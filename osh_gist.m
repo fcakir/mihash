@@ -67,15 +67,17 @@ function osh_gist(dataset, nbits, mapping)
 	whos gist traingist testgist cateTrainTest
 
 	%%% ONLINE LEARNING %%%
-	ntrials = 50;
+	ntrials = 20;
 	mAP = zeros(1, ntrials);
 	train_time = zeros(1, ntrials);
+	bit_flips = zeros(1, ntrials);
 	parfor t = 1:ntrials
 		fprintf('%s-%dbit-%s: random trial %d\n', dataset, nbits, mapping, t);
 		% train
 		t0 = tic;
-		[W, Y] = train_osh(traingist, trainlabels, noTrainingPoints, ...
-			nbits, mapping, stepsize, SGDBoost);
+		%[W, Y, bit_flips(t)] = train_osh(traingist, trainlabels, noTrainingPoints, ...
+		[W, Y, bit_flips(t)] = train_osh_rs(traingist, trainlabels, noTrainingPoints, ...
+			nbits, mapping, stepsize, SGDBoost, 0.01);
 		train_time(t) = toc(t0);
 
 		% test
@@ -84,5 +86,8 @@ function osh_gist(dataset, nbits, mapping)
 	end
 	fprintf('\nTraining time: %.2f +/- %.2f\n', mean(train_time), std(train_time));
 	fprintf('     Test mAP: %.3g +/- %.3g\n', mean(mAP), std(mAP));
+	if strcmp(mapping, 'smooth')
+		fprintf('    Bit flips: %.3g +/- %.3g\n', mean(bit_flips), std(bit_flips));
+	end
 end
 
