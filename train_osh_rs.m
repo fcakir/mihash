@@ -94,7 +94,7 @@ function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoint
 
 	% populate hash table
 	if strcmp(mapping,'smooth')
-		fprintf('%d bitflips, ', bitflips);
+		myLogInfo('%d bitflips, ', bitflips);
 		Y = 2*single(W'*traingist' > 0)-1;
 
 	elseif strcmp(mapping,'bucket')

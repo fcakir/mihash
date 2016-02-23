@@ -10,5 +10,6 @@ function mAP = get_mAP(cateTrainTest, Y, tY)
 		AP(j) = info.ap;
 	end
 
-	mAP = mean(AP)
+	mAP = mean(AP);
+	myLogInfo(['mAP = ' num2str(mAP)]);
 end
