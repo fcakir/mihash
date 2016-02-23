@@ -16,7 +16,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('update_interval', 50, @isscalar);  % update index structure
-	ip.addParamValue('test_interval', 20, @isscalar);  % save intermediate model
+	ip.addParamValue('test_interval', 200, @isscalar);  % save intermediate model
 	ip.addParamValue('sampleratio', 0.01, @isscalar);  % reservoir size
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	% parse input
