@@ -1,17 +1,10 @@
-% ---------------------------------------------------------------------
-% KH: reservoir sampling
-%
-function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoints, ...
-		nbits, mapping, stepsize, SGDBoost, sampleratio)
-	if nargin < 8, sampleratio = 0.1; end
-	if sampleratio < 0 || sampleratio > 1, 
-		error(sprintf('sampleratio=%g', sampleratio));
-	end
+function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, opts)
+	% online supervised hasing, with reservoir sampling
 
-	% KH: randomly generate candidate codewords, store in M2
+	% randomly generate candidate codewords, store in M2
 	bigM = 10000;
-	M2   = zeros(bigM, nbits);
-	for t = 1:nbits
+	M2   = zeros(bigM, opts.nbits);
+	for t = 1:opts.nbits
 		r = ones(bigM, 1);
 		while (abs(sum(r)) == bigM)
 			r = 2*randi([0,1], bigM, 1)-1;
@@ -22,20 +15,21 @@ function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoint
 
 	% initialize with LSH
 	d = size(traingist, 2);
-	W = randn(d, nbits);
+	W = randn(d, opts.nbits);
 	W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+	Y = [];  % the indexing structure
 
 	% do simple sampling
 	% KH: TODO reservoir sampling
 	bitflips = 0;
 	ntrain_all = size(traingist, 1);
-	sid = randperm(ntrain_all, ceil(sampleratio*ntrain_all));
+	sid = randperm(ntrain_all, ceil(opts.sampleratio*ntrain_all));
 	samplegist = traingist(sid, :);
 
 	i_ecoc = 1;
 	classLabels = [];
-	for i = 1:noTrainingPoints
-		% sample point
+	for i = 1:opts.noTrainingPoints
+		% new training point
 		spoint = traingist(i, :);
 		slabel = trainlabels(i);
 
@@ -57,7 +51,7 @@ function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoint
 		islabel = find(classLabels == slabel);
 
 		% hash function update
-		if SGDBoost == 0
+		if opts.SGDBoost == 0
 			for j = 1:nbits
 				if M(islabel,j)*W(:,j)'*spoint' > 1
 					continue;
@@ -80,8 +74,8 @@ function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoint
 		end
 
 		% hash index update
-		if strcmp(mapping, 'smooth')
-			if i == 1
+		if strcmp(opts.mapping, 'smooth') && ~mod(i, opts.update_interval)
+			if isempty(Y)
 				Y = 2*single(W'*samplegist' > 0)-1;
 			else
 				Ynew = 2*single(W'*samplegist' > 0)-1;
@@ -90,7 +84,16 @@ function [W, Y, bitflips] = train_osh_rs(traingist, trainlabels, noTrainingPoint
 				Y = Ynew;
 			end
 		end
-	end
+
+		% cache intermediate model to disk
+		if ~mod(i, opts.test_interval)
+			if isempty(Y)
+				Y = 2*single(W'*samplegist' > 0)-1;
+			end
+			save(savefile, 'W', 'Y');
+		end
+	end % end for
+
 
 	% populate hash table
 	if strcmp(mapping,'smooth')

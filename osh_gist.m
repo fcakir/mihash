@@ -2,21 +2,22 @@ function osh_gist(dataset, nbits, varargin)
 	% PARAMS
 	%  dataset (string) from {'cifar' ,'sun','nus'}
 	%  nbits (integer) is length of binary code
+	%  varargin: see get_opts.m for details
 	%  
 	if nargin < 1, dataset = 'cifar'; end
 	if nargin < 2, nbits = 8; end
-	opts = get_opts(dataset, nbits, varargin);  % set parameters
+	opts = get_opts(dataset, nbits, varargin{:});  % set parameters
 
 	if strcmp(dataset, 'cifar')
 		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/gist.mat');
-		gist       = [traingist; testgist];
-		gistlabels = [trainlabels; testlabels];
-		opts.tstperclass      = 100;
+		gist        = [traingist; testgist];
+		gistlabels  = [trainlabels; testlabels];
+		tstperclass = 100;
 		opts.noTrainingPoints = 2000;  % # points used for training
 	elseif strcmp(dataset, 'sun')
 		load('/research/codebooks/hashing_project/data/sun397/SUN_gist.mat');
-		gistlabels = labels;
-		opts.tstperclass      = 10;
+		gistlabels  = labels;
+		tstperclass = 10;
 		opts.noTrainingPoints = 3970;  % # points used for training
 	else
 		error('unknown dataset');
@@ -61,54 +62,31 @@ function osh_gist(dataset, nbits, varargin)
 		== repmat(testlabels, 1, length(trainlabels))';
 	whos gist traingist testgist cateTrainTest
 
-	%%% ONLINE LEARNING %%%
-	trial_file = cell(1, ntrials);
-	train_time = zeros(1, ntrials);
-	bit_flips  = zeros(1, ntrials);
-	parfor t = 1:ntrials
-		trial_file{t} = sprintf('%s/%s-%dbit-%s-trial%d.mat', ...
-			localdir, dataset, nbits, mapping, t);
-		if exist(trial_file{t}), continue; end
-		myLogInfo('%s-%dbit-%s: random trial %d\n', dataset, nbits, mapping, t);
+	%% ONLINE LEARNING
+	expdir = train_osh(traingist, trainlabels, opts);  % baseline
+	%train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
+	%train_osh_l1l2(traingist, trainlabels, opts);  % with L1L2 regularizer
 
-		% train
-		t0 = tic;
-		%[W, Y, bit_flips(t)] = train_osh(traingist, trainlabels, noTrainingPoints, ...
-		[W, Y, bit_flips(t)] = train_osh_rs(traingist, trainlabels, noTrainingPoints, ...
-			opts);
-			%nbits, mapping, stepsize, SGDBoost, 0.01);
-		train_time(t) = toc(t0);
-
-		% save to scratch dir
-		res = [];
-		res.W = W;
-		res.Y = Y;
-		res.bit_flips = bit_flips(t);
-		res.train_time = train_time(t);
-		parsave(trial_file{t}, res);
+	%% test models
+	mAPfn = sprintf('%s/mAP_t%d.mat', expdir, opts.test_interval);
+	try 
+		load(mAPfn);
+	catch
+		n = floor(opts.noTrainingPoints/opts.test_interval);
+		mAP = zeros(opts.ntrials, n);
+		for t = 1:opts.ntrials
+			for i = 1:n
+				F = sprintf('%s/trial%d_iter%d.mat', expdir, t, i*opts.test_interval);
+				d = load(F);
+				W = d.W;
+				Y = d.Y;
+				tY = 2*single(W'*testgist' > 0)-1;
+		
+				% NOTE: get_mAP() uses parfor
+				mAP(t, i) = get_mAP(cateTrainTest, Y, tY);
+			end
+		end
+		save(mAPfn, 'mAP');
 	end
-
-	% test models
-	% NOTE: get_mAP() uses parfor
-	mAP = zeros(1, ntrials);
-	for t = 1:ntrials
-		d = load(trial_file{t});
-		W = d.W;
-		Y = d.Y;
-		tY = 2*single(W'*testgist' > 0)-1;
-		mAP(t) = get_mAP(cateTrainTest, Y, tY);
-	end
-
-	myLogInfo('Training time: %.2f +/- %.2f', mean(train_time), std(train_time));
-	myLogInfo('     Test mAP: %.3g +/- %.3g', mean(mAP), std(mAP));
-	if strcmp(mapping, 'smooth')
-		myLogInfo('    Bit flips: %.3g +/- %.3g', mean(bit_flips), std(bit_flips));
-	end
+	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
 end
-
-
-function parsave(fname, res)
-	save(fname, '-struct', 'res');
-	unix(['chmod o-w ' fname]);  % fix for matlab permission bug
-end
-
