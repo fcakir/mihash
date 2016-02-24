@@ -161,5 +161,5 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 
 	% save final model, etc
 	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time');
-	unix(['chmod o-w ' savefile]);  % matlab permission bug
+	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
 end
