@@ -1,7 +1,7 @@
 function [expdir] = train_osh(traingist, trainlabels, opts)
 	% online supervised hashing
 	% baseline: no regularization, use heuristics to reduce hash table updates
-	expdir = sprintf('%s/%s-u%d', opts.localdir, opts.identifier, opts.update_interval);
+	expdir = sprintf('%s/%s-u%d-t%d', opts.localdir, opts.identifier, opts.update_interval, opts.test_interval);
 	if ~exist(expdir, 'dir')
 		mkdir(expdir);  unix(['chmod g+rw ' expdir]);
 	end
