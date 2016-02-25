@@ -1,10 +1,6 @@
-function [expdir] = train_osh(traingist, trainlabels, opts)
+function train_osh(traingist, trainlabels, opts)
 	% online supervised hashing
 	% baseline: no regularization, use heuristics to reduce hash table updates
-	expdir = sprintf('%s/%s-u%d-t%d', opts.localdir, opts.identifier, opts.update_interval, opts.test_interval);
-	if ~exist(expdir, 'dir')
-		mkdir(expdir);  unix(['chmod g+rw ' expdir]);
-	end
 
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
@@ -12,18 +8,24 @@ function [expdir] = train_osh(traingist, trainlabels, opts)
 	parfor t = 1:opts.ntrials
 		myLogInfo('%s: random trial %d', opts.identifier, t);
 		[train_time(t), update_time(t), bit_flips(t)] = train_sgd(...
-			traingist, trainlabels, opts, expdir, t);
+			traingist, trainlabels, opts, t);
 	end
-	myLogInfo('Training time: %.2f +/- %.2f', mean(train_time), std(train_time));
+	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
-		myLogInfo('    Bit flips: %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+		myLogInfo('    Bit flips (total): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 	end
 end
 
 % -------------------------------------------------------------
-function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels, opts, expdir, trialNo)
-	prefix = sprintf('%s/trial%d', expdir, trialNo);
-	if exist([prefix '.mat'], 'file')
+function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels, opts, trialNo)
+	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
+	noexist = 0;
+	for i = 1:floor(opts.noTrainingPoints/opts.test_interval)
+		if ~exist(sprintf('%s_iter%d.mat', prefix, i), 'file')
+			noexist = noexist + 1;
+		end
+	end
+	if noexist == 0 && exist([prefix '.mat'], 'file')
 		myLogInfo('Trial %d already done.', trialNo); 
 		load([prefix '.mat']);
 		return;
