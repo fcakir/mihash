@@ -8,6 +8,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	%  update_interval (int) update hash table
 	%  test_interval (int) save/test intermediate model
 	%  sampleratio (float) reservoir size, % of training set
+	%  lambda (float) weight of regularization
 	%  localdir (string) where to save stuff
 	%  exp (string) experiment type {'baseline', 'RS', 'L1L2'}
 	% 
@@ -23,6 +24,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('update_interval', 50, @isscalar);  % update index structure
 	ip.addParamValue('test_interval', 200, @isscalar);  % save intermediate model
 	ip.addParamValue('sampleratio', 0.01, @isscalar);  % reservoir size
+	ip.addParamValue('lambda', 0.1, @isscalar);  % regularization weight
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
 	% parse input

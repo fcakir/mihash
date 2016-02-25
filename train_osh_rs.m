@@ -1,17 +1,14 @@
-function [expdir] = train_osh_rs(traingist, trainlabels, opts)
+function train_osh_rs(traingist, trainlabels, opts)
 	% online supervised hashing
 	% regularization term defined on reservoir samples
-	expdir = sprintf('%s/%s-u%d-RS%g', opts.localdir, opts.identifier, ...
-		opts.update_interval, opts.sampleratio);
-	if ~exist(expdir, 'dir'), mkdir(expdir); unix(['chmod g+rw ' expdir]); end
-
+	
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
 	parfor t = 1:opts.ntrials
 		myLogInfo('%s: random trial %d', opts.identifier, t);
 		[train_time(t), update_time(t), bit_flips(t)] = train_sgd_rs(...
-			traingist, trainlabels, opts, expdir, t);
+			traingist, trainlabels, opts, t);
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
@@ -20,9 +17,17 @@ function [expdir] = train_osh_rs(traingist, trainlabels, opts)
 end
 
 % -------------------------------------------------------------
-function [train_time, update_time, bitflips] = train_sgd_rs(traingist, trainlabels, opts, expdir, trialNo)
-	prefix = sprintf('%s/trial%d', expdir, trialNo);
-	if exist([prefix '.mat'], 'file')
+function [train_time, update_time, bitflips] = train_sgd_rs(...
+		traingist, trainlabels, opts, trialNo)
+	% SGD with reservoir regularizer
+	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
+	noexist = 0;
+	for i = 1:floor(opts.noTrainingPoints/opts.test_interval)
+		if ~exist(sprintf('%s_iter%d.mat', prefix, i), 'file')
+			noexist = noexist + 1;
+		end
+	end
+	if noexist == 0 && exist([prefix '.mat'], 'file')
 		myLogInfo('Trial %d already done.', trialNo); 
 		load([prefix '.mat']);
 		return;
@@ -52,10 +57,10 @@ function [train_time, update_time, bitflips] = train_sgd_rs(traingist, trainlabe
 
 	% do simple sampling
 	% KH: TODO reservoir sampling
-	bitflips = 0;
 	ntrain_all = size(traingist, 1);
-	sid = randperm(ntrain_all, ceil(opts.sampleratio*ntrain_all));
-	samplegist = traingist(sid, :);
+	reservoir_size = ceil(opts.sampleratio*ntrain_all);
+	%sid = randperm(ntrain_all, reservoir_size);
+	%samplegist = traingist(sid, :);
 
 	i_ecoc = 1;
 	classLabels = [];
@@ -125,38 +130,20 @@ function [train_time, update_time, bitflips] = train_sgd_rs(traingist, trainlabe
 			if isempty(Y)
 				Y = 2*single(W'*samplegist' > 0)-1;
 			end
-			save(savefile, 'W', 'Y');
+			savefile = sprintf('%s_iter%d.mat', prefix, i);
+			save(savefile, 'W', 'Y', 'bitflips', 'train_time', 'update_time');
+			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
 	end % end for
 
-
 	% populate hash table
-	if strcmp(opts.mapping,'smooth')
-		myLogInfo('%d bitflips, ', bitflips);
-		Y = 2*single(W'*traingist' > 0)-1;
+	t_ = tic;
+	Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts);
+	update_time = update_time + toc(t_);
+	myLogInfo('Trial %d. SGD: %.2f sec, Hashtable update: %.2f sec', ...
+		trialNo, train_time, update_time);
 
-	elseif strcmp(opts.mapping,'bucket')
-		Y = zeros(nbits, size(traingist,1), 'single');
-		for i = 1:length(classLabels)
-			ind = find(classLabels(i) == trainlabels);
-			Y(:,ind) = repmat(M(i,:)',1,length(ind));
-		end
-
-	elseif strcmp(opts.mapping,'bucket2')
-		Y = 2*single(W'*traingist' > 0)-1;
-		sim = M * Y;
-		Y = zeros(nbits, size(traingist,1), 'single');
-		[~, maxInd] = max(sim);
-		Y = M(maxInd,:)';
-
-	elseif strcmp(opts.mapping, 'coord') 
-		% KH: do extra coordinate descent step on codewords
-		Y = 2*single(W'*traingist' > 0)-1;
-		for i = 1:length(classLabels)
-			ind = find(classLabels(i) == trainlabels);
-			% find codeword that minimizes J
-			cw = 2*single(mean(Y(:, ind), 2) > 0)-1; 
-			Y(:,ind) = repmat(cw, 1,length(ind));
-		end
-	end
+	% save final model, etc
+	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time');
+	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
 end
