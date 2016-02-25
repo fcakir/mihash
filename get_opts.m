@@ -39,15 +39,18 @@ function opts = get_opts(dataset, nbits, varargin)
 
 	% set expdir
 	if strcmp(opts.exp, 'baseline')
-		expdir = sprintf('%s/%s-u%d', opts.localdir, opts.identifier, opts.update_interval);
+		opts.expdir = sprintf('%s/%s-u%d-t%d', opts.localdir, opts.identifier, ...
+			opts.update_interval, opts.test_interval);
 	elseif strcmp(opts.exp, 'rs')
-		expdir = sprintf('%s/%s-u%d-RS', opts.localdir, opts.identifier, opts.update_interval);
+		opts.expdir = sprintf('%s/%s-u%d-t%d-RS', opts.localdir, opts.identifier, ...
+			opts.update_interval, opts.test_interval);
 	elseif strcmp(opts.exp, 'l1l2')
-		expdir = sprintf('%s/%s-u%d-L1L2', opts.localdir, opts.identifier, opts.update_interval);
+		opts.expdir = sprintf('%s/%s-u%d-t%d-L1L2', opts.localdir, opts.identifier, ...
+			opts.update_interval, opts.test_interval);
 	end
-	if ~exist(expdir, 'dir'), 
-		myLogInfo(['creating expdir: ' expdir]);
-		mkdir(expdir); unix(['chmod g+rw ' expdir]); 
+	if ~exist(opts.expdir, 'dir'), 
+		myLogInfo(['creating opts.expdir: ' opts.expdir]);
+		mkdir(opts.expdir); unix(['chmod g+rw ' opts.expdir]); 
 	end
 
 	% FINISHED

@@ -19,7 +19,13 @@ end
 % -------------------------------------------------------------
 function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels, opts, trialNo)
 	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
-	if exist([prefix '.mat'], 'file')
+	noexist = 0;
+	for i = 1:floor(opts.noTrainingPoints/opts.test_interval)
+		if ~exist(sprintf('%s_iter%d.mat', prefix, i), 'file')
+			noexist = noexist + 1;
+		end
+	end
+	if noexist == 0 && exist([prefix '.mat'], 'file')
 		myLogInfo('Trial %d already done.', trialNo); 
 		load([prefix '.mat']);
 		return;
