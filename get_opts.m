@@ -1,10 +1,15 @@
 function opts = get_opts(dataset, nbits, varargin)
 	% PARAMS
-	%  mapping: {'smooth', 'bucket', 'coord'}
-	%  ntrials: # of random trials
+	%  mapping (string) {'smooth', 'bucket', 'coord'}
+	%  ntrials (int) # of random trials
 	%  stepsize (float) is step size in SGD
 	%  SGDBoost (integer) is 0 for OSHEG, 1 for OSH
-	%  randseed: (int) random seed for repeatable experiments
+	%  randseed (int) random seed for repeatable experiments
+	%  update_interval (int) update hash table
+	%  test_interval (int) save/test intermediate model
+	%  sampleratio (float) reservoir size, % of training set
+	%  localdir (string) where to save stuff
+	%  exp (string) experiment type {'baseline', 'RS', 'L1L2'}
 	% 
 	ip = inputParser;
 	% default values

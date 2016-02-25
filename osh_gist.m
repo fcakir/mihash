@@ -48,7 +48,7 @@ function osh_gist(dataset, nbits, varargin)
 	end
 	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
 
-	%% draw curves
+	% draw curves
 	[px, py] = avg_curve(mAP, bitflips);
 	figure, plot(px, py); grid, title(opts.identifier)
 	xlabel('bit flips'), ylabel('mAP')
@@ -66,8 +66,9 @@ function [px, py] = avg_curve(Y, X)
 	px = linspace(mean(min(X,[],2)), mean(max(X,[],2)), 2*npoints);
 	py = zeros(ntrials, length(px));
 	for i = 1:ntrials
+		% TODO this will give error if X's elements are not unique
+		% trigger: X=bitflips && update_interval>test_interval
 		py(i, :) = interp1(X(i, :), Y(i, :), px, 'linear', 'extrap');
 	end
 	py = mean(py);
-	%plot(px, mean(py));
 end
