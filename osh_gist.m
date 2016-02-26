@@ -20,9 +20,12 @@ function osh_gist(dataset, nbits, varargin)
 			== repmat(testlabels, 1, length(trainlabels))';
 
 		% ONLINE LEARNING
-		train_osh(traingist, trainlabels, opts);  % baseline
-		%train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
-		%train_osh_l1l2(traingist, trainlabels, opts);  % with L1L2 regularizer
+		if strcmp(opts.exp, 'baseline')
+			train_osh(traingist, trainlabels, opts);  % baseline
+		elseif strcmp(opts.exp, 'rs')
+			train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
+		else, error(['unknown opts.exp = ' opts.exp]);
+		end
 		
 		% test models
 		n = floor(opts.noTrainingPoints/opts.test_interval);
@@ -56,19 +59,4 @@ function osh_gist(dataset, nbits, varargin)
 	[px, py] = avg_curve(mAP, train_time);
 	figure, plot(px, py); grid, title(opts.identifier)
 	xlabel('CPU time'), ylabel('mAP')
-end
-
-% -----------------------------------------------------------------------
-function [px, py] = avg_curve(Y, X)
-	% plot the "average curve" of multiple trials
-	ntrials = size(Y, 1);
-	npoints = size(Y, 2);
-	px = linspace(mean(min(X,[],2)), mean(max(X,[],2)), 2*npoints);
-	py = zeros(ntrials, length(px));
-	for i = 1:ntrials
-		% TODO this will give error if X's elements are not unique
-		% trigger: X=bitflips && update_interval>test_interval
-		py(i, :) = interp1(X(i, :), Y(i, :), px, 'linear', 'extrap');
-	end
-	py = mean(py);
 end
