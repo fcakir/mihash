@@ -70,33 +70,6 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		spoint = traingist(i, :);
 		slabel = trainlabels(i);
 
-		% reservoir update (based on random sort)
-		priority_queue = zeros(1, reservoir_size);
-		if i <= reservoir_size
-			samplegist(i, :)  = spoint;
-			samplelabel(i)    = slabel;
-			priority_queue(i) = rand;
-		else
-			% pop max from priority queue
-			[maxval, maxind] = max(priority_queue);
-			r = rand;
-			if maxval > r
-				% push into priority queue
-				priority_queue(maxind) = r;
-				samplegist(maxind, :)  = spoint;
-				samplelabel(maxind)    = slabel;
-			end
-			% compute binary codes for the reservoir
-			if isempty(Yres)
-				Yres = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
-			else
-				Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
-				bitdiff = (Yres ~= Ynew);
-				bitflips = bitflips + sum(bitdiff(:));
-				Yres = Ynew;
-			end
-		end
-
 		% check whether it exists in the "seen class labels" vector
 		islabel = find(seenLabels == slabel);
 		if isempty(islabel)
@@ -115,6 +88,33 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		islabel = find(seenLabels == slabel);
 		target_code = M(islabel, :);
 
+		% reservoir update (based on random sort)
+		priority_queue = zeros(1, reservoir_size);
+		if i <= reservoir_size
+			samplegist(i, :)  = spoint;
+			samplelabel(i)    = slabel;
+			priority_queue(i) = rand;
+		else
+			% pop max from priority queue
+			[maxval, maxind] = max(priority_queue);
+			r = rand;
+			if maxval > r
+				% push into priority queue
+				priority_queue(maxind) = r;
+				samplegist(maxind, :)  = spoint;
+				samplelabel(maxind)    = slabel;
+			end
+		end
+		% compute binary codes for the reservoir
+		if isempty(Yres)
+			Yres = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+		else
+			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+			bitdiff = (Yres ~= Ynew);
+			bitflips = bitflips + sum(bitdiff(:));
+			Yres = Ynew;
+		end
+
 		% hash function update
 		if opts.SGDBoost == 0
 			for j = 1:opts.nbits
@@ -123,17 +123,17 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 				if target_code(j)*W(:,j)'*spoint' <= 1
 					W(:,j) = W(:,j) + opts.stepsize * target_code(j)*spoint';
 				end
-				if i > reservoir_size
-					% GD on second term: reservoir regularizer
-					% (try to fit to previous mapped codes)
-					rstep = opts.stepsize * opts.lambda / reservoir_size;
-					for r = 1:reservoir_size
-						rpoint = samplegist(r, :);
-						if Yres(r, j)*W(:, j)'*rpoint' <= 1
-							W(:,j) = W(:,j) + rstep * Yres(r, j) * rpoint';
-						end
+				% GD on second term: reservoir regularizer
+				% (try to fit to previous mapped codes)
+				%if i > reservoir_size
+				rstep = opts.stepsize * opts.lambda / reservoir_size;
+				for r = 1:min(reservoir_size, i)
+					rpoint = samplegist(r, :);
+					if Yres(r, j)*W(:, j)'*rpoint' <= 1
+						W(:,j) = W(:,j) + rstep * Yres(r, j) * rpoint';
 					end
 				end
+				%end
 			end
 		else
 			% TODO
@@ -153,9 +153,9 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		if strcmp(opts.mapping, 'smooth') && ~mod(i, opts.update_interval)
 			t_ = tic;
 			if isempty(Y)
-				Y = 2*single(W'*samplegist' > 0)-1;
+				Y = build_hash_table(W, traingist, trainlabels, seenLabels, M, opts);
 			else
-				Ynew = 2*single(W'*samplegist' > 0)-1;
+				Ynew = build_hash_table(W, traingist, trainlabels, seenLabels, M, opts);
 				bitdiff = (Y ~= Ynew);
 				bitflips = bitflips + sum(bitdiff(:));
 				Y = Ynew;
@@ -166,7 +166,7 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		% cache intermediate model to disk
 		if ~mod(i, opts.test_interval)
 			if isempty(Y)
-				Y = 2*single(W'*samplegist' > 0)-1;
+				Y = build_hash_table(W, traingist, trainlabels, seenLabels, M, opts);
 			end
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
 			save(savefile, 'W', 'Y', 'bitflips', 'train_time', 'update_time');

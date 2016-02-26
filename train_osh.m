@@ -81,12 +81,9 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 		% hash function update
 		if opts.SGDBoost == 0
 			for j = 1:opts.nbits
-				if M(islabel,j)*W(:,j)'*spoint' > 1
-					continue;
-				else
+				if M(islabel,j)*W(:,j)'*spoint' <= 1
 					W(:,j) = W(:,j) + opts.stepsize * M(islabel,j)*spoint';
 				end
-				%W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 			end
 		else
 			for j = 1:opts.nbits
