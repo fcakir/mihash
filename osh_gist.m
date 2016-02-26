@@ -20,12 +20,10 @@ function osh_gist(dataset, nbits, varargin)
 			== repmat(testlabels, 1, length(trainlabels))';
 
 		% ONLINE LEARNING
-		if opts.exp == 'baseline'
+		if strcmp(opts.exp, 'baseline')
 			train_osh(traingist, trainlabels, opts);  % baseline
-		elseif opts.exp == 'rs'
+		elseif strcmp(opts.exp, 'rs')
 			train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
-		elseif opts.exp == 'l1l2'
-			train_osh_l1l2(traingist, trainlabels, opts);  % with L1L2 regularizer
 		else, error(['unknown opts.exp = ' opts.exp]);
 		end
 		

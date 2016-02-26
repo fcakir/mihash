@@ -23,8 +23,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('update_interval', 50, @isscalar);  % update index structure
 	ip.addParamValue('test_interval', 200, @isscalar);  % save intermediate model
-	ip.addParamValue('sampleratio', 0.01, @isscalar);  % reservoir size
-	ip.addParamValue('lambda', 0.1, @isscalar);  % regularization weight
+	ip.addParamValue('samplesize', 200, @isscalar);  % reservoir size
+	ip.addParamValue('lambda', 0.01, @isscalar);  % regularization weight
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
 	% parse input
@@ -41,20 +41,16 @@ function opts = get_opts(dataset, nbits, varargin)
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%dbit-%s-r%d-st%g', ...
-		opts.dataset, opts.nbits, opts.mapping, opts.randseed, opts.stepsize);
+	opts.identifier = sprintf('%s-%dbit-%s-r%d-st%g-u%dt%d', ...
+		opts.dataset, opts.nbits, opts.mapping, opts.randseed, opts.stepsize, ...
+		opts.update_interval, opts.test_interval);
+	if strcmp(opts.exp, 'rs')
+		opts.identifier = sprintf('%s-RS%dL%g', opts.identifier, ...
+			opts.samplesize, opts.lambda);
+	end
 
 	% set expdir
-	if strcmp(opts.exp, 'baseline')
-		opts.expdir = sprintf('%s/%s-u%d-t%d', opts.localdir, opts.identifier, ...
-			opts.update_interval, opts.test_interval);
-	elseif strcmp(opts.exp, 'rs')
-		opts.expdir = sprintf('%s/%s-u%d-t%d-RS', opts.localdir, opts.identifier, ...
-			opts.update_interval, opts.test_interval);
-	elseif strcmp(opts.exp, 'l1l2')
-		opts.expdir = sprintf('%s/%s-u%d-t%d-L1L2', opts.localdir, opts.identifier, ...
-			opts.update_interval, opts.test_interval);
-	end
+	opts.expdir = sprintf('%s/%s', opts.localdir, opts.identifier);
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
 		mkdir(opts.expdir); unix(['chmod g+rw ' opts.expdir]); 

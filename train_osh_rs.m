@@ -55,58 +55,96 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 	train_time = 0;
 	update_time = 0;
 
-	% do simple sampling
-	% KH: TODO reservoir sampling
-	ntrain_all = size(traingist, 1);
-	reservoir_size = ceil(opts.sampleratio*ntrain_all);
-	%sid = randperm(ntrain_all, reservoir_size);
-	%samplegist = traingist(sid, :);
+	% reservoir sampling
+	ntrain_all     = size(traingist, 1);
+	reservoir_size = opts.samplesize; %ceil(opts.sampleratio*ntrain_all);
+	samplegist     = zeros(reservoir_size, size(traingist, 2));
+	samplelabel    = zeros(reservoir_size, 1);
+	Yres           = [];  % mapped binary codes for the reservoir
 
 	i_ecoc = 1;
-	classLabels = [];
+	seenLabels = [];
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;
 		% new training point
 		spoint = traingist(i, :);
 		slabel = trainlabels(i);
 
+		% reservoir update (based on random sort)
+		priority_queue = zeros(1, reservoir_size);
+		if i <= reservoir_size
+			samplegist(i, :)  = spoint;
+			samplelabel(i)    = slabel;
+			priority_queue(i) = rand;
+		else
+			% pop max from priority queue
+			[maxval, maxind] = max(priority_queue);
+			r = rand;
+			if maxval > r
+				% push into priority queue
+				priority_queue(maxind) = r;
+				samplegist(maxind, :)  = spoint;
+				samplelabel(maxind)    = slabel;
+			end
+			% compute binary codes for the reservoir
+			if isempty(Yres)
+				Yres = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+			else
+				Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+				bitdiff = (Yres ~= Ynew);
+				bitflips = bitflips + sum(bitdiff(:));
+				Yres = Ynew;
+			end
+		end
+
 		% check whether it exists in the "seen class labels" vector
-		islabel = find(classLabels == slabel);
+		islabel = find(seenLabels == slabel);
 		if isempty(islabel)
-			if isempty(classLabels)
+			if isempty(seenLabels)
 				% does not exist, create a binary code for M
-				classLabels = slabel;
+				seenLabels = slabel;
 				M = M2(i_ecoc, :);
 				i_ecoc = i_ecoc + 1;
 			else
 				% append codeword to ECOC matrix
-				classLabels = [classLabels; slabel];
+				seenLabels = [seenLabels; slabel];
 				M = [M; M2(i_ecoc,:)];
 				i_ecoc = i_ecoc +1;
 			end
 		end
-		islabel = find(classLabels == slabel);
+		islabel = find(seenLabels == slabel);
+		target_code = M(islabel, :);
 
 		% hash function update
 		if opts.SGDBoost == 0
 			for j = 1:opts.nbits
-				if M(islabel,j)*W(:,j)'*spoint' > 1
-					continue;
-				else
-					W(:,j) = W(:,j) + opts.stepsize * M(islabel,j)*spoint';
+				% gradient descent on fist term: loss
+				% (try to fit to target code)
+				if target_code(j)*W(:,j)'*spoint' <= 1
+					W(:,j) = W(:,j) + opts.stepsize * target_code(j)*spoint';
 				end
-				%W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+				if i > reservoir_size
+					% GD on second term: reservoir regularizer
+					% (try to fit to previous mapped codes)
+					rstep = opts.stepsize * opts.lambda / reservoir_size;
+					for r = 1:reservoir_size
+						rpoint = samplegist(r, :);
+						if Yres(r, j)*W(:, j)'*rpoint' <= 1
+							W(:,j) = W(:,j) + rstep * Yres(r, j) * rpoint';
+						end
+					end
+				end
 			end
 		else
+			% TODO
 			for j = 1:opts.nbits
 				if j ~= 1
-					c1 = exp(-(M(islabel,1:j-1)*(W(:,1:j-1)'*spoint')));
+					c1 = exp(-(target_code(1:j-1)*(W(:,1:j-1)'*spoint')));
 				else
 					c1 = 1;
 				end
 				W(:,j) = W(:,j) - opts.stepsize * ...
-					c1 * exp(-M(islabel,j)*W(:,j)'*spoint')*-M(islabel,j)*spoint';
-				%W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+					c1 * exp(-target_code(j)*W(:,j)'*spoint')*-target_code(j)*spoint';
 			end
 		end
 		train_time = train_time + toc(t_);
@@ -138,9 +176,9 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 
 	% populate hash table
 	t_ = tic;
-	Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts);
+	Y = build_hash_table(W, traingist, trainlabels, seenLabels, M, opts);
 	update_time = update_time + toc(t_);
-	myLogInfo('Trial %d. SGD: %.2f sec, Hashtable update: %.2f sec', ...
+	myLogInfo('Trial %02d. SGD+reservoir: %.2f sec, Hashtable update: %.2f sec', ...
 		trialNo, train_time, update_time);
 
 	% save final model, etc

@@ -1,6 +1,5 @@
 function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts)
 	if strcmp(opts.mapping,'smooth')
-		%myLogInfo('%d bitflips, ', bitflips);
 		Y = 2*single(W'*traingist' > 0)-1;
 
 	elseif strcmp(opts.mapping,'bucket')
