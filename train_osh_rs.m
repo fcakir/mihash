@@ -12,7 +12,7 @@ function train_osh_rs(traingist, trainlabels, opts)
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
-		myLogInfo('    Bit flips (total): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+		myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 	end
 end
 
@@ -52,6 +52,7 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 	Y = [];  % the indexing structure
 
 	bitflips = 0;
+	bitflips_res = 0;
 	train_time = 0;
 	update_time = 0;
 
@@ -111,7 +112,7 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		else
 			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
 			bitdiff = (Yres ~= Ynew);
-			bitflips = bitflips + sum(bitdiff(:));
+			bitflips_res = bitflips_res + sum(bitdiff(:));
 			Yres = Ynew;
 		end
 
@@ -173,13 +174,15 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
 	end % end for
+	bitflips = bitflips/ntrain_all;
+	bitflips_res = bitflips_res/ntrain_all;
 
 	% populate hash table
 	t_ = tic;
 	Y = build_hash_table(W, traingist, trainlabels, seenLabels, M, opts);
 	update_time = update_time + toc(t_);
-	myLogInfo('Trial %02d. SGD+reservoir: %.2f sec, Hashtable update: %.2f sec', ...
-		trialNo, train_time, update_time);
+	myLogInfo('Trial %02d. bitflips_res=%.2f, SGD+reservoir: %.2f sec, Hashtable update: %.2f sec', ...
+		trialNo, bitflips_res, train_time, update_time);
 
 	% save final model, etc
 	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time');

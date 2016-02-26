@@ -12,7 +12,7 @@ function train_osh(traingist, trainlabels, opts)
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
-		myLogInfo('    Bit flips (total): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+		myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 	end
 end
 
@@ -123,6 +123,7 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
 	end % end for
+	bitflips = bitflips/size(traingist, 1);
 
 	% populate hash table
 	t_ = tic;
