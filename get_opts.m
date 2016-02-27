@@ -31,6 +31,9 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.parse(varargin{:});
 	opts = ip.Results;
 
+	% assertions
+	assert(opts.lambda>0, ['opts.lambda = ', opts.lambda]);
+
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
 		mkdir(opts.localdir); 

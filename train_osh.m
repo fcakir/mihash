@@ -82,8 +82,7 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 		% hash function update
 		if opts.SGDBoost == 0
 			% vectorized updates
-			cW = W * diag(target_code);
-			id = (spoint * cW <= 1);  % logical indexing > find()
+			id = (spoint * W .* target_code <= 1);  % logical indexing > find()
 			n  = sum(id);
 			if n > 0
 				W(:,id) = W(:,id) + opts.stepsize*repmat(spoint',[1 n])*diag(target_code(id)); 

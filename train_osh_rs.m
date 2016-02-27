@@ -105,36 +105,27 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 				samplegist(maxind, :)  = spoint;
 				samplelabel(maxind)    = slabel;
 			end
-		end
-		% compute binary codes for the reservoir
-		if isempty(Yres)
-			Yres = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
-		else
-			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
-			bitdiff = (Yres ~= Ynew);
-			bitflips_res = bitflips_res + sum(bitdiff(:));
-			Yres = Ynew;
+			% compute binary codes for the reservoir
+			if isempty(Yres)
+				Yres = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+			else
+				Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M, opts)';
+				bitdiff = (Yres ~= Ynew);
+				bitflips_res = bitflips_res + sum(bitdiff(:));
+				Yres = Ynew;
+			end
 		end
 
 		% hash function update
 		if opts.SGDBoost == 0
-			for j = 1:opts.nbits
-				% gradient descent on fist term: loss
-				% (try to fit to target code)
-				if target_code(j)*W(:,j)'*spoint' <= 1
-					W(:,j) = W(:,j) + opts.stepsize * target_code(j)*spoint';
-				end
-				% GD on second term: reservoir regularizer
-				% (try to fit to previous mapped codes)
-				%if i > reservoir_size
-				rstep = opts.stepsize * opts.lambda / reservoir_size;
-				for r = 1:min(reservoir_size, i)
-					rpoint = samplegist(r, :);
-					if Yres(r, j)*W(:, j)'*rpoint' <= 1
-						W(:,j) = W(:,j) + rstep * Yres(r, j) * rpoint';
-					end
-				end
-				%end
+			% vectorized updates
+			if i <= reservoir_size
+				W = sgd_update_hinge(W, spoint, target_code, opts.stepsize);
+			else
+				codes  = [target_code; Yres];
+				points = [spoint; samplegist*(opts.lambda/reservoir_size)];
+				stepsizes = opts.stepsize * [1; ones(reservoir_size,1)*opts.lambda/reservoir_size];
+				W = sgd_update_hinge(W, points, codes, stepsizes);
 			end
 		else
 			% TODO
@@ -175,7 +166,7 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 		end
 	end % end for
 	bitflips = bitflips/ntrain_all;
-	bitflips_res = bitflips_res/ntrain_all;
+	bitflips_res = bitflips_res/reservoir_size;
 
 	% populate hash table
 	t_ = tic;
@@ -187,4 +178,24 @@ function [train_time, update_time, bitflips] = train_sgd_rs(...
 	% save final model, etc
 	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time');
 	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
+end
+
+% -----------------------------------------------------------
+function W = sgd_update_hinge(W, points, codes, stepsizes)
+	% input: 
+	%   W         - D*nbits matrix, each col is a hyperplane
+	%   points    - n*D matrix, each row is a point
+	%   codes     - n*nbits matrix, each row the corresp. target binary code
+	%   stepsizes - SGD step sizes (1 per point) for current batch
+	% output: 
+	%   updated W
+	for i = 1:size(points, 1)
+		xi = points(i, :);
+		ci = codes(i, :);
+		id = (xi * W .* ci <= 1);  % logical indexing > find()
+		n  = sum(id);
+		if n > 0
+			W(:,id) = W(:,id) + stepsizes(i)*repmat(xi',[1 n])*diag(ci(id)); 
+		end
+	end
 end
