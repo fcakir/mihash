@@ -77,17 +77,24 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 			end
 		end
 		islabel = find(classLabels == slabel);
+		target_code = M(islabel, :);
 
 		% hash function update
 		if opts.SGDBoost == 0
-			for j = 1:opts.nbits
-				if M(islabel,j)*W(:,j)'*spoint' > 1
-					continue;
-				else
-					W(:,j) = W(:,j) + opts.stepsize * M(islabel,j)*spoint';
-				end
-				%W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+			% vectorized updates
+			cW = W * diag(target_code);
+			id = (spoint * cW <= 1);  % logical indexing > find()
+			n  = sum(id);
+			if n > 0
+				W(:,id) = W(:,id) + opts.stepsize*repmat(spoint',[1 n])*diag(target_code(id)); 
 			end
+			%{
+			for j = 1:opts.nbits
+				if target_code(j)*W(:,j)'*spoint' <= 1
+					W(:,j) = W(:,j) + opts.stepsize * target_code(j)*spoint';
+				end
+			end
+			%}
 		else
 			for j = 1:opts.nbits
 				if j ~= 1
