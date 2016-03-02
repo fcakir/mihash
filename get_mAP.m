@@ -7,13 +7,8 @@ function mAP = get_mAP(cateTrainTest, Y, tY)
 	parfor j = 1:testsize
 		labels = 2*double(cateTrainTest(:,j))-1;
 		[~, ~, info] = vl_pr(labels, sim(:,j));
-		% temp fix for NUSWIDE -- why get NaN?
-		if ~isnan(info.ap)
-			AP(j) = info.ap;
-		else
-			AP(j) = info.ap_interp_11;
-		end
 	end
+	AP = AP(~isnan(AP));  % for NUSWIDE
 
 	mAP = mean(AP);
 	myLogInfo(['mAP = ' num2str(mAP)]);
