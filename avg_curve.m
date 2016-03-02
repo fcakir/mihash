@@ -3,6 +3,7 @@ function [px, py] = avg_curve(Y, X)
 	% based on interpolating at common locations
 	ntrials = size(Y, 1);
 	npoints = size(Y, 2);
+    if npoints == 1, px = mean(Y), py = mean(X), return, end
 	px = linspace(mean(min(X,[],2)), mean(max(X,[],2)), 2*npoints);
 	py = zeros(ntrials, length(px));
 	for i = 1:ntrials
