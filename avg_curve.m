@@ -10,5 +10,5 @@ function [px, py] = avg_curve(Y, X)
 		% trigger: X=bitflips && update_interval>test_interval
 		py(i, :) = interp1(X(i, :), Y(i, :), px, 'linear', 'extrap');
 	end
-	py = mean(py);
+	py = mean(py,1);
 end
