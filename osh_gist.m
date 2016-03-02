@@ -15,16 +15,22 @@ function osh_gist(dataset, nbits, varargin)
 		myLogInfo(['Results loaded: ' mAPfn]);
 	catch
 		% load GIST data
-		[traingist, trainlabels, testgist, testlabels, opts] = load_gist(dataset, opts);
-		cateTrainTest = repmat(trainlabels, 1, length(testlabels)) ...
-			== repmat(testlabels, 1, length(trainlabels))';
+		[traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = ...
+			load_gist(dataset, opts);
+		% hack
+		if strcmp(dataset, 'nus')
+			idx = 1:round(size(testgist, 1)/5);
+			testgist = testgist(idx, :);
+			cateTrainTest = cateTrainTest(:, idx);
+		end
 
 		% ONLINE LEARNING
 		if strcmp(opts.exp, 'baseline')
 			train_osh(traingist, trainlabels, opts);  % baseline
 		elseif strcmp(opts.exp, 'rs')
 			train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
-		else, error(['unknown opts.exp = ' opts.exp]);
+		else 
+			error(['unknown opts.exp = ' opts.exp]);
 		end
 		
 		% test models
