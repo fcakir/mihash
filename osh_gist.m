@@ -53,10 +53,10 @@ function osh_gist(dataset, nbits, varargin)
 
 	% draw curves
 	[px, py] = avg_curve(mAP, bitflips);
-	figure, plot(px, py); grid, title(opts.identifier)
+	figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end, grid, title(opts.identifier)
 	xlabel('bit flips'), ylabel('mAP')
 
 	[px, py] = avg_curve(mAP, train_time);
-	figure, plot(px, py); grid, title(opts.identifier)
+	figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end, grid, title(opts.identifier)
 	xlabel('CPU time'), ylabel('mAP')
 end
