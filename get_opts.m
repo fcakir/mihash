@@ -12,6 +12,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	%  localdir (string) where to save stuff
 	%  exp (string) experiment type {'baseline', 'RS', 'L1L2'}
     %  noTrainingPoints (int) # of training points 
+    %  override (int) override previous results {0, 1}
 	% 
 	ip = inputParser;
 	% default values
