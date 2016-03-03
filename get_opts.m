@@ -42,12 +42,12 @@ function opts = get_opts(dataset, nbits, varargin)
 		unix(['chmod g+rw ' opts.localdir]);
 	end
 
-	% set randseed
+	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%dbit-%s-r%d-st%g-u%dt%d', ...
-		opts.dataset, opts.nbits, opts.mapping, opts.randseed, opts.stepsize, ...
+	opts.identifier = sprintf('%s-%d%s-B%dst%g-u%dt%d', ...
+		opts.dataset, opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize, ...
 		opts.update_interval, opts.test_interval);
 	%if strcmp(opts.exp, 'rs')
 	if opts.reg_rs > 0

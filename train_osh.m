@@ -92,13 +92,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		if isLabeled
 			for c = 1:size(target_codes, 1)
 				code = target_codes(c, :);
-				W = sgd_update_hinge(W, spoint, code, opts.stepsize);
+				W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost);
 			end
 		end
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		if opts.reg_rs > 0  &&  i > reservoir_size
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-			W = sgd_update_hinge(W, samplegist, Yres, stepsizes);
+			W = sgd_update(W, samplegist, Yres, stepsizes, opts.SGDBoost);
 		end
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
 		% either max entropy or smoothness, but not both
@@ -155,7 +155,7 @@ end
 
 % -----------------------------------------------------------
 % SGD mini-batch update
-function W = sgd_update_hinge(W, points, codes, stepsizes)
+function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 	% input: 
 	%   W         - D*nbits matrix, each col is a hyperplane
 	%   points    - n*D matrix, each row is a point
@@ -163,13 +163,31 @@ function W = sgd_update_hinge(W, points, codes, stepsizes)
 	%   stepsizes - SGD step sizes (1 per point) for current batch
 	% output: 
 	%   updated W
-	for i = 1:size(points, 1)
-		xi = points(i, :);
-		ci = codes(i, :);
-		id = (xi * W .* ci <= 1);  % logical indexing > find()
-		n  = sum(id);
-		if n > 0
-			W(:,id) = W(:,id) + stepsizes(i)*repmat(xi',[1 n])*diag(ci(id)); 
+	if opts.SGDBoost == 0
+		% hinge loss version
+		for i = 1:size(points, 1)
+			xi = points(i, :);
+			ci = codes(i, :);
+			id = (xi * W .* ci <= 1);  % logical indexing > find()
+			n  = sum(id);
+			if n > 0
+				W(:,id) = W(:,id) + stepsizes(i)*repmat(xi',[1 n])*diag(ci(id)); 
+			end
+		end
+	else
+		% exp loss version
+		for i = 1:size(points, 1)
+			xi = points(i, :);
+			ci = codes(i, :);
+			st = stepsizes(i);
+			for j = 1:size(W, 2)
+				if j ~= 1
+					c1 = exp(-(ci(1:j-1)*(W(:,1:j-1)'*xi')));
+				else
+					c1 = 1;
+				end
+				W(:,j) = W(:,j) - st * c1 * exp(-ci(j)*W(:,j)'*xi')*-ci(j)*xi';
+			end
 		end
 	end
 end
