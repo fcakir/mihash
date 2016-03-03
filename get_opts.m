@@ -11,6 +11,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	%  lambda (float) weight of regularization
 	%  localdir (string) where to save stuff
 	%  exp (string) experiment type {'baseline', 'RS', 'L1L2'}
+    %  noTrainingPoints (int) # of training points 
 	% 
 	ip = inputParser;
 	% default values
@@ -27,12 +28,16 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('lambda', 0.1, @isscalar);  % regularization weight
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
+    ip.addParamValue('noTrainingPoints',2000,@isscalar);
+    ip.addParamValue('override',0,@isscalar);
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
 
 	% assertions
 	assert(opts.lambda>0, ['opts.lambda = ', opts.lambda]);
+    assert(opts.test_interval <= opts.noTrainingPoints, ... 
+        'test_interval should be smaller than \# of training points');
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 

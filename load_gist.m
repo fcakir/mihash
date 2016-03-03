@@ -7,7 +7,7 @@ function [traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = .
 		gist        = [traingist; testgist];
 		gistlabels  = [trainlabels; testlabels];
 		tstperclass = 100;
-		opts.noTrainingPoints = 2000;  % # points used for training
+		%opts.noTrainingPoints = 2000;  % # points used for training
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
@@ -15,7 +15,7 @@ function [traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = .
 		load('/research/codebooks/hashing_project/data/sun397/SUN_gist.mat');
 		gistlabels  = labels;
 		tstperclass = 10;
-		opts.noTrainingPoints = 3970;  % # points used for training
+		%opts.noTrainingPoints = 3970;  % # points used for training
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
@@ -23,7 +23,7 @@ function [traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = .
     gist = load('/research/codebooks/hashing_project/data/nuswide/BoW_int.dat');
     tags = load('/research/codebooks/hashing_project/data/nuswide/AllLabels81.txt');
     tstperclass = 30;
-		opts.noTrainingPoints = 20*81;
+		%opts.noTrainingPoints = 20*81;
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest] = ...
 			split_train_test_nus(gist, tags, tstperclass);
 

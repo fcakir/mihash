@@ -12,6 +12,7 @@ function osh_gist(dataset, nbits, varargin)
 	try 
 		% load experiment results
 		load(mAPfn);
+        assert(opts.override == 0, 'Results overriden');
 		myLogInfo(['Results loaded: ' mAPfn]);
 	catch
 		% load GIST data
