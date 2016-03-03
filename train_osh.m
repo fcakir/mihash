@@ -164,7 +164,7 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 	% output: 
 	%   updated W
 	if SGDBoost == 0
-		% hinge loss version
+		% no online boosting, hinge loss
 		for i = 1:size(points, 1)
 			xi = points(i, :);
 			ci = codes(i, :);
@@ -175,7 +175,7 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 			end
 		end
 	else
-		% exp loss version
+		% online boosting + exp loss
 		for i = 1:size(points, 1)
 			xi = points(i, :);
 			ci = codes(i, :);

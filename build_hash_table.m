@@ -3,7 +3,7 @@ function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts)
 		Y = 2*single(W'*traingist' > 0)-1;
 
 	elseif strcmp(opts.mapping,'bucket')
-		Y = zeros(nbits, size(traingist,1), 'single');
+		Y = zeros(opts.nbits, size(traingist,1), 'single');
 		for i = 1:length(classLabels)
 			ind = find(classLabels(i) == trainlabels);
 			Y(:,ind) = repmat(M(i,:)',1,length(ind));
@@ -12,7 +12,7 @@ function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts)
 	elseif strcmp(opts.mapping,'bucket2')
 		Y = 2*single(W'*traingist' > 0)-1;
 		sim = M * Y;
-		Y = zeros(nbits, size(traingist,1), 'single');
+		Y = zeros(opts.nbits, size(traingist,1), 'single');
 		[~, maxInd] = max(sim);
 		Y = M(maxInd,:)';
 
