@@ -28,14 +28,19 @@ function osh_gist(dataset, nbits, varargin)
 		train_osh(traingist, trainlabels, opts);
 		
 		% test models
-		n = floor(opts.noTrainingPoints/opts.test_interval);
+		n = ceil(opts.noTrainingPoints/opts.test_interval);
 		mAP = zeros(opts.ntrials, n);
 		bitflips = zeros(opts.ntrials, n);
 		train_time = zeros(opts.ntrials, n);
 		for t = 1:opts.ntrials
 			for i = 1:n
-				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i*opts.test_interval);
-				d = load(F);
+				try
+					F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i*opts.test_interval);
+					d = load(F);
+				catch
+					% final model, if not the same as the last *_iter%d.mat
+					d = load(sprintf('%s/trial%d.mat', opts.expdir, t));
+				end
 				W = d.W;
 				Y = d.Y;
 				tY = 2*single(W'*testgist' > 0)-1;

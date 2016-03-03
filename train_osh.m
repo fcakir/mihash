@@ -163,7 +163,7 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 	%   stepsizes - SGD step sizes (1 per point) for current batch
 	% output: 
 	%   updated W
-	if opts.SGDBoost == 0
+	if SGDBoost == 0
 		% hinge loss version
 		for i = 1:size(points, 1)
 			xi = points(i, :);
