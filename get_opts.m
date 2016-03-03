@@ -21,6 +21,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('update_interval', 200, @isscalar); % update index structure
 	ip.addParamValue('test_interval', 200, @isscalar);   % save intermediate model
+	ip.addParamValue('test_frac', 1, @isscalar);         % for faster testing
 	ip.addParamValue('samplesize', 200, @isscalar);      % reservoir size
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	
@@ -35,6 +36,7 @@ function opts = get_opts(dataset, nbits, varargin)
 
 	% assertions
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
+	assert(test_frac > 0);
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 

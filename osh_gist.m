@@ -17,9 +17,9 @@ function osh_gist(dataset, nbits, varargin)
 		% load GIST data
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = ...
 			load_gist(dataset, opts);
-		% hack, TODO: remove for serious experiments
-		if strcmp(dataset, 'nus')
-			idx = 1:round(size(testgist, 1)/5);
+		if opts.test_frac < 1
+			myLogInfo('! only testing first %d%%', round(opts.test_frac*100));
+			idx = 1:round(size(testgist, 1)*opts.test_frac);
 			testgist = testgist(idx, :);
 			cateTrainTest = cateTrainTest(:, idx);
 		end
