@@ -22,17 +22,25 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('update_interval', 50, @isscalar);  % update index structure
-	ip.addParamValue('test_interval', 200, @isscalar);  % save intermediate model
-	ip.addParamValue('samplesize', 200, @isscalar);  % reservoir size
-	ip.addParamValue('lambda', 0.1, @isscalar);  % regularization weight
+	ip.addParamValue('test_interval', 200, @isscalar);   % save intermediate model
+	ip.addParamValue('samplesize', 200, @isscalar);      % reservoir size
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
-	ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
+	
+	%ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
+	ip.addParamValue('reg_rs', true, @islogical);
+	ip.addParamValue('reg_maxent', false, @islogical);
+	ip.addParamValue('reg_smooth', false, @islogical);
+	ip.addParamValue('lambda', 0.1, @isscalar);  % reservoir reg. weight
+	ip.addParamValue('gamma', 0.1, @isscalar);  % max entropy reg. weight
+	
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
 
 	% assertions
 	assert(opts.lambda>0, ['opts.lambda = ', opts.lambda]);
+	assert(opts.gamma>0,  ['opts.gamma = ', opts.gamma]);
+	assert(~(opts.reg_maxent & opts.reg_smooth));  % can't have both
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
@@ -47,9 +55,16 @@ function opts = get_opts(dataset, nbits, varargin)
 	opts.identifier = sprintf('%s-%dbit-%s-r%d-st%g-u%dt%d', ...
 		opts.dataset, opts.nbits, opts.mapping, opts.randseed, opts.stepsize, ...
 		opts.update_interval, opts.test_interval);
-	if strcmp(opts.exp, 'rs')
+	%if strcmp(opts.exp, 'rs')
+	if opts.reg_rs
 		opts.identifier = sprintf('%s-RS%dL%g', opts.identifier, ...
 			opts.samplesize, opts.lambda);
+	end
+	if opts.reg_maxent
+		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.gamma);
+	end
+	if opts.reg_smooth
+		; %TODO
 	end
 
 	% set expdir

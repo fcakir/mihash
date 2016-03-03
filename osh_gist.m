@@ -25,13 +25,7 @@ function osh_gist(dataset, nbits, varargin)
 		end
 
 		% ONLINE LEARNING
-		if strcmp(opts.exp, 'baseline')
-			train_osh(traingist, trainlabels, opts);  % baseline
-		elseif strcmp(opts.exp, 'rs')
-			train_osh_rs(traingist, trainlabels, opts);  % with reservoir regularizer
-		else 
-			error(['unknown opts.exp = ' opts.exp]);
-		end
+		train_osh(traingist, trainlabels, opts);
 		
 		% test models
 		n = floor(opts.noTrainingPoints/opts.test_interval);
