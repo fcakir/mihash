@@ -8,9 +8,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	%  update_interval (int) update hash table
 	%  test_interval (int) save/test intermediate model
 	%  sampleratio (float) reservoir size, % of training set
-	%  lambda (float) weight of regularization
 	%  localdir (string) where to save stuff
-	%  exp (string) experiment type {'baseline', 'RS', 'L1L2'}
 	% 
 	ip = inputParser;
 	% default values
@@ -21,26 +19,22 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('stepsize', 0.2, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
-	ip.addParamValue('update_interval', 50, @isscalar);  % update index structure
+	ip.addParamValue('update_interval', 200, @isscalar); % update index structure
 	ip.addParamValue('test_interval', 200, @isscalar);   % save intermediate model
 	ip.addParamValue('samplesize', 200, @isscalar);      % reservoir size
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	
 	%ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
-	ip.addParamValue('reg_rs', true, @islogical);
-	ip.addParamValue('reg_maxent', false, @islogical);
-	ip.addParamValue('reg_smooth', false, @islogical);
-	ip.addParamValue('lambda', 0.1, @isscalar);  % reservoir reg. weight
-	ip.addParamValue('gamma', 0.1, @isscalar);  % max entropy reg. weight
+	ip.addParamValue('reg_rs', -1, @isscalar);     % reservoir reg. weight
+	ip.addParamValue('reg_maxent', -1, @isscalar); % max entropy reg. weight
+	ip.addParamValue('reg_smooth', -1, @isscalar); % smoothness reg. weight
 	
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
 
 	% assertions
-	assert(opts.lambda>0, ['opts.lambda = ', opts.lambda]);
-	assert(opts.gamma>0,  ['opts.gamma = ', opts.gamma]);
-	assert(~(opts.reg_maxent & opts.reg_smooth));  % can't have both
+	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
@@ -56,14 +50,14 @@ function opts = get_opts(dataset, nbits, varargin)
 		opts.dataset, opts.nbits, opts.mapping, opts.randseed, opts.stepsize, ...
 		opts.update_interval, opts.test_interval);
 	%if strcmp(opts.exp, 'rs')
-	if opts.reg_rs
+	if opts.reg_rs > 0
 		opts.identifier = sprintf('%s-RS%dL%g', opts.identifier, ...
-			opts.samplesize, opts.lambda);
+			opts.samplesize, opts.reg_rs);
 	end
-	if opts.reg_maxent
-		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.gamma);
+	if opts.reg_maxent > 0
+		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
-	if opts.reg_smooth
+	if opts.reg_smooth > 0
 		; %TODO
 	end
 

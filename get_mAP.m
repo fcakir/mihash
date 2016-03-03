@@ -7,6 +7,7 @@ function mAP = get_mAP(cateTrainTest, Y, tY)
 	parfor j = 1:testsize
 		labels = 2*double(cateTrainTest(:,j))-1;
 		[~, ~, info] = vl_pr(labels, sim(:,j));
+		AP(j) = info.ap;
 	end
 	AP = AP(~isnan(AP));  % for NUSWIDE
 

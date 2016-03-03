@@ -1,6 +1,5 @@
 function train_osh(traingist, trainlabels, opts)
-	% online supervised hashing
-	% regularization term defined on reservoir samples
+	% online (semi-)supervised hashing
 	
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
@@ -35,20 +34,20 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 	% init
 	[W, Y, ECOCs] = init_osh(traingist, opts);
+	ntrain_all    = size(traingist, 1);
 	bitflips      = 0;  bitflips_res  = 0;
 	train_time    = 0;  update_time   = 0;
 
 	% deal with regularizers
-	if opts.reg_reservoir
+	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
-		ntrain_all     = size(traingist, 1);
 		reservoir_size = opts.samplesize; %ceil(opts.sampleratio*ntrain_all);
 		samplegist     = zeros(reservoir_size, size(traingist, 2));
 		samplelabel    = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
 		Yres           = [];  % mapped binary codes for the reservoir
 	end
-	if opts.reg_maxent
+	if opts.reg_maxent > 0
 		% use max entropy regularizer
 		num_unlabeled = 0;
 		U = zeros(size(traingist, 2));
@@ -64,20 +63,20 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 		if sum(slabel) > 0  % labeled: assign target code(s)
 			isLabeled = true;
-			[target_codes, M_ecoc, i_ecoc] = find_target_codes(slabel, seenLabels, ...
-				ECOCs, M_ecoc, i_ecoc);
+			[target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
+				slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
 		else  % unlabeled
 			isLabeled = false;
-			if opts.reg_maxent  % update maxent regularizer
+			if opts.reg_maxent > 0  % update maxent regularizer
 				U = U*num_unlabeled + spoint'*spoint;
 				num_unlabeled = num_unlabeled + 1;
 				U = U/num_unlabeled;
-			elseif opts.reg_smooth
+			elseif opts.reg_smooth > 0
 				; %TODO
 			end
 		end
 
-		if opts.reg_reservoir  % reservoir update
+		if opts.reg_rs > 0  % reservoir update
 			[samplegist, samplelabel, priority_queue] = update_reservoir(...
 				samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size);
 			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M_ecoc, opts)';
@@ -96,21 +95,18 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				W = sgd_update_hinge(W, spoint, code, opts.stepsize);
 			end
 		end
-
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
-		if opts.reg_reservoir  &&  i > reservoir_size
-			stepsizes = ones(reservoir_size,1)*opts.lambda*opts.stepsize/reservoir_size;
+		if opts.reg_rs > 0  &&  i > reservoir_size
+			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
 			W = sgd_update_hinge(W, samplegist, Yres, stepsizes);
 		end
-
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
 		% either max entropy or smoothness, but not both
-		if opts.reg_maxent  &&  num_unlabeled > 10
-			W = W - opts.gamma * U * W;
-		elseif opts.reg_smooth
+		if opts.reg_maxent > 0  &&  num_unlabeled > 10
+			W = W - opts.reg_maxent * U * W;
+		elseif opts.reg_smooth > 0
 			; %TODO
 		end
-
 		train_time = train_time + toc(t_);
 
 		% hash index update
@@ -136,9 +132,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		end
 	end % end for
 	bitflips = bitflips/ntrain_all;
-	if opts.reg_reservoir
+	if opts.reg_rs > 0
 		bitflips_res = bitflips_res/reservoir_size;
-		myLogInfo('Trial %02d. bitflips_res = %g', bitflips_res);
+		myLogInfo('Trial %02d. bitflips_res = %g', trialNo, bitflips_res);
+	end
+	if opts.reg_maxent > 0
+		myLogInfo('Trial %02d. %d labeled, %d unlabeled. reg_maxent = %g', ...
+			trialNo, opts.noTrainingPoints-num_unlabeled, num_unlabeled, opts.reg_maxent);
 	end
 
 	% populate hash table
@@ -154,6 +154,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 end
 
 % -----------------------------------------------------------
+% SGD mini-batch update
 function W = sgd_update_hinge(W, points, codes, stepsizes)
 	% input: 
 	%   W         - D*nbits matrix, each col is a hyperplane
@@ -174,9 +175,10 @@ function W = sgd_update_hinge(W, points, codes, stepsizes)
 end
 
 % -----------------------------------------------------------
+% initialize online hashing
 function [W, Y, ECOCs] = init_osh(traingist, opts, bigM)
 	% randomly generate candidate codewords, store in ECOCs
-	if nagin < 3, bigM = 10000; end
+	if nargin < 3, bigM = 10000; end
 	ECOCs = zeros(bigM, opts.nbits);
 	for t = 1:opts.nbits
 		r = ones(bigM, 1);
@@ -195,13 +197,14 @@ function [W, Y, ECOCs] = init_osh(traingist, opts, bigM)
 end
 
 % -----------------------------------------------------------
-function [target_codes, M_ecoc, i_ecoc] = find_target_codes(slabel, seenLabels, ...
-		ECOCs, M_ecoc, i_ecoc);
+% find target codes for a new labeled example
+function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
+		slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
 	assert(sum(slabel) ~= 0, 'Error: finding target codes for unlabeled example');
 
-	if length(slabel) == 1  % single-label dataset
-		islabel = find(seenLabels == slabel);
-		if isempty(islabel)
+	if numel(slabel) == 1  % single-label dataset
+		ind = find(seenLabels == slabel);
+		if isempty(ind)
 			if isempty(seenLabels)
 				% does not exist, create a binary code for M_ecoc
 				seenLabels = slabel;
@@ -214,31 +217,31 @@ function [target_codes, M_ecoc, i_ecoc] = find_target_codes(slabel, seenLabels, 
 				i_ecoc = i_ecoc +1;
 			end
 		end
-		islabel = find(seenLabels == slabel);
-	else  % multi-label dataset
-		if isempty(seenLabels), 
+		ind = find(seenLabels == slabel);
+	else  
+		% multi-label dataset
+		if isempty(seenLabels) 
+			assert(isempty(M_ecoc));
 			seenLabels = zeros(size(slabel)); 
+			M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
 		end
-
-		% if not all incoming labels are seen
-		inds = find(slabel == 1);
-		seen = seenLabels(inds);
-		if sum(seen) < length(seenLabels)
-			seenLabels(inds) = 1;
-			for j = find(seen == 0)
-				M_ecoc = [M_ecoc; ECOCs(inds(j), :)];
-				% TODO
-				indexRank(i_ecoc) = inds(j);
-				i_ecoc = i_ecoc+1;
+		% find incoming labels that are unseen
+		unseen = find((slabel==1) & (seenLabels==0));
+		if ~isempty(unseen)
+			for j = unseen
+				M_ecoc(j, :) = ECOCs(i_ecoc, :);
+				i_ecoc = i_ecoc + 1;
 			end
+			seenLabels(unseen) = 1;
 		end
-		islabel = find(ismember(indexRank, inds));
+		ind = find(slabel==1);
 	end
 	% find/assign target codes
-	target_codes = M_ecoc(islabel, :);
+	target_codes = M_ecoc(ind, :);
 end
 
 % -----------------------------------------------------------
+% reservoir sampling, update step
 function [samplegist, samplelabel, priority_queue] = update_reservoir(...
 		samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size)
 	% reservoir update (based on random sort)
