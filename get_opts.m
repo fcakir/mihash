@@ -36,7 +36,7 @@ function opts = get_opts(dataset, nbits, varargin)
 
 	% assertions
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
-	assert(test_frac > 0);
+	assert(opts.test_frac > 0);
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
