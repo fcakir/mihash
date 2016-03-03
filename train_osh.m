@@ -5,7 +5,7 @@ function train_osh(traingist, trainlabels, opts)
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
-	parfor t = 1:opts.ntrials
+	for t = 1:opts.ntrials
 		myLogInfo('%s: random trial %d', opts.identifier, t);
 		[train_time(t), update_time(t), bit_flips(t)] = train_sgd(...
 			traingist, trainlabels, opts, t);
@@ -148,9 +148,7 @@ function [train_time, update_time, bitflips] = train_sgd(traingist, trainlabels,
 
 		% cache intermediate model to disk for future testing
 		if ~mod(i, opts.test_interval)
-			if isempty(Y)
-				Y = 2*single(W'*traingist' > 0)-1;
-			end
+            Y = build_hash_table(W, traingist, trainlabels, classLabels, M_ecoc, opts); 
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
 			save(savefile, 'W', 'Y', 'bitflips', 'train_time', 'update_time');
 			unix(['chmod o-w ' savefile]);  % matlab permission bug

@@ -28,8 +28,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('lambda', 0.1, @isscalar);  % regularization weight
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
 	ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
-    ip.addParamValue('noTrainingPoints',2000,@isscalar);
-    ip.addParamValue('override',0,@isscalar);
+    ip.addParamValue('noTrainingPoints', 2000, @isscalar);
+    ip.addParamValue('override', 0, @isscalar);
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
