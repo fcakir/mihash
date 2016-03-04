@@ -26,4 +26,7 @@ function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts)
 			Y(:,ind) = repmat(cw, 1,length(ind));
 		end
 	end
+
+	% convert to logical
+	Y = (Y > 0);
 end

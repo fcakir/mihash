@@ -9,7 +9,7 @@ function osh_gist(dataset, nbits, varargin)
 	opts = get_opts(dataset, nbits, varargin{:});  % set parameters
 
 	%mAPfn = sprintf('%s/mAP_t%d.mat', opts.expdir, opts.test_interval);
-	mAPfn = sprintf('%s/mAP_%dtests', opts.expdir, opts.ntests);
+	mAPfn = sprintf('%s/mAP_%dtrials_%dtests', opts.expdir, opts.ntrials, opts.ntests);
 	if opts.test_frac < 1
 		mAPfn = sprintf('%s_frac%g', mAPfn);
 	end
@@ -38,12 +38,12 @@ function osh_gist(dataset, nbits, varargin)
 		train_time = zeros(opts.ntrials, n);
 		for t = 1:opts.ntrials
 			trial_model = load(sprintf('%s/trial%d.mat', opts.expdir, t));
-			for i = 1:trial_model.test_iters
+			for i = trial_model.test_iters
 				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i);
 				d = load(F);
 				W = d.W;
-				Y = d.H;
-				tY = 2*single(W'*testgist' > 0)-1;
+				Y = d.H;  % NOTE: logical
+				tY = (W'*testgist' > 0);
 		
 				% NOTE: get_mAP() uses parfor
 				fprintf('Trial %d, Iter %d, ', t, i);

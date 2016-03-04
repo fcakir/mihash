@@ -47,15 +47,15 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	% init
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
 	ntrain_all    = size(Xtrain, 1);
-	bitflips      = 0;  bitflips_res  = 0;
-	train_time    = 0;  update_time   = 0;
+	bitflips      = 0;   bitflips_res = 0;
+	train_time    = 0;   update_time  = 0;
 
 	% deal with regularizers
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
-		reservoir_size = opts.samplesize; %ceil(opts.sampleratio*ntrain_all);
-		Xsample     = zeros(reservoir_size, size(Xtrain, 2));
-		Ysample    = zeros(reservoir_size, 1);
+		reservoir_size = opts.samplesize;
+		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+		Ysample        = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
 	end
@@ -93,17 +93,10 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			[Xsample, Ysample, priority_queue] = update_reservoir(...
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, opts)';
-			%{
-			if ~isempty(Hres)
-				bitdiff = (Hres ~= Hnew);
-				bitflips_res = bitflips_res + sum(bitdiff(:));
-			end
-			Hres = Hnew;
-			%}
 			if isempty(Hres)
-				Hres = Hnew; update_table = true;
+				Hres = Hnew;  update_table = true;
 			else
-				bitdiff = (Hres ~= Hnew);
+				bitdiff = xor(Hres, Hew); %(Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
 				% signal update when:
 				% 1) using update_interval (for rs_baseline)
@@ -153,7 +146,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			t_ = tic;
 			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			if ~isempty(H)
-				bitdiff = (H ~= Hnew);
+				bitdiff = xor(H, Hew); %(H ~= Hnew);
 				bitflips = bitflips + sum(bitdiff(:))/ntrain_all;
 			end
 			H = Hnew;
@@ -174,7 +167,6 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	end % end for
 
 	if opts.reg_rs > 0
-		%bitflips_res = bitflips_res/reservoir_size;
 		myLogInfo('Trial %02d. bitflips_res = %g', trialNo, bitflips_res);
 	end
 	if opts.reg_maxent > 0
@@ -238,13 +230,13 @@ end
 function [W, H, ECOCs] = init_osh(Xtrain, opts, bigM)
 	% randomly generate candidate codewords, store in ECOCs
 	if nargin < 3, bigM = 10000; end
-	ECOCs = zeros(bigM, opts.nbits);
+	ECOCs = logical(zeros(bigM, opts.nbits));
 	for t = 1:opts.nbits
 		r = ones(bigM, 1);
-		while (abs(sum(r)) == bigM)
-			r = 2*randi([0,1], bigM, 1)-1;
+		while (sum(r)==bigM || sum(r)==0)
+			r = randi([0,1], bigM, 1);
 		end
-		ECOCs(:, t) = r;
+		ECOCs(:, t) = logical(r);
 	end
 	clear r
 
@@ -282,7 +274,7 @@ function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 		if isempty(seenLabels) 
 			assert(isempty(M_ecoc));
 			seenLabels = zeros(size(slabel)); 
-			M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
+			M_ecoc = logical(zeros(numel(slabel), size(ECOCs, 2)));
 		end
 		% find incoming labels that are unseen
 		unseen = find((slabel==1) & (seenLabels==0));
@@ -300,10 +292,9 @@ function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 end
 
 % -----------------------------------------------------------
-% reservoir sampling, update step
+% reservoir sampling, update step, based on random sort
 function [Xsample, Ysample, priority_queue] = update_reservoir(...
 		Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size)
-	% reservoir update (based on random sort)
 	if i <= reservoir_size
 		Xsample(i, :)     = spoint;
 		Ysample(i)        = slabel;

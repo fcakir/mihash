@@ -21,20 +21,20 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('stepsize', 0.1, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
-	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
-
+	ip.addParamValue('localdir', ...
+		'/research/object_detection/cachedir/online-hashing', @isstr);
 	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
 	ip.addParamValue('override', 0, @isscalar);
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations
 	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
-	ip.addParamValue('update_interval', 200, @isscalar); % use with baseline
-	ip.addParamValue('flip_thresh', 10, @isscalar); % use with reservoir
+	ip.addParamValue('update_interval', 100, @isscalar); % use with baseline
+	ip.addParamValue('flip_thresh', -1, @isscalar); % use with reservoir
 
 	% testing
-	ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
-	ip.addParamValue('test_frac', 1, @isscalar);         % for faster testing
+	%ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
+	ip.addParamValue('test_frac', 1, @isscalar);         % <1 for faster testing
 	ip.addParamValue('ntests', 10, @isscalar);
 	
 	%ip.addParamValue('exp', 'baseline', @isstr);   % baseline, rs, l1l2
@@ -52,13 +52,12 @@ function opts = get_opts(dataset, nbits, varargin)
 	% assertions
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
-	assert(opts.test_interval <= opts.noTrainingPoints, ... 
-		'test_interval should be smaller than \# of training points');
+	%assert(opts.test_interval <= opts.noTrainingPoints, ... 
+		%'test_interval should be smaller than \# of training points');
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
-		mkdir(opts.localdir); 
-		unix(['chmod g+rw ' opts.localdir]);
+		mkdir(opts.localdir);  unix(['chmod g+rw ' opts.localdir]);
 	end
 
 	% set randseed -- don't change the randseed if don't have to!
@@ -87,7 +86,7 @@ function opts = get_opts(dataset, nbits, varargin)
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
 	if opts.reg_smooth > 0
-		; %TODO
+		opts.identifier = sprintf('%s-SM%g', opts.identifier, opts.reg_smooth);
 	end
 
 	% set expdir
