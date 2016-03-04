@@ -54,8 +54,8 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
 		reservoir_size = opts.samplesize; %ceil(opts.sampleratio*ntrain_all);
-		samplegist     = zeros(reservoir_size, size(Xtrain, 2));
-		samplelabel    = zeros(reservoir_size, 1);
+		Xsample     = zeros(reservoir_size, size(Xtrain, 2));
+		Ysample    = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
 	end
@@ -90,9 +90,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 		update_table = false;
 		if opts.reg_rs > 0  % reservoir update
-			[samplegist, samplelabel, priority_queue] = update_reservoir(...
-				samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size);
-			Hnew = build_hash_table(W, samplegist, samplelabel, seenLabels, M_ecoc, opts)';
+			[Xsample, Ysample, priority_queue] = update_reservoir(...
+				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
+			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, opts)';
 			%{
 			if ~isempty(Hres)
 				bitdiff = (Hres ~= Hnew);
@@ -105,8 +105,11 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			else
 				bitdiff = (Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
-				% signal update when #bitflips > thresh
-				if bf_temp > opts.flip_thresh
+				% signal update when:
+				% 1) using update_interval (for rs_baseline)
+				% 2) #bitflips > thresh (for rs)
+				% NOTE: get_opts() already ensures only one scenario will happen
+				if opts.update_interval > 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					bitflips_res = bitflips_res + bf_temp;
 					update_table = true;
 					Hres = Hnew;
@@ -128,7 +131,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		if opts.reg_rs > 0  &&  i > reservoir_size
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-			W = sgd_update(W, samplegist, Hres, stepsizes, opts.SGDBoost);
+			W = sgd_update(W, Xsample, Hres, stepsizes, opts.SGDBoost);
 		end
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
@@ -298,12 +301,12 @@ end
 
 % -----------------------------------------------------------
 % reservoir sampling, update step
-function [samplegist, samplelabel, priority_queue] = update_reservoir(...
-		samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size)
+function [Xsample, Ysample, priority_queue] = update_reservoir(...
+		Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size)
 	% reservoir update (based on random sort)
 	if i <= reservoir_size
-		samplegist(i, :)  = spoint;
-		samplelabel(i)    = slabel;
+		Xsample(i, :)     = spoint;
+		Ysample(i)        = slabel;
 		priority_queue(i) = rand;
 	else
 		% pop max from priority queue
@@ -312,8 +315,8 @@ function [samplegist, samplelabel, priority_queue] = update_reservoir(...
 		if maxval > r
 			% push into priority queue
 			priority_queue(maxind) = r;
-			samplegist(maxind, :)  = spoint;
-			samplelabel(maxind)    = slabel;
+			Xsample(maxind, :)     = spoint;
+			Ysample(maxind)        = slabel;
 		end
 	end
 end

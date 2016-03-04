@@ -68,10 +68,18 @@ function opts = get_opts(dataset, nbits, varargin)
 	opts.identifier = sprintf('%s-%d%s-B%dst%g', opts.dataset, opts.nbits, ...
 		opts.mapping, opts.SGDBoost, opts.stepsize, opts.ntests);
 	if opts.reg_rs > 0
-		assert(opts.flip_thresh > 0);
-		opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
-			opts.samplesize, opts.reg_rs, opts.flip_thresh);
+		% reservoir: either use update_interval or flip_thresh, but not both
+		if opts.flip_thresh > 0
+			assert(opts.update_interval <= 0);
+			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
+				opts.samplesize, opts.reg_rs, opts.flip_thresh);
+		else
+			assert(opts.update_interval > 0);
+			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
+				opts.samplesize, opts.reg_rs, opts.update_interval);
+		end
 	else
+		% no reservoir (baseline): use update_interval
 		assert(opts.update_interval > 0);
 		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	end
