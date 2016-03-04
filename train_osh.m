@@ -6,8 +6,20 @@ function train_osh(traingist, trainlabels, opts)
 	bit_flips   = zeros(1, opts.ntrials);
 	parfor t = 1:opts.ntrials
 		myLogInfo('%s: random trial %d', opts.identifier, t);
+
+		% randomly set test iteration numbers (to better mimic real scenarios)
+		% tests at 1, end, and around the endpoints of every interval
+		test_iters = [];
+		interval = round(opts.noTrainingPoints/(opts.ntests-1));
+		for i = 1:opts.ntests-2
+			iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
+			test_iters = [test_iters, iter];
+		end
+		test_iters = [1, test_iters, opts.noTrainingPoints];
+
+		% do SGD optimization
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
-			traingist, trainlabels, opts, t);
+			traingist, trainlabels, testiter, opts, t);
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
@@ -17,7 +29,7 @@ end
 
 % -------------------------------------------------------------
 function [train_time, update_time, bitflips] = sgd_optim(...
-		traingist, trainlabels, opts, trialNo)
+		traingist, trainlabels, test_iters, opts, trialNo)
 	% optimization via SGD
 	
 	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
@@ -76,18 +88,35 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			end
 		end
 
+		update_table = false;
 		if opts.reg_rs > 0  % reservoir update
 			[samplegist, samplelabel, priority_queue] = update_reservoir(...
 				samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size);
 			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M_ecoc, opts)';
+			%{
 			if ~isempty(Yres)
 				bitdiff = (Yres ~= Ynew);
 				bitflips_res = bitflips_res + sum(bitdiff(:));
 			end
 			Yres = Ynew;
+			%}
+			if isempty(Yres)
+				Yres = Ynew; update_table = true;
+			else
+				bitdiff = (Yres ~= Ynew);
+				bf_temp = sum(bitdiff(:))/reservoir_size;
+				% signal update when #bitflips > thresh
+				if bf_temp > opts.flip_thresh
+					bitflips_res = bitflips_res + bf_temp;
+					update_table = true;
+					Yres = Ynew;
+				end
+			end
 		end
 
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash function update
+
 		% SGD-1. update W wrt. loss term(s)
 		if isLabeled
 			for c = 1:size(target_codes, 1)
@@ -95,11 +124,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost);
 			end
 		end
+
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		if opts.reg_rs > 0  &&  i > reservoir_size
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
 			W = sgd_update(W, samplegist, Yres, stepsizes, opts.SGDBoost);
 		end
+
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
 		% either max entropy or smoothness, but not both
 		if opts.reg_maxent > 0  &&  num_unlabeled > 10
@@ -109,20 +140,27 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		end
 		train_time = train_time + toc(t_);
 
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
-		if strcmp(opts.mapping, 'smooth') && ~mod(i, opts.update_interval)
+		if opts.reg_rs <= 0
+			% NOTE: if using reservoir, update_table is already set.
+			update_table = ~mod(i, opts.update_interval);
+		end
+		if strcmp(opts.mapping, 'smooth') && update_table
 			t_ = tic;
 			Ynew = build_hash_table(W, traingist, trainlabels, seenLabels, M_ecoc, opts);
 			if ~isempty(Y)
 				bitdiff = (Y ~= Ynew);
-				bitflips = bitflips + sum(bitdiff(:));
+				bitflips = bitflips + sum(bitdiff(:))/ntrain_all;
 			end
 			Y = Ynew;
 			update_time = update_time + toc(t_);
 		end
 
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% cache intermediate model to disk
-		if ~mod(i, opts.test_interval)
+		%if ~mod(i, opts.test_interval)
+		if ismember(i, test_iters)
 			if isempty(Y)
 				Y = build_hash_table(W, traingist, trainlabels, seenLabels, M_ecoc, opts);
 			end
@@ -131,9 +169,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
 	end % end for
-	bitflips = bitflips/ntrain_all;
+
 	if opts.reg_rs > 0
-		bitflips_res = bitflips_res/reservoir_size;
+		%bitflips_res = bitflips_res/reservoir_size;
 		myLogInfo('Trial %02d. bitflips_res = %g', trialNo, bitflips_res);
 	end
 	if opts.reg_maxent > 0
@@ -149,7 +187,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		trialNo, train_time, update_time);
 
 	% save final model, etc
-	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time');
+	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time', 'test_iters');
 	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
 end
 

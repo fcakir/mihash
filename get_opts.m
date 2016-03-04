@@ -19,20 +19,30 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('stepsize', 0.2, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
-	ip.addParamValue('update_interval', 200, @isscalar); % update index structure
-	ip.addParamValue('test_interval', 200, @isscalar);   % save intermediate model
-	ip.addParamValue('test_frac', 1, @isscalar);         % for faster testing
-	ip.addParamValue('samplesize', 200, @isscalar);      % reservoir size
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
+
+	% controling when to update hash table
+	% default: save every opts.update_interval iterations
+	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
+	ip.addParamValue('update_interval', 200, @isscalar); % use with baseline
+	ip.addParamValue('flip_thresh', -1, @isscalar); % use with reservoir
+
+	% testing
+	ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
+	ip.addParamValue('test_frac', 1, @isscalar);         % for faster testing
+	ip.addParamValue('ntests', 10, @isscalar);
 	
-	%ip.addParamValue('exp', 'baseline', @isstr);  % baseline, rs, l1l2
-	ip.addParamValue('reg_rs', -1, @isscalar);     % reservoir reg. weight
-	ip.addParamValue('reg_maxent', -1, @isscalar); % max entropy reg. weight
-	ip.addParamValue('reg_smooth', -1, @isscalar); % smoothness reg. weight
+	%ip.addParamValue('exp', 'baseline', @isstr);   % baseline, rs, l1l2
+	ip.addParamValue('samplesize', 200, @isscalar); % reservoir size
+	ip.addParamValue('reg_rs', -1, @isscalar);      % reservoir reg. weight
+	ip.addParamValue('reg_maxent', -1, @isscalar);  % max entropy reg. weight
+	ip.addParamValue('reg_smooth', -1, @isscalar);  % smoothness reg. weight
 	
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	% assertions
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both

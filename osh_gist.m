@@ -8,10 +8,14 @@ function osh_gist(dataset, nbits, varargin)
 	if nargin < 2, nbits = 8; end
 	opts = get_opts(dataset, nbits, varargin{:});  % set parameters
 
-	mAPfn = sprintf('%s/mAP_t%d.mat', opts.expdir, opts.test_interval);
+	%mAPfn = sprintf('%s/mAP_t%d.mat', opts.expdir, opts.test_interval);
+	mAPfn = sprintf('%s/mAP_%dtests', opts.expdir, opts.ntests);
+	if opts.test_frac < 1
+		mAPfn = sprintf('%s_frac%g', mAPfn);
+	end
 	try 
 		% load experiment results
-		load(mAPfn);
+		load([mAPfn '.mat']);
 		myLogInfo(['Results loaded: ' mAPfn]);
 	catch
 		% load GIST data
@@ -28,19 +32,17 @@ function osh_gist(dataset, nbits, varargin)
 		train_osh(traingist, trainlabels, opts);
 		
 		% test models
-		n = ceil(opts.noTrainingPoints/opts.test_interval);
+		% TODO
+		%n = ceil(opts.noTrainingPoints/opts.test_interval);
+		n = opts.ntests;
 		mAP = zeros(opts.ntrials, n);
 		bitflips = zeros(opts.ntrials, n);
 		train_time = zeros(opts.ntrials, n);
 		for t = 1:opts.ntrials
-			for i = 1:n
-				try
-					F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i*opts.test_interval);
-					d = load(F);
-				catch
-					% final model, if not the same as the last *_iter%d.mat
-					d = load(sprintf('%s/trial%d.mat', opts.expdir, t));
-				end
+			trial_model = load(sprintf('%s/trial%d.mat', opts.expdir, t));
+			for i = 1:trial_model.test_iters
+				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i*opts.test_interval);
+				d = load(F);
 				W = d.W;
 				Y = d.Y;
 				tY = 2*single(W'*testgist' > 0)-1;
@@ -51,7 +53,7 @@ function osh_gist(dataset, nbits, varargin)
 				train_time(t, i) = d.train_time;
 			end
 		end
-		save(mAPfn, 'mAP', 'bitflips', 'train_time');
+		save([mAPfn '.mat'], 'mAP', 'bitflips', 'train_time');
 		myLogInfo(['Results saved: ' mAPfn]);
 	end
 	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
