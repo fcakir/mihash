@@ -17,8 +17,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('dataset', dataset, @isstr);
 	ip.addParamValue('nbits', nbits, @isscalar);
 	ip.addParamValue('mapping', 'smooth', @isstr);
-	ip.addParamValue('ntrials', 10, @isscalar);
-	ip.addParamValue('stepsize', 0.2, @isscalar);
+	ip.addParamValue('ntrials', 5, @isscalar);
+	ip.addParamValue('stepsize', 0.1, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
@@ -65,7 +65,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%d%s-B%dst%g', opts.dataset, opts.nbits, ...
+	opts.identifier = sprintf('%s-%d%s-B%dst%g-T%d', opts.dataset, opts.nbits, ...
 		opts.mapping, opts.SGDBoost, opts.stepsize, opts.ntests);
 	if opts.reg_rs > 0
 		% reservoir: either use update_interval or flip_thresh, but not both
@@ -81,7 +81,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	else
 		% no reservoir (baseline): use update_interval
 		assert(opts.update_interval > 0);
-		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
+		opts.identifier = sprintf('%sU%d', opts.identifier, opts.update_interval);
 	end
 	if opts.reg_maxent > 0
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);

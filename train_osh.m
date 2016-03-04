@@ -19,7 +19,7 @@ function train_osh(Xtrain, Ytrain, opts)
 
 		% do SGD optimization
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
-			Xtrain, Ytrain, testiter, opts, t);
+			Xtrain, Ytrain, test_iters, opts, t);
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')

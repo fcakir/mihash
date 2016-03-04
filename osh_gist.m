@@ -39,10 +39,10 @@ function osh_gist(dataset, nbits, varargin)
 		for t = 1:opts.ntrials
 			trial_model = load(sprintf('%s/trial%d.mat', opts.expdir, t));
 			for i = 1:trial_model.test_iters
-				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i*opts.test_interval);
+				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i);
 				d = load(F);
 				W = d.W;
-				Y = d.Y;
+				Y = d.H;
 				tY = 2*single(W'*testgist' > 0)-1;
 		
 				% NOTE: get_mAP() uses parfor
