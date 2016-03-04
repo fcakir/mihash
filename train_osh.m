@@ -1,4 +1,4 @@
-function train_osh(traingist, trainlabels, opts)
+function train_osh(Xtrain, Ytrain, opts)
 	% online (semi-)supervised hashing
 	
 	train_time  = zeros(1, opts.ntrials);
@@ -19,7 +19,7 @@ function train_osh(traingist, trainlabels, opts)
 
 		% do SGD optimization
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
-			traingist, trainlabels, testiter, opts, t);
+			Xtrain, Ytrain, testiter, opts, t);
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
@@ -29,7 +29,7 @@ end
 
 % -------------------------------------------------------------
 function [train_time, update_time, bitflips] = sgd_optim(...
-		traingist, trainlabels, test_iters, opts, trialNo)
+		Xtrain, Ytrain, test_iters, opts, trialNo)
 	% optimization via SGD
 	
 	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
@@ -45,8 +45,8 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	end
 
 	% init
-	[W, Y, ECOCs] = init_osh(traingist, opts);
-	ntrain_all    = size(traingist, 1);
+	[W, H, ECOCs] = init_osh(Xtrain, opts);
+	ntrain_all    = size(Xtrain, 1);
 	bitflips      = 0;  bitflips_res  = 0;
 	train_time    = 0;  update_time   = 0;
 
@@ -54,15 +54,15 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
 		reservoir_size = opts.samplesize; %ceil(opts.sampleratio*ntrain_all);
-		samplegist     = zeros(reservoir_size, size(traingist, 2));
+		samplegist     = zeros(reservoir_size, size(Xtrain, 2));
 		samplelabel    = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
-		Yres           = [];  % mapped binary codes for the reservoir
+		Hres           = [];  % mapped binary codes for the reservoir
 	end
 	if opts.reg_maxent > 0
 		% use max entropy regularizer
 		num_unlabeled = 0;
-		U = zeros(size(traingist, 2));
+		U = zeros(size(Xtrain, 2));
 	end
 
 	% SGD iterations
@@ -70,8 +70,8 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;  
 		% new training point
-		spoint = traingist(i, :);
-		slabel = trainlabels(i, :);
+		spoint = Xtrain(i, :);
+		slabel = Ytrain(i, :);
 
 		if sum(slabel) > 0  % labeled: assign target code(s)
 			isLabeled = true;
@@ -92,24 +92,24 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		if opts.reg_rs > 0  % reservoir update
 			[samplegist, samplelabel, priority_queue] = update_reservoir(...
 				samplegist, samplelabel, priority_queue, spoint, slabel, i, reservoir_size);
-			Ynew = build_hash_table(W, samplegist, samplelabel, seenLabels, M_ecoc, opts)';
+			Hnew = build_hash_table(W, samplegist, samplelabel, seenLabels, M_ecoc, opts)';
 			%{
-			if ~isempty(Yres)
-				bitdiff = (Yres ~= Ynew);
+			if ~isempty(Hres)
+				bitdiff = (Hres ~= Hnew);
 				bitflips_res = bitflips_res + sum(bitdiff(:));
 			end
-			Yres = Ynew;
+			Hres = Hnew;
 			%}
-			if isempty(Yres)
-				Yres = Ynew; update_table = true;
+			if isempty(Hres)
+				Hres = Hnew; update_table = true;
 			else
-				bitdiff = (Yres ~= Ynew);
+				bitdiff = (Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
 				% signal update when #bitflips > thresh
 				if bf_temp > opts.flip_thresh
 					bitflips_res = bitflips_res + bf_temp;
 					update_table = true;
-					Yres = Ynew;
+					Hres = Hnew;
 				end
 			end
 		end
@@ -128,7 +128,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		if opts.reg_rs > 0  &&  i > reservoir_size
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-			W = sgd_update(W, samplegist, Yres, stepsizes, opts.SGDBoost);
+			W = sgd_update(W, samplegist, Hres, stepsizes, opts.SGDBoost);
 		end
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
@@ -148,12 +148,12 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		end
 		if strcmp(opts.mapping, 'smooth') && update_table
 			t_ = tic;
-			Ynew = build_hash_table(W, traingist, trainlabels, seenLabels, M_ecoc, opts);
-			if ~isempty(Y)
-				bitdiff = (Y ~= Ynew);
+			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+			if ~isempty(H)
+				bitdiff = (H ~= Hnew);
 				bitflips = bitflips + sum(bitdiff(:))/ntrain_all;
 			end
-			Y = Ynew;
+			H = Hnew;
 			update_time = update_time + toc(t_);
 		end
 
@@ -161,11 +161,11 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% cache intermediate model to disk
 		%if ~mod(i, opts.test_interval)
 		if ismember(i, test_iters)
-			if isempty(Y)
-				Y = build_hash_table(W, traingist, trainlabels, seenLabels, M_ecoc, opts);
+			if isempty(H)
+				H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			end
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
-			save(savefile, 'W', 'Y', 'bitflips', 'train_time', 'update_time');
+			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
 	end % end for
@@ -181,13 +181,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 	% populate hash table
 	t_ = tic;
-	Y = build_hash_table(W, traingist, trainlabels, seenLabels, M_ecoc, opts);
+	H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 	update_time = update_time + toc(t_);
 	myLogInfo('Trial %02d. SGD: %.2f sec, Hashtable update: %.2f sec', ...
 		trialNo, train_time, update_time);
 
 	% save final model, etc
-	save([prefix '.mat'], 'W', 'Y', 'bitflips', 'train_time', 'update_time', 'test_iters');
+	save([prefix '.mat'], 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
 	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
 end
 
@@ -232,7 +232,7 @@ end
 
 % -----------------------------------------------------------
 % initialize online hashing
-function [W, Y, ECOCs] = init_osh(traingist, opts, bigM)
+function [W, H, ECOCs] = init_osh(Xtrain, opts, bigM)
 	% randomly generate candidate codewords, store in ECOCs
 	if nargin < 3, bigM = 10000; end
 	ECOCs = zeros(bigM, opts.nbits);
@@ -246,10 +246,10 @@ function [W, Y, ECOCs] = init_osh(traingist, opts, bigM)
 	clear r
 
 	% initialize with LSH
-	d = size(traingist, 2);
+	d = size(Xtrain, 2);
 	W = randn(d, opts.nbits);
 	W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-	Y = [];  % the indexing structure
+	H = [];  % the indexing structure
 end
 
 % -----------------------------------------------------------
