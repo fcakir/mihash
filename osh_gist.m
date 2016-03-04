@@ -22,7 +22,7 @@ function osh_gist(dataset, nbits, varargin)
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = ...
 			load_gist(dataset, opts);
 		if opts.test_frac < 1
-			myLogInfo('! only testing first %d%%', round(opts.test_frac*100));
+			myLogInfo('! only testing first %g%%', opts.test_frac*100);
 			idx = 1:round(size(testgist, 1)*opts.test_frac);
 			testgist = testgist(idx, :);
 			cateTrainTest = cateTrainTest(:, idx);
@@ -32,11 +32,9 @@ function osh_gist(dataset, nbits, varargin)
 		train_osh(traingist, trainlabels, opts);
 		
 		% test models
-		% TODO
-		%n = ceil(opts.noTrainingPoints/opts.test_interval);
-		n = opts.ntests;
-		mAP = zeros(opts.ntrials, n);
-		bitflips = zeros(opts.ntrials, n);
+		n          = opts.ntests;
+		mAP        = zeros(opts.ntrials, n);
+		bitflips   = zeros(opts.ntrials, n);
 		train_time = zeros(opts.ntrials, n);
 		for t = 1:opts.ntrials
 			trial_model = load(sprintf('%s/trial%d.mat', opts.expdir, t));
@@ -48,6 +46,7 @@ function osh_gist(dataset, nbits, varargin)
 				tY = 2*single(W'*testgist' > 0)-1;
 		
 				% NOTE: get_mAP() uses parfor
+				fprintf('Trial %d, Iter %d, ', t, i);
 				mAP(t, i) = get_mAP(cateTrainTest, Y, tY);
 				bitflips(t, i) = d.bitflips;
 				train_time(t, i) = d.train_time;

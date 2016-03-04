@@ -34,7 +34,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	
 	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
 	noexist = 0;
-	for i = 1:floor(opts.noTrainingPoints/opts.test_interval)
+	for i = test_iters
 		if ~exist(sprintf('%s_iter%d.mat', prefix, i), 'file')
 			noexist = noexist + 1;
 		end

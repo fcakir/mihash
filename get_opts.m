@@ -25,7 +25,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	% default: save every opts.update_interval iterations
 	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
 	ip.addParamValue('update_interval', 200, @isscalar); % use with baseline
-	ip.addParamValue('flip_thresh', -1, @isscalar); % use with reservoir
+	ip.addParamValue('flip_thresh', 10, @isscalar); % use with reservoir
 
 	% testing
 	ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
@@ -58,13 +58,15 @@ function opts = get_opts(dataset, nbits, varargin)
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%d%s-B%dst%g-u%dt%d', ...
-		opts.dataset, opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize, ...
-		opts.update_interval, opts.test_interval);
-	%if strcmp(opts.exp, 'rs')
+	opts.identifier = sprintf('%s-%d%s-B%dst%g', opts.dataset, opts.nbits, ...
+		opts.mapping, opts.SGDBoost, opts.stepsize, opts.ntests);
 	if opts.reg_rs > 0
-		opts.identifier = sprintf('%s-RS%dL%g', opts.identifier, ...
-			opts.samplesize, opts.reg_rs);
+		assert(opts.flip_thresh > 0);
+		opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
+			opts.samplesize, opts.reg_rs, opts.flip_thresh);
+	else
+		assert(opts.update_interval > 0);
+		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	end
 	if opts.reg_maxent > 0
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
