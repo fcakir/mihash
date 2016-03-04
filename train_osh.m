@@ -4,7 +4,7 @@ function train_osh(traingist, trainlabels, opts)
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
-	parfor t = 1:opts.ntrials
+	for t = 1:opts.ntrials
 		myLogInfo('%s: random trial %d', opts.identifier, t);
 
 		% randomly set test iteration numbers (to better mimic real scenarios)

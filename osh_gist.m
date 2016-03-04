@@ -13,11 +13,11 @@ function osh_gist(dataset, nbits, varargin)
 	if opts.test_frac < 1
 		mAPfn = sprintf('%s_frac%g', mAPfn);
 	end
-	try 
+	if opts.override==0 && exist([mAPfn '.mat'], 'file')
 		% load experiment results
 		load([mAPfn '.mat']);
 		myLogInfo(['Results loaded: ' mAPfn]);
-	catch
+	else
 		% load GIST data
 		[traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = ...
 			load_gist(dataset, opts);

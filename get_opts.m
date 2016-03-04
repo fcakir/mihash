@@ -9,6 +9,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	%  test_interval (int) save/test intermediate model
 	%  sampleratio (float) reservoir size, % of training set
 	%  localdir (string) where to save stuff
+	%  noTrainingPoints (int) # of training points 
+	%  override (int) override previous results {0, 1}
 	% 
 	ip = inputParser;
 	% default values
@@ -20,6 +22,9 @@ function opts = get_opts(dataset, nbits, varargin)
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('localdir', '/scratch/online-hashing', @isstr);
+
+	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
+	ip.addParamValue('override', 0, @isscalar);
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations
@@ -47,6 +52,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	% assertions
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
+	assert(opts.test_interval <= opts.noTrainingPoints, ... 
+		'test_interval should be smaller than \# of training points');
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
