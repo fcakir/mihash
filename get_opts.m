@@ -64,8 +64,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%d%s-B%dst%g-T%d', opts.dataset, opts.nbits, ...
-		opts.mapping, opts.SGDBoost, opts.stepsize, opts.ntests);
+	opts.identifier = sprintf('%s-%d%s-B%dS%g', opts.dataset, opts.nbits, ...
+		opts.mapping, opts.SGDBoost, opts.stepsize);
 	if opts.reg_rs > 0
 		% reservoir: either use update_interval or flip_thresh, but not both
 		if opts.flip_thresh > 0
@@ -80,7 +80,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	else
 		% no reservoir (baseline): use update_interval
 		assert(opts.update_interval > 0);
-		opts.identifier = sprintf('%sU%d', opts.identifier, opts.update_interval);
+		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	end
 	if opts.reg_maxent > 0
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
@@ -90,7 +90,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	end
 
 	% set expdir
-	opts.expdir = sprintf('%s/%s', opts.localdir, opts.identifier);
+	opts.expdir = sprintf('%s/%s/%gpts_%dtests', opts.localdir, opts.identifier, ...
+		opts.noTrainingPoints, opts.ntests);
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
 		mkdir(opts.expdir); unix(['chmod g+rw ' opts.expdir]); 

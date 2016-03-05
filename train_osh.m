@@ -5,7 +5,7 @@ function train_osh(Xtrain, Ytrain, opts)
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
 	parfor t = 1:opts.ntrials
-		myLogInfo('%s: random trial %d', opts.identifier, t);
+		myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
 
 		% randomly set test iteration numbers (to better mimic real scenarios)
 		% tests at 1, end, and around the endpoints of every interval
@@ -96,7 +96,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			if isempty(Hres)
 				Hres = Hnew;  update_table = true;
 			else
-				bitdiff = xor(Hres, Hew); %(Hres ~= Hnew);
+				bitdiff = xor(Hres, Hnew); %(Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
 				% signal update when:
 				% 1) using update_interval (for rs_baseline)
@@ -146,7 +146,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			t_ = tic;
 			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			if ~isempty(H)
-				bitdiff = xor(H, Hew); %(H ~= Hnew);
+				bitdiff = xor(H, Hnew); %(H ~= Hnew);
 				bitflips = bitflips + sum(bitdiff(:))/ntrain_all;
 			end
 			H = Hnew;
@@ -164,6 +164,10 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
 		end
+		if ~mod(i, round(opts.noTrainingPoints/5))
+			myLogInfo('Trial %02d, Iter %d/%d. Elapsed: SGD %.2f, HT_update %.2f', ...
+				trialNo, i, opts.noTrainingPoints, train_time, update_time);
+		end
 	end % end for
 
 	if opts.reg_rs > 0
@@ -178,7 +182,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	t_ = tic;
 	H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 	update_time = update_time + toc(t_);
-	myLogInfo('Trial %02d. SGD: %.2f sec, Hashtable update: %.2f sec', ...
+	myLogInfo('Trial %02d. TOTAL: SGD %.2f sec, HT_update %.2f sec', ...
 		trialNo, train_time, update_time);
 
 	% save final model, etc

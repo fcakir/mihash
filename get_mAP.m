@@ -5,7 +5,7 @@ function mAP = get_mAP(cateTrainTest, Y, tY)
 	% output:
 	%  mAP - mean Average Precision
 
-	sim = int8(2*Y-1)'*int8(2*tY-1);  % int8 for saving space
+	sim = single(2*Y-1)'*single(2*tY-1);
 	trainsize = length(Y);
 	testsize  = length(tY);
 

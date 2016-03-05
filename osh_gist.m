@@ -8,8 +8,7 @@ function osh_gist(dataset, nbits, varargin)
 	if nargin < 2, nbits = 8; end
 	opts = get_opts(dataset, nbits, varargin{:});  % set parameters
 
-	%mAPfn = sprintf('%s/mAP_t%d.mat', opts.expdir, opts.test_interval);
-	mAPfn = sprintf('%s/mAP_%dtrials_%dtests', opts.expdir, opts.ntrials, opts.ntests);
+	mAPfn = sprintf('%s/mAP_%dtrials', opts.expdir, opts.ntrials);
 	if opts.test_frac < 1
 		mAPfn = sprintf('%s_frac%g', mAPfn);
 	end
@@ -35,34 +34,49 @@ function osh_gist(dataset, nbits, varargin)
 		n          = opts.ntests;
 		mAP        = zeros(opts.ntrials, n);
 		bitflips   = zeros(opts.ntrials, n);
+		train_iter = zeros(opts.ntrials, n);
 		train_time = zeros(opts.ntrials, n);
 		for t = 1:opts.ntrials
-			trial_model = load(sprintf('%s/trial%d.mat', opts.expdir, t));
-			for i = trial_model.test_iters
-				F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, i);
-				d = load(F);
-				W = d.W;
+			prefix = sprintf('%s/trial%d', opts.expdir, t);
+			trial_model = load(sprintf('%s.mat', prefix));
+			for i = 1:n
+				iter = trial_model.test_iters(i);
+				d = load(sprintf('%s_iter%d.mat', prefix, iter));
 				Y = d.H;  % NOTE: logical
-				tY = (W'*testgist' > 0);
+				tY = (d.W'*testgist' > 0);
 		
 				% NOTE: get_mAP() uses parfor
-				fprintf('Trial %d, Iter %d, ', t, i);
+				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
 				mAP(t, i) = get_mAP(cateTrainTest, Y, tY);
 				bitflips(t, i) = d.bitflips;
+				train_iter(t, i) = iter;
 				train_time(t, i) = d.train_time;
 			end
 		end
-		save([mAPfn '.mat'], 'mAP', 'bitflips', 'train_time');
+		save([mAPfn '.mat'], 'mAP', 'bitflips', 'train_time', 'train_iter');
 		myLogInfo(['Results saved: ' mAPfn]);
 	end
 	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
 
-	% draw curves
-	[px, py] = avg_curve(mAP, bitflips);
-	figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end, grid, title(opts.identifier)
-	xlabel('bit flips'), ylabel('mAP')
+	% draw curves, with auto figure saving
+	figname = sprintf('%s_iter.fig', mAPfn);
+	show_mAP(figname, mAP, train_iter, 'iterations', opts.identifier);
 
-	[px, py] = avg_curve(mAP, train_time);
-	figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end, grid, title(opts.identifier)
-	xlabel('CPU time'), ylabel('mAP')
+	figname = sprintf('%s_cpu.fig', mAPfn);
+	show_mAP(figname, mAP, train_time, 'CPU time', opts.identifier);
+
+	figname = sprintf('%s_flip.fig', mAPfn);
+	show_mAP(figname, mAP, bitflips, 'bit flips', opts.identifier);
+end
+
+% -----------------------------------------------------------
+function show_mAP(figname, mAP, X, xlb, ttl)
+	try
+		openfig(figname);
+	catch
+		[px, py] = avg_curve(mAP, X);
+		figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end
+		grid, title(ttl), xlabel(xlb), ylabel('mAP')
+		saveas(gcf, figname);
+	end
 end
