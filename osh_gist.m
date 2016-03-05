@@ -6,7 +6,7 @@ function osh_gist(dataset, nbits, varargin)
 	%  
 	if nargin < 1, dataset = 'cifar'; end
 	if nargin < 2, nbits = 8; end
-	opts = get_opts(dataset, nbits, varargin{:});  % set parameters
+	opts = get_opts(dataset, nbits, 'gist', varargin{:});  % set parameters
 
 	mAPfn = sprintf('%s/mAP_%dtrials', opts.expdir, opts.ntrials);
 	if opts.test_frac < 1
@@ -18,7 +18,7 @@ function osh_gist(dataset, nbits, varargin)
 		myLogInfo(['Results loaded: ' mAPfn]);
 	else
 		% load GIST data
-		[traingist, trainlabels, testgist, testlabels, cateTrainTest, opts] = ...
+		[traingist, trainlabels, testgist, testlabels, cateTrainTest] = ...
 			load_gist(dataset, opts);
 		if opts.test_frac < 1
 			myLogInfo('! only testing first %g%%', opts.test_frac*100);

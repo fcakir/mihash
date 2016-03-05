@@ -1,5 +1,4 @@
-function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest, opts] = ...
-		load_gist(dataset, opts)
+function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts)
 
 	tic;
 	if strcmp(dataset, 'cifar')

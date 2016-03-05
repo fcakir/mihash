@@ -1,4 +1,4 @@
-function opts = get_opts(dataset, nbits, varargin)
+function opts = get_opts(dataset, nbits, ftype, varargin)
 	% PARAMS
 	%  mapping (string) {'smooth', 'bucket', 'coord'}
 	%  ntrials (int) # of random trials
@@ -16,6 +16,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	% default values
 	ip.addParamValue('dataset', dataset, @isstr);
 	ip.addParamValue('nbits', nbits, @isscalar);
+	ip.addParamValue('ftype', ftype, @isstr);
+
 	ip.addParamValue('mapping', 'smooth', @isstr);
 	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('stepsize', 0.1, @isscalar);
@@ -50,6 +52,7 @@ function opts = get_opts(dataset, nbits, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	% assertions
+	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	%assert(opts.test_interval <= opts.noTrainingPoints, ... 
@@ -64,8 +67,8 @@ function opts = get_opts(dataset, nbits, varargin)
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%d%s-B%dS%g', opts.dataset, opts.nbits, ...
-		opts.mapping, opts.SGDBoost, opts.stepsize);
+	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
+		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
 	if opts.reg_rs > 0
 		% reservoir: either use update_interval or flip_thresh, but not both
 		if opts.flip_thresh > 0
