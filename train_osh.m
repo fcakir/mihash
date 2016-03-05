@@ -157,9 +157,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% cache intermediate model to disk
 		%if ~mod(i, opts.test_interval)
 		if ismember(i, test_iters)
-			if isempty(H)
-				H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
-			end
+			%if isempty(H)
+			H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+			%end
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
 			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
