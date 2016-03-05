@@ -7,15 +7,20 @@ function train_osh(Xtrain, Ytrain, opts)
 	parfor t = 1:opts.ntrials
 		myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
 
-		% randomly set test iteration numbers (to better mimic real scenarios)
-		% tests at 1, end, and around the endpoints of every interval
-		test_iters = [];
-		interval = round(opts.noTrainingPoints/(opts.ntests-1));
-		for i = 1:opts.ntests-2
-			iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-			test_iters = [test_iters, iter];
+		if opts.ntests > 2
+			% randomly set test iteration numbers (to better mimic real scenarios)
+			% tests at 1, end, and around the endpoints of every interval
+			test_iters = [];
+			interval = round(opts.noTrainingPoints/(opts.ntests-1));
+			for i = 1:opts.ntests-2
+				iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
+				test_iters = [test_iters, iter];
+			end
+			test_iters = [1, test_iters, opts.noTrainingPoints];
+		else
+			% special case ntests<=2: only test on first & last iteration
+			test_iters = [1, opts.noTrainingPoints];
 		end
-		test_iters = [1, test_iters, opts.noTrainingPoints];
 
 		% do SGD optimization
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
@@ -138,7 +143,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
-		if opts.reg_rs <= 0
+		if i == 1 || i == opts.noTrainingPoints 
+			update_table = true;  % update on first & last iteration no matter what
+		elseif opts.reg_rs <= 0
 			% NOTE: if using reservoir, update_table is already set.
 			update_table = ~mod(i, opts.update_interval);
 		end
@@ -146,7 +153,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			t_ = tic;
 			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			if ~isempty(H)
-				bitdiff = xor(H, Hnew); %(H ~= Hnew);
+				bitdiff = xor(H, Hnew);
 				bitflips = bitflips + sum(bitdiff(:))/ntrain_all;
 			end
 			H = Hnew;
@@ -155,11 +162,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% cache intermediate model to disk
-		%if ~mod(i, opts.test_interval)
 		if ismember(i, test_iters)
-			if isempty(H)
-				H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
-			end
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
 			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
 			unix(['chmod o-w ' savefile]);  % matlab permission bug
