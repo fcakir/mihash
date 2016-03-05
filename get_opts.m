@@ -55,6 +55,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
+	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 	%assert(opts.test_interval <= opts.noTrainingPoints, ... 
 		%'test_interval should be smaller than \# of training points');
 
