@@ -44,7 +44,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			noexist = noexist + 1;
 		end
 	end
-	if noexist == 0 && exist([prefix '.mat'], 'file')
+	if noexist == 0 && exist([prefix '.mat'], 'file') && ...
+            opts.override == 0
+        
 		myLogInfo('Trial %d already done.', trialNo); 
 		load([prefix '.mat']); return;
 	end
@@ -88,8 +90,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				U = U*num_unlabeled + spoint'*spoint;
 				num_unlabeled = num_unlabeled + 1;
 				U = U/num_unlabeled;
-			elseif opts.reg_smooth > 0
-				; %TODO
+			elseif opts.reg_smooth > 0 && opts.reg_rs
+				if i > reservoir_size
+                    resY = 2*single(W'*samplegist' > 0)-1;
+                    qY = 2* single(W'*spoint > 0)-1;
+                    [~, ind] = sort(resY' * qY,'descend');
+                    
+                end
 			end
 		end
 
@@ -97,9 +104,14 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		if opts.reg_rs > 0  % reservoir update
 			[Xsample, Ysample, priority_queue] = update_reservoir(...
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
-			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, opts)';
+            
+            % a hack -we always use smooth mapping for reservoir samples 
+            ropts = opts;
+            ropts.mapping = 'smooth';
+			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, ropts)';
 			if isempty(Hres)
-				Hres = Hnew;  update_table = true;
+				Hres = Hnew;  
+                if strcmp(opts.mapping,'smooth'), update_table = true; end
 			else
 				bitdiff = xor(Hres, Hnew); %(Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
@@ -107,7 +119,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				% 1) using update_interval (for rs_baseline)
 				% 2) #bitflips > thresh (for rs)
 				% NOTE: get_opts() already ensures only one scenario will happen
-				if opts.update_interval > 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+				if mod(i,opts.update_interval) == 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					bitflips_res = bitflips_res + bf_temp;
 					update_table = true;
 					Hres = Hnew;
@@ -136,8 +148,8 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% either max entropy or smoothness, but not both
 		if opts.reg_maxent > 0  &&  num_unlabeled > 10
 			W = W - opts.reg_maxent * U * W;
-		elseif opts.reg_smooth > 0
-			; %TODO
+		elseif opts.reg_smooth > 0 && i > reservoir_size
+			W = reg_smooth(W,[spoint;samplegist(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
 
@@ -147,9 +159,12 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			update_table = true;  % update on first & last iteration no matter what
 		elseif opts.reg_rs <= 0
 			% NOTE: if using reservoir, update_table is already set.
+            % TODO if mapping is not smooth, set update_interval to
+            % noTrainingPoints
 			update_table = ~mod(i, opts.update_interval);
 		end
-		if strcmp(opts.mapping, 'smooth') && update_table
+		%if strcmp(opts.mapping, 'smooth') && update_table
+        if update_table
 			t_ = tic;
 			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			if ~isempty(H)
@@ -317,4 +332,17 @@ function [Xsample, Ysample, priority_queue] = update_reservoir(...
 			Ysample(maxind)        = slabel;
 		end
 	end
+end
+
+% -----------------------------------------------------------
+% smoothness regularizer
+function W = reg_smooth(W, points, reg_smooth)
+    reg_smooth = reg_smooth/size(points,1);
+
+    for i = 1:size(W,2)
+        for j = 1:size(points,2)-1
+            W(:,i) = W(:,i) + reg_smooth*(points(1,:)*(W(:,i)'*points(j+1,:)) + ...
+                (W(:,i)'*points(1,:))*points(j+1,:));
+        end
+    end
 end

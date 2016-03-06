@@ -44,7 +44,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	ip.addParamValue('reg_rs', -1, @isscalar);      % reservoir reg. weight
 	ip.addParamValue('reg_maxent', -1, @isscalar);  % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);  % smoothness reg. weight
-	
+	ip.addParamValue('rs_sm_neigh_size',5,@isscalar) % neighbor size for smoothness
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -58,12 +58,21 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 	%assert(opts.test_interval <= opts.noTrainingPoints, ... 
 		%'test_interval should be smaller than \# of training points');
-
-	% make localdir
+    
+    if ~strcmp(opts.mapping,'smooth')
+        opts.update_interval = opts.noTrainingPoints;
+        myLogInfo([opts.mapping 'hashing schemes supports ntests = 2 only' ...
+             '\n setting ntests to 2'])
+        opts.ntests = 2;
+    end
+    
+    
+    % make localdir
 	if ~exist(opts.localdir, 'dir'), 
 		mkdir(opts.localdir);  unix(['chmod g+rw ' opts.localdir]);
-	end
+    end
 
+    
 	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
