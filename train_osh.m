@@ -90,8 +90,13 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				U = U*num_unlabeled + spoint'*spoint;
 				num_unlabeled = num_unlabeled + 1;
 				U = U/num_unlabeled;
-			elseif opts.reg_smooth > 0
-				; %TODO
+			elseif opts.reg_smooth > 0 && opts.reg_rs
+				if i > reservoir_size
+                    resY = 2*single(W'*samplegist' > 0)-1;
+                    qY = 2* single(W'*spoint > 0)-1;
+                    [~, ind] = sort(resY' * qY,'descend');
+                    
+                end
 			end
 		end
 
@@ -143,8 +148,8 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% either max entropy or smoothness, but not both
 		if opts.reg_maxent > 0  &&  num_unlabeled > 10
 			W = W - opts.reg_maxent * U * W;
-		elseif opts.reg_smooth > 0
-			; %TODO
+		elseif opts.reg_smooth > 0 && i > reservoir_size
+			W = reg_smooth(W,[spoint;samplegist(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
 
@@ -327,4 +332,17 @@ function [Xsample, Ysample, priority_queue] = update_reservoir(...
 			Ysample(maxind)        = slabel;
 		end
 	end
+end
+
+% -----------------------------------------------------------
+% smoothness regularizer
+function W = reg_smooth(W, points, reg_smooth)
+    reg_smooth = reg_smooth/size(points,1);
+
+    for i = 1:size(W,2)
+        for j = 1:size(points,2)-1
+            W(:,i) = W(:,i) + reg_smooth*(points(1,:)*(W(:,i)'*points(j+1,:)) + ...
+                (W(:,i)'*points(1,:))*points(j+1,:));
+        end
+    end
 end

@@ -44,7 +44,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	ip.addParamValue('reg_rs', -1, @isscalar);      % reservoir reg. weight
 	ip.addParamValue('reg_maxent', -1, @isscalar);  % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);  % smoothness reg. weight
-	
+	ip.addParamValue('rs_sm_neigh_size',5,@isscalar) % neighbor size for smoothness
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
