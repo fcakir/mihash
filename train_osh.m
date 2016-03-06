@@ -44,7 +44,9 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			noexist = noexist + 1;
 		end
 	end
-	if noexist == 0 && exist([prefix '.mat'], 'file')
+	if noexist == 0 && exist([prefix '.mat'], 'file') && ...
+            opts.override == 0
+        
 		myLogInfo('Trial %d already done.', trialNo); 
 		load([prefix '.mat']); return;
 	end
@@ -97,9 +99,14 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		if opts.reg_rs > 0  % reservoir update
 			[Xsample, Ysample, priority_queue] = update_reservoir(...
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
-			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, opts)';
+            
+            % a hack -we always use smooth mapping for reservoir samples 
+            ropts = opts;
+            ropts.mapping = 'smooth';
+			Hnew = build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, ropts)';
 			if isempty(Hres)
-				Hres = Hnew;  update_table = true;
+				Hres = Hnew;  
+                if strcmp(opts.mapping,'smooth'), update_table = true; end
 			else
 				bitdiff = xor(Hres, Hnew); %(Hres ~= Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
@@ -107,7 +114,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				% 1) using update_interval (for rs_baseline)
 				% 2) #bitflips > thresh (for rs)
 				% NOTE: get_opts() already ensures only one scenario will happen
-				if opts.update_interval > 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+				if mod(i,opts.update_interval) == 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					bitflips_res = bitflips_res + bf_temp;
 					update_table = true;
 					Hres = Hnew;
@@ -147,9 +154,12 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			update_table = true;  % update on first & last iteration no matter what
 		elseif opts.reg_rs <= 0
 			% NOTE: if using reservoir, update_table is already set.
+            % TODO if mapping is not smooth, set update_interval to
+            % noTrainingPoints
 			update_table = ~mod(i, opts.update_interval);
 		end
-		if strcmp(opts.mapping, 'smooth') && update_table
+		%if strcmp(opts.mapping, 'smooth') && update_table
+        if update_table
 			t_ = tic;
 			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 			if ~isempty(H)
