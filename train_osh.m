@@ -56,8 +56,12 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	ntrain_all    = size(Xtrain, 1);
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
-
-	% deal with regularizers
+    maxLabelSize  = 205; % Sun
+    
+    persistent table_thr;
+    table_thr = arrayfun(@bit_fp_thr,opt.bits*ones(1,maxLabelSize),1:maxLabelSize);
+    
+    % deal with regularizers
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
 		reservoir_size = opts.samplesize;
@@ -119,7 +123,10 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 				% 1) using update_interval (for rs_baseline)
 				% 2) #bitflips > thresh (for rs)
 				% NOTE: get_opts() already ensures only one scenario will happen
-				if mod(i,opts.update_interval) == 0 || (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+                
+                
+				if mod(i,opts.update_interval) == 0 || (opts.flip_thresh > 0 && ...
+                        bf_temp > table_thr(length(seenLabels)))
 					bitflips_res = bitflips_res + bf_temp;
 					update_table = true;
 					Hres = Hnew;
@@ -346,3 +353,5 @@ function W = reg_smooth(W, points, reg_smooth)
         end
     end
 end
+
+
