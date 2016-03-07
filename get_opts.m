@@ -34,12 +34,13 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
 	ip.addParamValue('update_interval', 100, @isscalar); % use with baseline
 	ip.addParamValue('flip_thresh', -1, @isscalar); % use with reservoir
+	ip.addParamValue('adaptive', -1, @isscalar); % use with reservoir
 
 	% testing
 	%ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
 	ip.addParamValue('test_frac', 1, @isscalar);         % <1 for faster testing
 	ip.addParamValue('ntests', 10, @isscalar);
-	
+
 	%ip.addParamValue('exp', 'baseline', @isstr);   % baseline, rs, l1l2
 	ip.addParamValue('samplesize', 200, @isscalar); % reservoir size
 	ip.addParamValue('reg_rs', -1, @isscalar);      % reservoir reg. weight
@@ -57,23 +58,26 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-	%assert(opts.test_interval <= opts.noTrainingPoints, ... 
-		%'test_interval should be smaller than \# of training points');
-    
-    if ~strcmp(opts.mapping,'smooth')
-        opts.update_interval = opts.noTrainingPoints;
-        myLogInfo([opts.mapping 'hashing schemes supports ntests = 2 only' ...
-             '\n setting ntests to 2'])
-        opts.ntests = 2;
-    end
-    
-    
-    % make localdir
+	assert(~(opts.update_interval>0 && (opts.flip_thresh>0 || opts.adaptive>0)), ...
+		'update_interval cannot be used with flip_thresh or adaptive');
+	if opts.adaptive > 0, 
+		assert(opts.flip_thresh<=0, 'adaptive cannot have flip_thresh>0'); 
+	end
+
+	if ~strcmp(opts.mapping,'smooth')
+		opts.update_interval = opts.noTrainingPoints;
+		myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
+			'\n setting ntests to 2'])
+		opts.ntests = 2;
+	end
+
+
+	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
 		mkdir(opts.localdir);  unix(['chmod g+rw ' opts.localdir]);
-    end
+	end
 
-    
+
 	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
