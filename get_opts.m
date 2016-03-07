@@ -27,6 +27,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 		'/research/object_detection/cachedir/online-hashing', @isstr);
 	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
 	ip.addParamValue('override', 0, @isscalar);
+	ip.addParamValue('showplots', 0, @isscalar);
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations

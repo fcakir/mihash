@@ -1,4 +1,4 @@
-function osh_cnn(dataset, nbits, varargin)
+function mAPfn = osh_cnn(dataset, nbits, varargin)
 	% PARAMS
 	%  dataset (string) from {'cifar' ,'sun','nus'}
 	%  nbits (integer) is length of binary code
@@ -58,15 +58,19 @@ function osh_cnn(dataset, nbits, varargin)
 	end
 	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
 
-	% draw curves, with auto figure saving
-	figname = sprintf('%s_iter.fig', mAPfn);
-	show_mAP(figname, mAP, train_iter, 'iterations', opts.identifier);
+	if opts.showplots
+		% draw curves, with auto figure saving
+		figname = sprintf('%s_iter.fig', mAPfn);
+		show_mAP(figname, mAP, train_iter, 'iterations', opts.identifier);
 
-	figname = sprintf('%s_cpu.fig', mAPfn);
-	show_mAP(figname, mAP, train_time, 'CPU time', opts.identifier);
+		figname = sprintf('%s_cpu.fig', mAPfn);
+		show_mAP(figname, mAP, train_time, 'CPU time', opts.identifier);
 
-	figname = sprintf('%s_flip.fig', mAPfn);
-	show_mAP(figname, mAP, bitflips, 'bit flips', opts.identifier);
+		figname = sprintf('%s_flip.fig', mAPfn);
+		show_mAP(figname, mAP, bitflips, 'bit flips', opts.identifier);
+		drawnow;
+	end
+	mAPfn = [mAPfn '.mat'];
 end
 
 % -----------------------------------------------------------

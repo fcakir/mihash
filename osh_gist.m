@@ -1,4 +1,4 @@
-function osh_gist(dataset, nbits, varargin)
+function mAPfn = osh_gist(dataset, nbits, varargin)
 	% PARAMS
 	%  dataset (string) from {'cifar' ,'sun','nus'}
 	%  nbits (integer) is length of binary code
@@ -58,15 +58,19 @@ function osh_gist(dataset, nbits, varargin)
 	end
 	myLogInfo('Test mAP (final): %.3g +/- %.3g', mean(mAP(:,end)), std(mAP(:,end)));
 
-	% draw curves, with auto figure saving
-	figname = sprintf('%s_iter.fig', mAPfn);
-	show_mAP(figname, mAP, train_iter, 'iterations', opts.identifier);
+	if opts.showplots
+		% draw curves, with auto figure saving
+		figname = sprintf('%s_iter.fig', mAPfn);
+		show_mAP(figname, mAP, train_iter, 'iterations', opts.identifier);
 
-	figname = sprintf('%s_cpu.fig', mAPfn);
-	show_mAP(figname, mAP, train_time, 'CPU time', opts.identifier);
+		figname = sprintf('%s_cpu.fig', mAPfn);
+		show_mAP(figname, mAP, train_time, 'CPU time', opts.identifier);
 
-	figname = sprintf('%s_flip.fig', mAPfn);
-	show_mAP(figname, mAP, bitflips, 'bit flips', opts.identifier);
+		figname = sprintf('%s_flip.fig', mAPfn);
+		show_mAP(figname, mAP, bitflips, 'bit flips', opts.identifier);
+		drawnow;
+	end
+	mAPfn = [mAPfn '.mat'];
 end
 
 % -----------------------------------------------------------
@@ -75,7 +79,7 @@ function show_mAP(figname, mAP, X, xlb, ttl)
 		openfig(figname);
 	catch
 		[px, py] = avg_curve(mAP, X);
-		figure, if length(px) == 1, plot(px, py,'+'), else plot(px,py), end
+		figure, if length(px) == 1, plot(px, py, '+'), else plot(px, py), end
 		grid, title(ttl), xlabel(xlb), ylabel('mAP')
 		saveas(gcf, figname);
 	end

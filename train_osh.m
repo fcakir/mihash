@@ -181,10 +181,12 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 			trialNo, opts.noTrainingPoints-num_unlabeled, num_unlabeled, opts.reg_maxent);
 	end
 
+	%{ KH: obsolete now because we now always update on last iteration
 	% populate hash table
 	t_ = tic;
 	H = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 	update_time = update_time + toc(t_);
+	%}
 	myLogInfo('Trial %02d. TOTAL: SGD %.2f sec, HT_update %.2f sec', ...
 		trialNo, train_time, update_time);
 
