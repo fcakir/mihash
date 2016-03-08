@@ -59,7 +59,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	maxLabelSize  = 205; % Sun
 
 	persistent table_thr;
-	table_thr = arrayfun(@bit_fp_thr,opt.bits*ones(1,maxLabelSize),1:maxLabelSize);
+	table_thr = arrayfun(@bit_fp_thr,opts.nbits*ones(1,maxLabelSize),1:maxLabelSize);
 
 	% deal with regularizers
 	if opts.reg_rs > 0
