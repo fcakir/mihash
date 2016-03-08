@@ -28,6 +28,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
 	ip.addParamValue('override', 0, @isscalar);
 	ip.addParamValue('showplots', 0, @isscalar);
+	ip.addParamValue('nworkers', 6, @isscalar);
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations
@@ -52,7 +53,6 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	opts = ip.Results;
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
@@ -71,6 +71,15 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 		opts.ntests = 2;
 	end
 
+	assert(opts.nworkers>0 && opts.nworkers<=12);
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	% matlabpool handling
+	if matlabpool('size') == 0
+		myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
+		matlabpool close force local  % clear up zombies
+		matlabpool(opts.nworkers);
+	end
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 

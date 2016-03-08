@@ -26,8 +26,13 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_cnn(dataset, opts)
 		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
 			split_train_test_nus(cnn, tags, tstperclass);
 
-	elseif strcmp(dataset, 'places2')
-		% TODO
+	elseif strcmp(dataset, 'places')
+		% loads variables: feats, labels, images
+		load('/research/object_detection/data/places/places_alexnet_fc7.mat')
+		% TODO train/test split for Places
+		%tstperclass = ?
+		%[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+			%split_train_test(feats, labels, tstperclass);
 
 	else, error(['unknown dataset: ' dataset]); end
 
