@@ -19,35 +19,32 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	ip.addParamValue('ftype', ftype, @isstr);
 
 	ip.addParamValue('mapping', 'smooth', @isstr);
-	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('stepsize', 0.1, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('localdir', ...
 		'/research/object_detection/cachedir/online-hashing', @isstr);
-	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
+	ip.addParamValue('noTrainingPoints', 20000, @isscalar);
 	ip.addParamValue('override', 0, @isscalar);
-	ip.addParamValue('showplots', 0, @isscalar);
+	ip.addParamValue('showplots', 1, @isscalar);
+
 	ip.addParamValue('nworkers', 6, @isscalar);
+	ip.addParamValue('ntrials', 5, @isscalar);
+	ip.addParamValue('ntests', 10, @isscalar);
+	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations
 	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
-	ip.addParamValue('update_interval', 100, @isscalar); % use with baseline
-	ip.addParamValue('flip_thresh', -1, @isscalar); % use with reservoir
-	ip.addParamValue('adaptive', -1, @isscalar); % use with reservoir
+	ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
+	ip.addParamValue('flip_thresh', -1, @isscalar);      % use with reservoir
+	ip.addParamValue('adaptive', -1, @isscalar);         % use with reservoir
 
-	% testing
-	%ip.addParamValue('test_interval', -1, @isscalar);   % save intermediate model
-	ip.addParamValue('test_frac', 1, @isscalar);         % <1 for faster testing
-	ip.addParamValue('ntests', 10, @isscalar);
-
-	%ip.addParamValue('exp', 'baseline', @isstr);   % baseline, rs, l1l2
-	ip.addParamValue('samplesize', 200, @isscalar); % reservoir size
-	ip.addParamValue('reg_rs', -1, @isscalar);      % reservoir reg. weight
-	ip.addParamValue('reg_maxent', -1, @isscalar);  % max entropy reg. weight
-	ip.addParamValue('reg_smooth', -1, @isscalar);  % smoothness reg. weight
-	ip.addParamValue('rs_sm_neigh_size',5,@isscalar) % neighbor size for smoothness
+	ip.addParamValue('samplesize', 50, @isscalar);    % reservoir size
+	ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
+	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
+	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
+	ip.addParamValue('rs_sm_neigh_size',5,@isscalar); % neighbor size for smoothness
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -73,6 +70,14 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 
 	assert(opts.nworkers>0 && opts.nworkers<=12);
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	% are we on window$?
+	opts.windows = ~isempty(strfind(computer, 'WIN'));
+	if opts.windows
+		% reset localdir
+		opts.localdir = '\\kraken\object_detection\cachedir\online-hashing';
+		myLogInfo('We are on Window$. localdir set to %s', opts.localdir);
+	end
 
 	% matlabpool handling
 	if matlabpool('size') == 0
@@ -86,7 +91,6 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 		mkdir(opts.localdir);  unix(['chmod g+rw ' opts.localdir]);
 	end
 
-
 	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
@@ -94,15 +98,17 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
 	if opts.reg_rs > 0
-		% reservoir: either use update_interval or flip_thresh, but not both
-		if opts.flip_thresh > 0
-			assert(opts.update_interval <= 0);
+		% reservoir: use update_interval or flip_thresh or adaptive
+		if opts.update_interval > 0
+			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
+				opts.samplesize, opts.reg_rs, opts.update_interval);
+		elseif opts.flip_thresh > 0
 			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
 				opts.samplesize, opts.reg_rs, opts.flip_thresh);
 		else
-			assert(opts.update_interval > 0);
-			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
-				opts.samplesize, opts.reg_rs, opts.update_interval);
+			assert(opts.adaptive > 0);
+			opts.identifier = sprintf('%s-RS%dL%gAda', opts.identifier, ...
+				opts.samplesize, opts.reg_rs);
 		end
 	else
 		% no reservoir (baseline): use update_interval

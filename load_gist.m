@@ -1,8 +1,14 @@
 function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts)
 
+	if opts.windows
+		basedir = '\\ivcfs1\codebooks\hashing_project\data';
+	else
+		basedir = '/research/codebooks/hashing_project/data';
+	end
+
 	tic;
 	if strcmp(dataset, 'cifar')
-		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/gist.mat');
+		load([basedir '/cifar-10/descriptors/gist.mat']);
 		gist        = [traingist; testgist];
 		gistlabels  = [trainlabels; testlabels];
 		tstperclass = 100;
@@ -11,7 +17,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts
 			split_train_test(gist, gistlabels, tstperclass);
 
 	elseif strcmp(dataset, 'sun')
-		load('/research/codebooks/hashing_project/data/sun397/SUN_gist.mat');
+		load([basedir '/sun397/SUN_gist.mat']);
 		gistlabels  = labels;
 		tstperclass = 10;
 		%opts.noTrainingPoints = 3970;  % # points used for training
@@ -19,8 +25,8 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts
 			split_train_test(gist, gistlabels, tstperclass);
 
 	elseif strcmp(dataset, 'nus')
-    gist = load('/research/codebooks/hashing_project/data/nuswide/BoW_int.dat');
-    tags = load('/research/codebooks/hashing_project/data/nuswide/AllLabels81.txt');
+    gist = load([basedir '/nuswide/BoW_int.dat']);
+    tags = load([basedir '/nuswide/AllLabels81.txt']);
     tstperclass = 30;
 		%opts.noTrainingPoints = 20*81;
 		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...

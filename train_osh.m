@@ -188,7 +188,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		if ismember(i, test_iters)
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
 			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
-			unix(['chmod o-w ' savefile]);  % matlab permission bug
+			if ~opts.windows, unix(['chmod o-w ' savefile]); end  % matlab permission bug
 		end
 		if ~mod(i, round(opts.noTrainingPoints/5))
 			myLogInfo('Trial %02d, Iter %d/%d. Elapsed: SGD %.2f, HT_update %.2f', ...
@@ -215,7 +215,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 	% save final model, etc
 	save([prefix '.mat'], 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
-	unix(['chmod o-w ' prefix '.mat']);  % matlab permission bug
+	if ~opts.windows, unix(['chmod o-w ' prefix '.mat']); end % matlab permission bug
 end
 
 % -----------------------------------------------------------
