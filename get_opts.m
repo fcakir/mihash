@@ -46,6 +46,10 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',5,@isscalar); % neighbor size for smoothness
+
+	% Hack for Places
+	ip.addParamValue('labelspercls', 2500, @isscalar);
+	
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -53,7 +57,6 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
-	assert(ismember(opts.metric, {'mAP', 'prec_k', 'prec_n'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
@@ -90,13 +93,21 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
-		mkdir(opts.localdir);  unix(['chmod g+rw ' opts.localdir]);
+		mkdir(opts.localdir);  
+		if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
 	end
 
 	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
 	% identifier string for the current experiment
+	if strcmp(opts.dataset, 'places')
+		% [hack] for places
+		assert(opts.labelspercls >= 500 && opts.labelspercls <= 5000, ...
+			'please give a reasonable labelspercls in [500, 5000]');
+		myLogInfo('Places will use %d labeled examples per class', opts.labelspercls);
+		opts.dataset = [opts.dataset, 'L', num2str(opts.labelspercls)];
+	end
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
 	if opts.reg_rs > 0
@@ -129,7 +140,19 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.noTrainingPoints, opts.ntests);
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
-		mkdir(opts.expdir); unix(['chmod g+rw ' opts.expdir]); 
+		mkdir(opts.expdir); 
+		if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
+	end
+
+	% decipher evaluation metric
+	if ~isempty(strfind(opts.metric, 'prec_k'))
+		% eg. prec_k3 is precision at k=3
+		opts.prec_k = sscanf(opts.metric(7:end), '%d');
+	elseif ~isempty(strfind(opts.metric, 'prec_n'))
+		% eg. prec_n3 is precision at n=3
+		opts.prec_n = sscanf(opts.metric(7:end), '%d');
+	else 
+		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
 	end
 
 	% FINISHED

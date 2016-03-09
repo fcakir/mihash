@@ -1,4 +1,4 @@
-function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts)
+function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
 
 	if opts.windows
 		basedir = '\\ivcfs1\codebooks\hashing_project\data';
@@ -13,7 +13,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts
 		gistlabels  = [trainlabels; testlabels];
 		tstperclass = 100;
 		%opts.noTrainingPoints = 2000;  % # points used for training
-		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
 	elseif strcmp(dataset, 'sun')
@@ -21,7 +21,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts
 		gistlabels  = labels;
 		tstperclass = 10;
 		%opts.noTrainingPoints = 3970;  % # points used for training
-		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
 	elseif strcmp(dataset, 'nus')
@@ -29,17 +29,17 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_gist(dataset, opts
     tags = load([basedir '/nuswide/AllLabels81.txt']);
     tstperclass = 30;
 		%opts.noTrainingPoints = 20*81;
-		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test_nus(gist, tags, tstperclass);
 
 	else, error('unknown dataset'); end
 
-	whos Xtrain Ytrain Xtest Ytest cateTrainTest
+	whos Xtrain Ytrain Xtest Ytest
 	myLogInfo('Dataset "%s" loaded in %.2f secs', dataset, toc);
 end
 
 % --------------------------------------------------------
-function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+function [Xtrain, Ytrain, Xtest, Ytest] = ...
 		split_train_test(gist, gistlabels, tstperclass)
 
 	% normalize features
@@ -75,12 +75,12 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
 	Xtest  = Xtest(ind, :);
 	Ytest  = Ytest(ind);
 
-	cateTrainTest = repmat(Ytrain, 1, length(Ytest)) ...
-		== repmat(Ytest, 1, length(Ytrain))';
+	%cateTrainTest = repmat(Ytrain, 1, length(Ytest)) ...
+		%== repmat(Ytest, 1, length(Ytrain))';
 end
 
 % --------------------------------------------------------
-function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
+function [Xtrain, Ytrain, Xtest, Ytest] = ...
 		split_train_test_nus(gist, tags, tstperclass)
 
 	% normalize features
@@ -104,5 +104,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
 	Xtest  = Xtest(ind, :);
 	Ytest  = Ytest(ind, :);
 
-	cateTrainTest = (Ytrain * Ytest' > 0);
+	% TODO after eliminating cateTrainTest, get_results will have to deal with
+	% the multi-label case explicitly
+	%cateTrainTest = (Ytrain * Ytest' > 0);
 end

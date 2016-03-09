@@ -138,14 +138,17 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		end
 
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
-		if opts.reg_rs > 0  &&  i > reservoir_size
-			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-			W = sgd_update(W, Xsample, Hres, stepsizes, opts.SGDBoost);
+		if isLabeled
+			if opts.reg_rs > 0  &&  i > reservoir_size
+				stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
+				W = sgd_update(W, Xsample, Hres, stepsizes, opts.SGDBoost);
+			end
 		end
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
 		% either max entropy or smoothness, but not both
 		if opts.reg_maxent > 0  &&  num_unlabeled > 10
+			% TODO hard-coded starting threshold of 10 unlabeled examples
 			W = W - opts.reg_maxent * U * W;
 		elseif opts.reg_smooth > 0 && i > reservoir_size
 			W = reg_smooth(W,[spoint;samplegist(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);

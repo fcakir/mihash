@@ -1,7 +1,16 @@
-function test_osh(Xtest, Ytest, cateTrainTest, resfn, res_trial_fn, opts)
+function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, opts)
 	try 
 		load(resfn);
 	catch
+		% for semi-supervised case, only do retrieval against LABELED training data
+		% NOTE assuming single-labeled examples
+		if ~all(Ytrain > 0)
+			labeled = find(Ytrain > 0);
+			myLogInfo('Doing retrieval against the %d(%.1f%%) labeled training examples', ...
+				length(labeled), length(labeled)/length(Ytrain)*100);
+			Ytrain  = Ytrain(labeled);
+		end
+
 		clear res bitflips train_iter train_time
 		for t = 1:opts.ntrials
 			try
@@ -13,12 +22,12 @@ function test_osh(Xtest, Ytest, cateTrainTest, resfn, res_trial_fn, opts)
 				for i = 1:opts.ntests
 					iter = trial_model.test_iters(i);
 					d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-					Y = d.H;  % NOTE: logical
-					tY = (d.W'*Xtest' > 0);
+					%Htrain = d.H;
+					Htrain = d.H(:, labeled);
+					Htest  = (d.W'*Xtest' > 0);
 
-					% NOTE: get_res() uses parfor
 					fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-					t_res(i) = get_results(cateTrainTest, Y, tY, opts);
+					t_res(i) = get_results(Htrain, Htest, Ytrain, Ytest, opts);
 					t_bitflips(i) = d.bitflips;
 					t_train_iter(i) = iter;
 					t_train_time(i) = d.train_time;
@@ -33,7 +42,9 @@ function test_osh(Xtest, Ytest, cateTrainTest, resfn, res_trial_fn, opts)
 		% save all trials in a single file (for backward compatibility)
 		save(resfn, 'res', 'bitflips', 'train_iter', 'train_time');
 	end
-	myLogInfo('Final test %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
+
+	myLogInfo('Final test %s: %.3g +/- %.3g', ...
+		opts.metric, mean(res(:,end)), std(res(:,end)));
 
 	% visualize
 	if opts.showplots
