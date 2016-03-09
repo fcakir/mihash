@@ -53,14 +53,6 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 	if any(run_trial) || ~all(res_exist)
 		myLogInfo('Loading data...');
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
-
-		% handle test_frac
-		if opts.test_frac < 1
-			myLogInfo('! only testing first %g%%', opts.test_frac*100);
-			idx = 1:round(size(Xtest, 1)*opts.test_frac);
-			Xtest = Xtest(idx, :);
-			Ytest = Ytest(idx);
-		end
 	end
 
 	% 3. TRAINING: run all _necessary_ trials (handled by train_osh)
@@ -72,6 +64,13 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 	% 4. TESTING: run all _necessary_ trials
 	if ~all(res_exist)
 		myLogInfo('Testing models...');
+		% handle test_frac
+		if opts.test_frac < 1
+			myLogInfo('! only testing first %g%%', opts.test_frac*100);
+			idx = 1:round(size(Xtest, 1)*opts.test_frac);
+			Xtest = Xtest(idx, :);
+			Ytest = Ytest(idx);
+		end
 		test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, opts);
 	end
 end
