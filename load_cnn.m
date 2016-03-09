@@ -2,37 +2,39 @@ function [Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = load_cnn(dataset, opts)
 
 	tic;
 	if strcmp(dataset, 'cifar')
+		if opts.windows
+			basedir = '\\ivcfs1\codebooks\hashing_project\data';
+		else
+			basedir = '/research/codebooks/hashing_project/data';
+		end
 		% trainCNN
-		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/trainCNN.mat');
+		load([basedir '/cifar-10/descriptors/trainCNN.mat']);
 		% traininglabels
-		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/traininglabelsCNN.mat');
+		load([basedir '/cifar-10/descriptors/traininglabelsCNN.mat']);
 		% testCNN
-		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/testCNN.mat');
+		load([basedir '/cifar-10/descriptors/testCNN.mat']);
 		% testlabels
-		load('/research/codebooks/hashing_project/data/cifar-10/descriptors/testlabelsCNN.mat');
+		load([basedir '/cifar-10/descriptors/testlabelsCNN.mat']);
 		cnn       = [trainCNN; testCNN];
 		cnnlabels = [traininglabels; testlabels];
 		tstperclass = 100;
 		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
 			split_train_test(cnn, cnnlabels, tstperclass);
 
-	elseif strcmp(dataset, 'sun')
-		% TODO
-		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
-			split_train_test(cnn, cnnlabels, tstperclass);
-
-	elseif strcmp(dataset, 'nus')
-		% TODO
-		[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
-			split_train_test_nus(cnn, tags, tstperclass);
-
 	elseif strcmp(dataset, 'places')
-		% loads variables: feats, labels, images
-		load('/research/object_detection/data/places/places_alexnet_fc7.mat')
-		% TODO train/test split for Places
+		if opts.windows
+			basedir = '\\kraken\object_detection\data';
+		else
+			basedir = '/research/object_detection/data';
+		end
+		% loads variables: pca_feats, labels, images
+		load([basedir '/places/places_alexnet_fc7pca128.mat']);
+		% TODO use the same number of training images from each class, 
+		%      or do uniform sampling?
+		%
 		%tstperclass = ?
 		%[Xtrain, Ytrain, Xtest, Ytest, cateTrainTest] = ...
-			%split_train_test(feats, labels, tstperclass);
+			%split_train_test(pca_feats, labels, tstperclass);
 
 	else, error(['unknown dataset: ' dataset]); end
 
