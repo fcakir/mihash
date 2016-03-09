@@ -1,14 +1,18 @@
-function train_osh(Xtrain, Ytrain, opts)
+function train_osh(Xtrain, Ytrain, run_trial, opts)
 	% online (semi-)supervised hashing
 	
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
 	parfor t = 1:opts.ntrials
+		if run_trial(t) == 0
+			myLogInfo('Trial %02d not required, skipped', t);
+			continue;
+		end
 		myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
 
+		% randomly set test checkpoints (to better mimic real scenarios)
 		if opts.ntests > 2
-			% randomly set test iteration numbers (to better mimic real scenarios)
 			% tests at 1, end, and around the endpoints of every interval
 			test_iters = [];
 			interval = round(opts.noTrainingPoints/(opts.ntests-1));
@@ -23,8 +27,9 @@ function train_osh(Xtrain, Ytrain, opts)
 		end
 
 		% do SGD optimization
+		prefix = sprintf('%s/trial%d', opts.expdir, t);
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
-			Xtrain, Ytrain, test_iters, opts, t);
+			Xtrain, Ytrain, prefix, test_iters, t, opts);
 	end
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
@@ -34,22 +39,8 @@ end
 
 % -------------------------------------------------------------
 function [train_time, update_time, bitflips] = sgd_optim(...
-		Xtrain, Ytrain, test_iters, opts, trialNo)
+		Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 	% optimization via SGD
-
-	prefix = sprintf('%s/trial%d', opts.expdir, trialNo);
-	noexist = 0;
-	for i = test_iters
-		if ~exist(sprintf('%s_iter%d.mat', prefix, i), 'file')
-			noexist = noexist + 1;
-		end
-	end
-	if noexist == 0 && exist([prefix '.mat'], 'file') && ...
-			opts.override == 0
-
-		myLogInfo('Trial %d already done.', trialNo); 
-		load([prefix '.mat']); return;
-	end
 
 	% init
 	[W, H, ECOCs] = init_osh(Xtrain, opts);

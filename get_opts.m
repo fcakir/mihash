@@ -1,4 +1,4 @@
-function opts = get_opts(dataset, nbits, ftype, varargin)
+function opts = get_opts(ftype, dataset, nbits, varargin)
 	% PARAMS
 	%  mapping (string) {'smooth', 'bucket', 'coord'}
 	%  ntrials (int) # of random trials
@@ -14,9 +14,9 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	% 
 	ip = inputParser;
 	% default values
+	ip.addParamValue('ftype', ftype, @isstr);
 	ip.addParamValue('dataset', dataset, @isstr);
 	ip.addParamValue('nbits', nbits, @isscalar);
-	ip.addParamValue('ftype', ftype, @isstr);
 
 	ip.addParamValue('mapping', 'smooth', @isstr);
 	ip.addParamValue('stepsize', 0.1, @isscalar);
@@ -32,6 +32,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('ntests', 10, @isscalar);
 	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
+	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
 	% controling when to update hash table
 	% default: save every opts.update_interval iterations
@@ -52,6 +53,7 @@ function opts = get_opts(dataset, nbits, ftype, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
+	assert(ismember(opts.metric, {'mAP', 'prec_k', 'prec_n'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
