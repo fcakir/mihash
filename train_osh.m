@@ -57,15 +57,16 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		Ysample        = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
+		if opts.adaptive > 0
+			persistent table_thr;
+			table_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
+				1:maxLabelSize);
+		end
 	end
 	if opts.reg_maxent > 0
 		% use max entropy regularizer
 		num_unlabeled = 0;
 		U = zeros(size(Xtrain, 2));
-	end
-	if opts.reg_smooth > 0
-		persistent table_thr;
-		table_thr = arrayfun(@bit_fp_thr,opts.nbits*ones(1,maxLabelSize),1:maxLabelSize);
 	end
 
 	% SGD iterations
