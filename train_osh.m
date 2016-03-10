@@ -2,11 +2,12 @@ function train_osh(Xtrain, Ytrain, run_trial, opts)
 	% online (semi-)supervised hashing
 	
 	% [hack] 
-	exp100dir = sprintf('%s/%s/%dpts_all101tests', opts.localdir, opts.identifier);
+	exp100dir = sprintf('%s/%s/%dpts_all101tests', opts.localdir, opts.identifier, ...
+		opts.noTrainingPoints);
 	if ~exist(exp100dir, 'dir')
+		myLogInfo('[HACK] Secretly creating %s', exp100dir);
 		mkdir(exp100dir); 
 		if ~opts.windows, unix(['chmod g+w ', exp100dir]); end
-		myLogInfo('[HACK] Secretly created %s', exp100dir);
 	end
 
 	train_time  = zeros(1, opts.ntrials);
