@@ -74,6 +74,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	assert(opts.nworkers>0 && opts.nworkers<=12);
+
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -136,23 +137,27 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% set expdir
-	opts.expdir = sprintf('%s/%s/%gpts_%dtests', opts.localdir, opts.identifier, ...
-		opts.noTrainingPoints, opts.ntests);
+	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
+	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+	if ~exist(expdir_base, 'dir'), 
+		mkdir(expdir_base);
+		if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
+	end
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
 		mkdir(opts.expdir); 
-		if ~opts.windows, unix(['chmod -R g+rw ' opts.expdir]); end
+		if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
 	end
 
 	% decipher evaluation metric
 	if ~isempty(strfind(opts.metric, 'prec_k'))
 		% eg. prec_k3 is precision at k=3
 		opts.prec_k = sscanf(opts.metric(7:end), '%d');
-        opts.metric = 'prec_k';
+		opts.metric = 'prec_k';
 	elseif ~isempty(strfind(opts.metric, 'prec_n'))
 		% eg. prec_n3 is precision at n=3
 		opts.prec_n = sscanf(opts.metric(7:end), '%d');
-        opts.metric = 'prec_n';
+		opts.metric = 'prec_n';
 	else 
 		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
 	end
