@@ -24,7 +24,7 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		myLogInfo(['mAP = ' num2str(res)]);
 
 
-	elseif strfind(opts.metric, 'prec_k')
+	elseif strcmp(opts.metric, 'prec_k')
 		% intended for PLACES, large scale
 		K = opts.prec_k;
 		prec_k = zeros(1, testsize);

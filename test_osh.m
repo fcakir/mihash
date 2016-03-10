@@ -22,7 +22,7 @@ function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
 			clear t_res t_bitflips t_train_iter t_train_time
 			Tprefix = sprintf('%s/trial%d', opts.expdir, t);
 			trial_model = load(sprintf('%s.mat', Tprefix));
-			for i = 1:opts.ntests
+			for i = 1:length(trial_model.test_iters)  % may NOT be 1:opts.ntests!
 				iter = trial_model.test_iters(i);
 				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
 				if isempty(labeled)

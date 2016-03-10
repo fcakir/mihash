@@ -1,6 +1,14 @@
 function train_osh(Xtrain, Ytrain, run_trial, opts)
 	% online (semi-)supervised hashing
 	
+	% [hack] 
+	exp100dir = sprintf('%s/%s/%dpts_all101tests', opts.localdir, opts.identifier);
+	if ~exist(exp100dir, 'dir')
+		mkdir(exp100dir); 
+		if ~opts.windows, unix(['chmod g+w ', exp100dir]); end
+		myLogInfo('[HACK] Secretly created %s', exp100dir);
+	end
+
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
@@ -12,28 +20,57 @@ function train_osh(Xtrain, Ytrain, run_trial, opts)
 		myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
 
 		% randomly set test checkpoints (to better mimic real scenarios)
-		if opts.ntests > 2
-			% tests at 1, end, and around the endpoints of every interval
-			test_iters = [];
-			interval = round(opts.noTrainingPoints/(opts.ntests-1));
-			for i = 1:opts.ntests-2
-				iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-				test_iters = [test_iters, iter];
-			end
-			test_iters = [1, test_iters, opts.noTrainingPoints];
-		else
-			% special case ntests<=2: only test on first & last iteration
-			test_iters = [1, opts.noTrainingPoints];
+		% NEW: always use 101 checkpoints (see note below), and require opts.ntests 
+		%      to be a divider of 100. This way when ntests changes for the same 
+		%      parameters, we won't have to run again
+		save_iters = [];
+		interval = round(opts.noTrainingPoints/(opts.ntests-1));
+		for i = 1:100-1 %opts.ntests-2
+			iter = interval*i + randi([1 round(interval/4)]) - round(interval/8);
+			save_iters = [save_iters, iter];
 		end
+		save_iters = [1, save_iters, opts.noTrainingPoints];
 
 		% do SGD optimization
-		prefix = sprintf('%s/trial%d', opts.expdir, t);
+		prefix = sprintf('%s/trial%d', exp100dir, t); %[hack]
 		[train_time(t), update_time(t), bit_flips(t)] = sgd_optim(...
-			Xtrain, Ytrain, prefix, test_iters, t, opts);
+			Xtrain, Ytrain, prefix, save_iters, t, opts);
+
+		% [hack] NEW: test_iters will be a subset of save_iters
+		% now symlink/copy models in exp100dir into opts.expdir
+		% 
+		% NOTE due to some weird technical detail, it's much more convenient to use
+		%      a total of 101 checkpoints (save_iters). 
+		%      Then it gives (ntests+1) equally spaced test_iters
+		%      [fingers crossed...]
+		%
+		M = 100/opts.ntests;  % M is int, ensured by get_opts
+		test_iters = save_iters(1:M:end);
+		for iter = test_iters
+			src = sprintf('%s/trial%d_iter%d.mat', exp100dir, t, iter);
+			dst = sprintf('%s/trial%d_iter%d.mat', opts.expdir, t, iter);
+			symlink_or_copy(src, dst, opts.windows);
+		end
+		% for final model, load, modify test_iters, save
+		d = load(sprintf('%s/trial%d.mat', exp100dir, t, iter));
+		d.test_iters = test_iters;
+		save(sprintf('%s/trial%d.mat', opts.expdir, t, iter), '-struct', 'd');
 	end
+
 	myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 	if strcmp(opts.mapping, 'smooth')
 		myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+	end
+end
+
+% -------------------------------------------------------------
+function symlink_or_copy(src, dst, windows)
+	if windows
+		% arghhh, we can't use ln -s on Window$, just copy
+		copyfile(src, dst);
+	else
+		% ln -s
+		unix(sprintf('ln -s %s %s', src, dst));
 	end
 end
 
@@ -212,6 +249,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	% save final model, etc
 	save([prefix '.mat'], 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
 	if ~opts.windows, unix(['chmod o-w ' prefix '.mat']); end % matlab permission bug
+	myLogInfo('Saved %s.mat', prefix);
 end
 
 % -----------------------------------------------------------
