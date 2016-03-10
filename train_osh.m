@@ -24,12 +24,12 @@ function train_osh(Xtrain, Ytrain, run_trial, opts)
 		%      to be a divider of 100. This way when ntests changes for the same 
 		%      parameters, we won't have to run again
 		save_iters = [];
-		interval = round(opts.noTrainingPoints/(opts.ntests-1));
-		for i = 1:100-1 %opts.ntests-2
+		interval = round(opts.noTrainingPoints/100*.99);
+		for i = 1:99
 			iter = interval*i + randi([1 round(interval/4)]) - round(interval/8);
 			save_iters = [save_iters, iter];
 		end
-		save_iters = [1, save_iters, opts.noTrainingPoints];
+		save_iters = [1, save_iters, opts.noTrainingPoints];  % 101 in total
 
 		% do SGD optimization
 		prefix = sprintf('%s/trial%d', exp100dir, t); %[hack]
