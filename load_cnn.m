@@ -12,7 +12,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		load([basedir '/cifar-10/descriptors/testCNN.mat']); % testCNN
 		load([basedir '/cifar-10/descriptors/testlabelsCNN.mat']); % testlabels
 		X = [trainCNN; testCNN];
-		Y = [traininglabels; testlabels];
+		Y = [traininglabels+1; testlabels+1];  % NOTE labels are from 0 to 9
 		T = 100;
 		% fully supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T);

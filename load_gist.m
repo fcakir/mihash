@@ -10,7 +10,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
 	if strcmp(dataset, 'cifar')
 		load([basedir '/cifar-10/descriptors/gist.mat']);
 		gist        = [traingist; testgist];
-		gistlabels  = [trainlabels; testlabels];
+		gistlabels  = [trainlabels+1; testlabels+1];  % NOTE labels are 0 to 9
 		tstperclass = 100;
 		%opts.noTrainingPoints = 2000;  % # points used for training
 		[Xtrain, Ytrain, Xtest, Ytest] = ...
@@ -18,7 +18,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
 
 	elseif strcmp(dataset, 'sun')
 		load([basedir '/sun397/SUN_gist.mat']);
-		gistlabels  = labels;
+		gistlabels  = labels+1;  % NOTE labels are 0 to 396
 		tstperclass = 10;
 		%opts.noTrainingPoints = 3970;  % # points used for training
 		[Xtrain, Ytrain, Xtest, Ytest] = ...

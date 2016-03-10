@@ -24,45 +24,33 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		myLogInfo(['mAP = ' num2str(res)]);
 
 
-	elseif strfind(opts.metric, 'prec_k')
+	elseif ~isempty(strfind(opts.metric, 'prec_k'))
 		% intended for PLACES, large scale
 		K = opts.prec_k;
 		prec_k = zeros(1, testsize);
+		sim = single(2*Htrain-1)'*single(2*Htest-1);
 
-		% distribute wrt. unique labels
-		[tlabels, testind, testres, testH] = parsplit(Ytest, Htest);
-		parfor l = 1:numel(testind)
-			target_label = tlabels(l);
-			sim = (2*single(Htrain)-1)' * (2*single(testH{l})-1);
-
-			for i = 1:length(testind{l})
-				[~, I] = sort(sim(:, i), 'descend');
-				I = I(1:K);
-				p_k = mean(Ytrain(I) == target_label);
-				testres{l}(i) = p_k;
-			end
-		end
-		% gather results
-		for l = 1:numel(testind)
-			prec_k(testind{l}) = testres{l};
+		parfor i = 1:testsize
+			sim_i = sim(:, i);
+			th = binsearch(sim_i, K);
+			[~, I] = sort(sim_i(sim_i>th), 'descend');
+			I = I(1:K);
+			prec_k(i) = mean(Ytrain(I) == Ytest(i));
 		end
 		res = mean(prec_k);
 		myLogInfo('Prec@%d neighbors = %g', K, res);
 
 
-	elseif strcmp(opts.metric, 'prec_n')
-		% TODO check correctness
+	elseif ~isempty(strfind(opts.metric, 'prec_n'))
 		N = opts.prec_n;
 		R = opts.nbits;
 		prec_n = zeros(1, testsize);
-        sim = single(2*Htrain-1)'*single(2*Htest-1);
-        
-        for j=1:testsize
-            labels = 2*double(Ytrain==Ytest(j))-1;
-            ind = find((-sim(:,j)+R)/2 <= N);
-            prec_n(j) = sum(labels(ind) == 1)/length(ind);
-            clear ind
-        end
+		sim = single(2*Htrain-1)'*single(2*Htest-1);
+
+		for j=1:testsize
+			labels = (Ytrain == Ytest(j));
+			prec_n(j) = mean(labels((-sim(:,j)+R)/2 <= N));
+		end
 
 		prec_n(isnan(prec_n)) = [];
 		res = mean(prec_n);
@@ -74,14 +62,17 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 end
 
 % ----------------------------------------------------------
-function [tlabels, testind, testres, testH] = parsplit(Ytest, Htest)
-	tlabels = unique(Ytest);
-	testind = cell(1, length(tlabels));
-	testres = cell(1, length(tlabels));
-	testH = cell(1, length(tlabels));
-	for l = 1:length(tlabels)
-		testind{l} = find(Ytest == tlabels(l));
-		testres{l} = zeros(size(testind{l}));
-		testH{l} = Htest(:, testind{l});
+function T = binsearch(x, k)
+	% x: input vector
+	% k: number of largest elements
+	% T: threshold
+	T = -Inf;
+	while numel(x) > k
+		T0 = T;
+		x0 = x;
+		T  = mean(x);
+		x  = x(x>T);
 	end
+	% for sanity
+	if numel(x) < k, T = T0; end
 end

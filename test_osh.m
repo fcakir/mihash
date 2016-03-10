@@ -30,10 +30,17 @@ function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
 				else
 					Htrain = d.H(:, labeled);
 				end
-				Htest = (d.W'*Xtest' > 0);
+				if 0 %~isempty(d.seenLabels)
+					[~, ind] = ismember(d.seenLabels, Ytest);
+					Htest = (d.W'*Xtest(ind, :)' > 0);
+					Ltest = Ytest(ind);
+				else
+					Htest = (d.W'*Xtest' > 0);
+					Ltest = Ytest;
+				end
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-				t_res(i) = get_results(Htrain, Htest, Ytrain, Ytest, opts);
+				t_res(i) = get_results(Htrain, Htest, Ytrain, Ltest, opts);
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;

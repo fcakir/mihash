@@ -1,5 +1,16 @@
 function train_osh(Xtrain, Ytrain, run_trial, opts)
 	% online (semi-)supervised hashing
+
+	% test
+	%{
+	[W, H, ECOCs] = init_osh(Xtrain, opts);
+	Xtest = evalin('caller', 'Xtest');
+	Ytest = evalin('caller', 'Ytest');
+	H = (W'*Xtrain' > 0);
+	Htest = (W'*Xtest' > 0);
+	get_results(H, Htest, Ytrain, Ytest, opts);
+	% test
+	%}
 	
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
@@ -44,6 +55,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 
 	% init
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
+
 	ntrain_all    = size(Xtrain, 1);
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
@@ -183,7 +195,7 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% cache intermediate model to disk
 		if ismember(i, test_iters)
 			savefile = sprintf('%s_iter%d.mat', prefix, i);
-			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time');
+			save(savefile, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'seenLabels');
 			if ~opts.windows, unix(['chmod o-w ' savefile]); end  % matlab permission bug
 		end
 		if ~mod(i, round(opts.noTrainingPoints/5))
