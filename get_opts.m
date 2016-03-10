@@ -94,7 +94,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
 		mkdir(opts.localdir);  
-		if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
+		if ~opts.windows, unix(['chmod -R g+rw ' opts.localdir]); end
 	end
 
 	% set randseed -- don't change the randseed if don't have to!
@@ -141,7 +141,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
 		mkdir(opts.expdir); 
-		if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
+		if ~opts.windows, unix(['chmod -R g+rw ' opts.expdir]); end
 	end
 
 	% decipher evaluation metric
