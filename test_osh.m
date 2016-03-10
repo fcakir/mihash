@@ -1,50 +1,56 @@
-function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, opts)
-	try 
-		load(resfn);
-	catch
-		% for semi-supervised case, only do retrieval against LABELED training data
-		% NOTE assuming single-labeled examples
-		if ~all(Ytrain > 0)
-			labeled = find(Ytrain > 0);
-			myLogInfo('Doing retrieval against the %d(%.1f%%) labeled training examples', ...
-				length(labeled), length(labeled)/length(Ytrain)*100);
-			Ytrain  = Ytrain(labeled);
-		end
+function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
+	% if we're running this function, it means some elements in res_exist is false
+	% and we need to compute/recompute the corresponding res_trial_fn's
 
-		clear res bitflips train_iter train_time
-		for t = 1:opts.ntrials
-			try
-				load(res_trial_fn{t});
-			catch
-				clear t_res t_bitflips t_train_iter t_train_time
-				Tprefix = sprintf('%s/trial%d', opts.expdir, t);
-				trial_model = load(sprintf('%s.mat', Tprefix));
-				for i = 1:opts.ntests
-					iter = trial_model.test_iters(i);
-					d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-					%Htrain = d.H;
-					Htrain = d.H(:, labeled);
-					Htest  = (d.W'*Xtest' > 0);
-
-					fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-					t_res(i) = get_results(Htrain, Htest, Ytrain, Ytest, opts);
-					t_bitflips(i) = d.bitflips;
-					t_train_iter(i) = iter;
-					t_train_time(i) = d.train_time;
-				end
-				save(res_trial_fn{t}, 't_res', 't_bitflips', 't_train_iter', 't_train_time');
-			end
-			res(t, :) = t_res;
-			bitflips(t, :) = t_bitflips;
-			train_iter(t, :) = t_train_iter;
-			train_time(t, :) = t_train_time;
-		end
-		% save all trials in a single file (for backward compatibility)
-		save(resfn, 'res', 'bitflips', 'train_iter', 'train_time');
+	% for semi-supervised case, only do retrieval against LABELED training data
+	% NOTE assuming single-labeled examples
+	if ~all(Ytrain > 0)
+		labeled = find(Ytrain > 0);
+		myLogInfo('Doing retrieval against the %d(%.1f%%) labeled training examples', ...
+			length(labeled), length(labeled)/length(Ytrain)*100);
+		Ytrain  = Ytrain(labeled);
+	else
+		labeled = [];
 	end
 
+	clear res bitflips train_iter train_time
+	for t = 1:opts.ntrials
+		if res_exist(t)
+			myLogInfo('Trial %d: results exist', t);
+			load(res_trial_fn{t});
+		else
+			clear t_res t_bitflips t_train_iter t_train_time
+			Tprefix = sprintf('%s/trial%d', opts.expdir, t);
+			trial_model = load(sprintf('%s.mat', Tprefix));
+			for i = 1:opts.ntests
+				iter = trial_model.test_iters(i);
+				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
+				if isempty(labeled)
+					Htrain = d.H;
+				else
+					Htrain = d.H(:, labeled);
+				end
+				Htest = (d.W'*Xtest' > 0);
+
+				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
+				t_res(i) = get_results(Htrain, Htest, Ytrain, Ytest, opts);
+				t_bitflips(i) = d.bitflips;
+				t_train_iter(i) = iter;
+				t_train_time(i) = d.train_time;
+			end
+			save(res_trial_fn{t}, 't_res', 't_bitflips', 't_train_iter', 't_train_time');
+		end
+		res(t, :) = t_res;
+		bitflips(t, :) = t_bitflips;
+		train_iter(t, :) = t_train_iter;
+		train_time(t, :) = t_train_time;
+	end
 	myLogInfo('Final test %s: %.3g +/- %.3g', ...
 		opts.metric, mean(res(:,end)), std(res(:,end)));
+
+	% save all trials in a single file (for backward compatibility)
+	% it may overwrite existing file, but whatever
+	save(resfn, 'res', 'bitflips', 'train_iter', 'train_time');
 
 	% visualize
 	if opts.showplots

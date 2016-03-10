@@ -49,9 +49,6 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 	train_time    = 0;   update_time  = 0;
 	maxLabelSize  = 205; % Sun
 
-	persistent table_thr;
-	table_thr = arrayfun(@bit_fp_thr,opts.nbits*ones(1,maxLabelSize),1:maxLabelSize);
-
 	% deal with regularizers
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
@@ -65,6 +62,10 @@ function [train_time, update_time, bitflips] = sgd_optim(...
 		% use max entropy regularizer
 		num_unlabeled = 0;
 		U = zeros(size(Xtrain, 2));
+	end
+	if opts.reg_smooth > 0
+		persistent table_thr;
+		table_thr = arrayfun(@bit_fp_thr,opts.nbits*ones(1,maxLabelSize),1:maxLabelSize);
 	end
 
 	% SGD iterations

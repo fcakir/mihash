@@ -12,12 +12,17 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 	if opts.test_frac < 1
 		Rprefix = sprintf('%s_frac%g', Rprefix);
 	end
+
 	resfn = sprintf('%s_%dtrials.mat', Rprefix, opts.ntrials);
 	res_trial_fn = cell(1, opts.ntrials);
 	for t = 1:opts.ntrials 
 		res_trial_fn{t} = sprintf('%s_trial%d.mat', Rprefix, t);
 	end
-	res_exist = cellfun(@(r) exist(r, 'file'), res_trial_fn);
+	if opts.override
+		res_exist = zeros(1, opts.ntrials);
+	else
+		res_exist = cellfun(@(r) exist(r, 'file'), res_trial_fn);
+	end
 
 
 	% 1. determine which (training) trials to run
@@ -71,6 +76,6 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 			Xtest = Xtest(idx, :);
 			Ytest = Ytest(idx);
 		end
-		test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, opts);
+		test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts);
 	end
 end
