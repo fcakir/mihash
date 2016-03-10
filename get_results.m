@@ -55,23 +55,16 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		N = opts.prec_n;
 		R = opts.nbits;
 		prec_n = zeros(1, testsize);
+        sim = single(2*Htrain-1)'*single(2*Htest-1);
+        
+        for j=1:testsize
+            labels = 2*double(Ytrain==Ytest(j))-1;
+            ind = find((-sim(:,j)+R)/2 <= N);
+            prec_n(j) = sum(labels(ind) == 1)/length(ind);
+            clear ind
+        end
 
-		% distribute wrt. unique labels
-		[tlabels, testind, testres, testH] = parsplit(Ytest, Htest);
-		parfor l = 1:numel(testind)
-			target_label = tlabels(l);
-			matches = (Ytrain == target_label);
-			sim = (2*single(Htrain)-1)' * (2*single(testH{l})-1);
-
-			for i = 1:length(testind{l})
-				p_n = mean(matches( -(sim(:, i)+R)/2 <= N ));
-				testres{l}(i) = p_n;
-			end
-		end
-		% gather results
-		for l = 1:numel(testind)
-			prec_n(testind{l}) = testres{l};
-		end
+		prec_n(isnan(prec_n)) = [];
 		res = mean(prec_n);
 		myLogInfo('Prec@%d radius = %g', N, res);
 
