@@ -129,7 +129,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.noTrainingPoints, opts.ntests);
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
-		mkdir(opts.expdir); unix(['chmod g+rw ' opts.expdir]); 
+		mkdir(opts.expdir); unix(['chmod -R g+rw ' opts.expdir]); 
 	end
 
 	% FINISHED
