@@ -136,12 +136,16 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% set expdir
-	opts.expdir = sprintf('%s/%s/%gpts_%dtests', opts.localdir, opts.identifier, ...
-		opts.noTrainingPoints, opts.ntests);
+	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
+	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+	if ~exist(expdir_base, 'dir'), 
+		mkdir(expdir_base);
+		if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
+	end
 	if ~exist(opts.expdir, 'dir'), 
 		myLogInfo(['creating opts.expdir: ' opts.expdir]);
 		mkdir(opts.expdir); 
-		if ~opts.windows, unix(['chmod -R g+rw ' opts.expdir]); end
+		if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
 	end
 
 	% decipher evaluation metric
