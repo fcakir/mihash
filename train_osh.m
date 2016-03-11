@@ -18,7 +18,7 @@ function train_osh(run_trial, opts)
 		test_iters(end) = opts.noTrainingPoints;
 		interval = round(opts.noTrainingPoints/(opts.ntests-1));
 		for i = 1:opts.ntests-2
-			iter = interval*i + randi([1 round(interval/4)]) - round(interval/8);
+			iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
 			test_iters(i+1) = iter;
 		end
 		prefix = sprintf('%s/trial%d', opts.expdir, t);
@@ -39,7 +39,6 @@ end
 function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		prefix, test_iters, trialNo, opts)
 	% optimization via SGD
-	%global Xtest Ytest
 
 	% init
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
@@ -48,6 +47,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
 	maxLabelSize  = 205; % Sun
+
+	% are we handling a mult-labeled dataset?
+	multi_labeled = (size(Ytrain, 2) > 1);
 
 	% deal with regularizers
 	if opts.reg_rs > 0
@@ -77,17 +79,22 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		t_ = tic;  
 		% new training point
 		spoint = Xtrain(i, :);
-		slabel = Ytrain(i);  % KH: assuming single-labeled data for now
+		slabel = Ytrain(i, :);
 
-		if slabel > 0  %if sum(slabel) > 0  
-			% labeled: assign target code
+		if (~multi_labeled && mod(slabel, 10) == 0) || ...
+				(multi_labeled && sum(slabel) > 0)
+			% labeled (single- or multi-label): assign target code(s)
 			isLabeled = true;
+			if ~multi_labeled
+				slabel = slabel/10;  % single-label: recover true label in [1, L]
+			end
 			num_labeled = num_labeled + 1;
-			[target_code, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
+			[target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 				slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
 		else  
 			% unlabeled
 			isLabeled = false;
+			slabel = zeros(size(slabel));  % mark as unlabeled for subsequent functions
 			num_unlabeled = num_unlabeled + 1;
 			if opts.reg_maxent > 0  % update maxent regularizer
 				U = U*num_unlabeled + spoint'*spoint;
@@ -116,7 +123,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				Hres = Hnew;  
 				if strcmp(opts.mapping,'smooth'), update_table = true; end
 			else
-				bitdiff = xor(Hres, Hnew); %(Hres ~= Hnew);
+				bitdiff = xor(Hres, Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
 				% signal update when:
 				% 1) using update_interval (for rs_baseline)
@@ -139,10 +146,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		% SGD-1. update W wrt. loss term(s)
 		if isLabeled
-			%for c = 1:size(target_codes, 1)
-			%code = target_codes(c, :);
-			W = sgd_update(W, spoint, target_code, opts.stepsize, opts.SGDBoost);
-			%end
+			for c = 1:size(target_codes, 1)
+				code = target_codes(c, :);
+				W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost);
+			end
 		end
 
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
@@ -173,7 +180,12 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		end
 		if update_table
 			t_ = tic;
-			Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+			if multi_labeled
+				Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+			else
+				% single-label case: use the TRUE labels to build hash table
+				Hnew = build_hash_table(W, Xtrain, floor(Ytrain/10), seenLabels, M_ecoc, opts);
+			end
 			if ~isempty(H)
 				bitdiff = xor(H, Hnew);
 				bitdiff = sum(bitdiff(:))/ntrain_all;
@@ -196,7 +208,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			myLogInfo(['[T%02d] (%d/%d) SGD %.2fs, HTU %.2fs\n' ...
 				'            L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
 				trialNo, i, opts.noTrainingPoints, train_time, update_time, ...
-				num_labeled, num_unlabeled, numel(seenLabels), bitflips);
+				num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
 
 			% DEBUG
 			%Htest = (W'*Xtest' > 0);
@@ -298,7 +310,7 @@ function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 		if isempty(seenLabels) 
 			assert(isempty(M_ecoc));
 			seenLabels = zeros(size(slabel)); 
-			M_ecoc = logical(zeros(numel(slabel), size(ECOCs, 2)));
+			M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
 		end
 		% find incoming labels that are unseen
 		unseen = find((slabel==1) & (seenLabels==0));

@@ -8,12 +8,14 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 		myLogInfo('! only testing first %g%%', opts.test_frac*100);
 		idx = 1:round(size(Xtest, 1)*opts.test_frac);
 		testX = Xtest(idx, :);
-		testY = Ytest(idx);
+		testY = floor(Ytest(idx)/10);  % reveal true labels
 	else
 		testX = Xtest;
-		testY = Ytest;
+		testY = floor(Ytest/10);  % reveal true labels
 	end
+	trainY = floor(Ytrain/10);  % reveal true labels (including unlabeled in training)
 
+	%{ obsolete
 	% for semi-supervised case, only do retrieval against LABELED training data
 	% NOTE assuming single-labeled examples
 	if ~all(Ytrain > 0)
@@ -24,6 +26,7 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	else
 		labeled = [];
 	end
+	%}
 
 	clear res bitflips train_iter train_time
 	for t = 1:opts.ntrials
@@ -37,22 +40,11 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 			for i = 1:length(trial_model.test_iters)  % may NOT be 1:opts.ntests!
 				iter = trial_model.test_iters(i);
 				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-				if isempty(labeled)
-					Htrain = d.H;
-				else
-					Htrain = d.H(:, labeled);
-				end
-				if 0 %~isempty(d.seenLabels)
-					[~, ind] = ismember(d.seenLabels, Ytest);
-					Htest = (d.W'*testX(ind, :)' > 0);
-					Ltest = testY(ind);
-				else
-					Htest = (d.W'*testX' > 0);
-					Ltest = testY;
-				end
+				Htrain = d.H;
+				Htest  = (d.W'*testX' > 0);
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-				t_res(i) = get_results(Htrain, Htest, Ytrain, Ltest, opts);
+				t_res(i) = get_results(Htrain, Htest, trainY, testY, opts);
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;

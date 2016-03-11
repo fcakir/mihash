@@ -1,4 +1,11 @@
 function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
+	% NOTE: labels are originally [0, L-1], first add 1 to make [1, L]
+	%       then multiply by 10 to make [10, L*10]
+	%
+	%       Next, for each item, if HIDE label in training, +1 to its Y
+	%       So eg. for first class, labeled ones have 10, unlabeled have 11
+	%
+	%       At test time labels can be recovered by dividing 10
 
 	tic;
 	if strcmp(dataset, 'cifar')
@@ -12,7 +19,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		load([basedir '/cifar-10/descriptors/testCNN.mat']); % testCNN
 		load([basedir '/cifar-10/descriptors/testlabelsCNN.mat']); % testlabels
 		X = [trainCNN; testCNN];
-		Y = [traininglabels+1; testlabels+1];  % NOTE labels are from 0 to 9
+		Y = [traininglabels+1; testlabels+1];
 		T = 100;
 		% fully supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T);
@@ -24,13 +31,11 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 			basedir = '/research/object_detection/data';
 		end
 		% loads variables: pca_feats, labels, images
-		% NOTE: labels are from 0 to 204, we add 1 to each to make them 1 to 205
-		%       because we want to use 0 to indicate unlabeled
 		clear pca_feats labels images
 		load([basedir '/places/places_alexnet_fc7pca128.mat']);
 		X = pca_feats;
 		Y = labels + 1;
-		T = 40;
+		T = 20;
 		L = opts.labelspercls;  % default 2500, range {0}U[500, 5000]
 		% semi-supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L);
@@ -88,7 +93,8 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 				warning(sprintf('%s Class%d: ntrain=%d<%d=labelspercls, keeping all', ...
 					labels(i), n_i-T, L));
 			else
-				Ytrain(st+L: ed) = 0;
+				% add 1 to mark unlabeled items
+				Ytrain(st+L: ed) = Ytrain(st+L: ed) + 1;
 			end
 		end
 		cnt = ed;
