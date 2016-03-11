@@ -12,6 +12,7 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 
 	if strcmp(opts.metric, 'mAP')
 		sim = single(2*Htrain-1)'*single(2*Htest-1);
+		%sim = Htrain'*Htest;
 		AP  = zeros(1, testsize);
 		parfor j = 1:testsize
 			labels = 2*double(Ytrain==Ytest(j))-1;
@@ -28,16 +29,19 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		K = opts.prec_k;
 		prec_k = zeros(1, testsize);
 		sim = single(2*Htrain-1)'*single(2*Htest-1);
+		%sim = Htrain'*Htest;
 
 		parfor i = 1:testsize
 			sim_i = sim(:, i);
-			th = binsearch(sim_i, K);
-			[~, I] = sort(sim_i(sim_i>th), 'descend');
+			%th = binsearch(sim_i, K);
+			%[~, I] = sort(sim_i(sim_i>th), 'descend');
+			[~, I] = sort(sim_i, 'descend');
 			I = I(1:K);
 			prec_k(i) = mean(Ytrain(I) == Ytest(i));
 		end
-		res = mean(prec_k(~isnan(prec_k)));
-		myLogInfo('Prec@%d neighbors = %g', K, res);
+		%prec_k = prec_k(~isnan(prec_k));
+		res = mean(prec_k);
+		myLogInfo('Prec@(neighs=%d) = %g', K, res);
 
 
 	elseif ~isempty(strfind(opts.metric, 'prec_n'))
@@ -45,13 +49,19 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		R = opts.nbits;
 		prec_n = zeros(1, testsize);
 		sim = single(2*Htrain-1)'*single(2*Htest-1);
+		%sim = Htrain'*Htest;
 
+		% NOTE 'for' has better CPU usage
 		for j=1:testsize
 			labels = (Ytrain==Ytest(j));
-			prec_n(j) = mean(labels((-sim(:,j)+R)/2 <= N));
+			ind = find(R-sim(:,j) <= 2*N);
+			if ~isempty(ind)
+				prec_n(j) = mean(labels(ind));
+			end
 		end
-		res = mean(prec_n(~isnan(prec_n)));
-		myLogInfo('Prec@%d radius = %g', N, res);
+		%prec_n = prec_n(~isnan(prec_n));
+		res = mean(prec_n);
+		myLogInfo('Prec@(radius=%d) = %g', N, res);
 
 	else
 		error(['Evaluation metric ' opts.metric ' not implemented']);

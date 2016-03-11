@@ -26,11 +26,12 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		% loads variables: pca_feats, labels, images
 		% NOTE: labels are from 0 to 204, we add 1 to each to make them 1 to 205
 		%       because we want to use 0 to indicate unlabeled
+		clear pca_feats labels images
 		load([basedir '/places/places_alexnet_fc7pca128.mat']);
-		X = double(pca_feats);
+		X = pca_feats;
 		Y = labels + 1;
-		T = 20;
-		L = opts.labelspercls;  % default 2500, range [500, 5000]
+		T = 40;
+		L = opts.labelspercls;  % default 2500, range {0}U[500, 5000]
 		% semi-supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L);
 
@@ -48,25 +49,29 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 	% L: [optional] # labels to retain per class
 	if nargin < 4, L = 0; end
 
+	% randomize
+	I = randperm(size(X, 1));
+	X = X(I, :);
+	Y = Y(I);
+
 	% normalize features
 	X = bsxfun(@minus, X, mean(X,1));  % first center at 0
-	X = normalize(X);  % then scale to unit length
-	D = size(X, 2);
+	X = normalize(double(X));  % then scale to unit length
+	D = size(X, 2)
 
 	labels = unique(Y);
-	nclass = length(labels);
-	ntest  = nclass * T;
+	ntest  = length(labels) * T;
 	ntrain = size(X, 1) - ntest;
 	Xtrain = zeros(ntrain, D);  Xtest = zeros(ntest, D);
 	Ytrain = zeros(ntrain, 1);  Ytest = zeros(ntest, 1);
 	
 	% construct test and training set
 	cnt = 0;
-	for i = 1:nclass
+	for i = 1:length(labels)
 		% find examples in this class, randomize ordering
 		ind = find(Y == labels(i));
 		n_i = length(ind);
-		ind = ind(randperm(n_i));
+		%ind = ind(randperm(n_i));
 
 		% assign test
 		Xtest((i-1)*T+1:i*T, :) = X(ind(1:T), :);
@@ -90,10 +95,10 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 	end
 
 	% randomize again
-	ind    = randperm(size(Xtrain, 1));
+	ind    = randperm(ntrain);
 	Xtrain = Xtrain(ind, :);
 	Ytrain = Ytrain(ind);
-	ind    = randperm(size(Xtest, 1));
+	ind    = randperm(ntest);
 	Xtest  = Xtest(ind, :);
 	Ytest  = Ytest(ind);
 end

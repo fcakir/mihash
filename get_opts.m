@@ -95,20 +95,33 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% make localdir
 	if ~exist(opts.localdir, 'dir'), 
 		mkdir(opts.localdir);  
-		if ~opts.windows, unix(['chmod -R g+rw ' opts.localdir]); end
+		if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
 	end
 
 	% set randseed -- don't change the randseed if don't have to!
 	rng(opts.randseed);
 
-	% identifier string for the current experiment
-	if strcmp(opts.dataset, 'places')
-		% [hack] for places
-		assert(opts.labelspercls >= 500 && opts.labelspercls <= 5000, ...
-			'please give a reasonable labelspercls in [500, 5000]');
-		myLogInfo('Places will use %d labeled examples per class', opts.labelspercls);
-		opts.dataset = [opts.dataset, 'L', num2str(opts.labelspercls)];
+	% FC: if mapping is not smooth, set update_interval to noTrainingPoints
+	if ~strcmp(opts.mapping, 'smooth') && opts.update_interval > 0 && ...
+			(opts.update_interval ~= opts.noTrainingPoints)
+		myLogInfo('Mapping: %s. Overriding update_interval=%d to noTrainingPoints=%d', ...
+			opts.mapping, opts.update_interval, opts.noTrainingPoints);
+		opts.update_interval = opts.noTrainingPoints;
 	end
+
+	% [hack] for places
+	if strcmp(opts.dataset, 'places')
+		if opts.labelspercls > 0
+			assert(opts.labelspercls >= 500 && opts.labelspercls <= 5000, ...
+				'please give a reasonable labelspercls in [500, 5000]');
+			myLogInfo('Places will use %d labeled examples per class', opts.labelspercls);
+			opts.dataset = [opts.dataset, 'L', num2str(opts.labelspercls)];
+		else
+			myLogInfo('Places: fully supervised experiment');
+		end
+	end
+
+	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
 	if opts.reg_rs > 0
@@ -135,6 +148,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	if opts.reg_smooth > 0
 		opts.identifier = sprintf('%s-SM%g', opts.identifier, opts.reg_smooth);
 	end
+	myLogInfo('identifier: %s', opts.identifier);
 
 	% set expdir
 	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);

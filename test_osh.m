@@ -1,6 +1,18 @@
-function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
+function test_osh(resfn, res_trial_fn, res_exist, opts)
 	% if we're running this function, it means some elements in res_exist is false
 	% and we need to compute/recompute the corresponding res_trial_fn's
+	global Xtest Ytest Ytrain
+
+	% handle test_frac
+	if opts.test_frac < 1
+		myLogInfo('! only testing first %g%%', opts.test_frac*100);
+		idx = 1:round(size(Xtest, 1)*opts.test_frac);
+		testX = Xtest(idx, :);
+		testY = Ytest(idx);
+	else
+		testX = Xtest;
+		testY = Ytest;
+	end
 
 	% for semi-supervised case, only do retrieval against LABELED training data
 	% NOTE assuming single-labeled examples
@@ -32,11 +44,11 @@ function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
 				end
 				if 0 %~isempty(d.seenLabels)
 					[~, ind] = ismember(d.seenLabels, Ytest);
-					Htest = (d.W'*Xtest(ind, :)' > 0);
-					Ltest = Ytest(ind);
+					Htest = (d.W'*testX(ind, :)' > 0);
+					Ltest = testY(ind);
 				else
-					Htest = (d.W'*Xtest' > 0);
-					Ltest = Ytest;
+					Htest = (d.W'*testX' > 0);
+					Ltest = testY;
 				end
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
@@ -45,6 +57,7 @@ function test_osh(Xtest, Ytest, Ytrain, resfn, res_trial_fn, res_exist, opts)
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;
 			end
+			clear Htrain Htest Ltest
 			save(res_trial_fn{t}, 't_res', 't_bitflips', 't_train_iter', 't_train_time');
 		end
 		res(t, :) = t_res;
