@@ -8,12 +8,15 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 		myLogInfo('! only testing first %g%%', opts.test_frac*100);
 		idx = 1:round(size(Xtest, 1)*opts.test_frac);
 		testX = Xtest(idx, :);
-		testY = floor(Ytest(idx)/10);  % reveal true labels
+		testY = Ytest(idx, :);
 	else
 		testX = Xtest;
-		testY = floor(Ytest/10);  % reveal true labels
+		testY = Ytest;
 	end
-	trainY = floor(Ytrain/10);  % reveal true labels (including unlabeled in training)
+	if size(Ytrain, 2) == 1
+		trainY = floor(Ytrain/10);
+		testY  = floor(Ytest/10);
+	end
 
 	%{ obsolete
 	% for semi-supervised case, only do retrieval against LABELED training data
