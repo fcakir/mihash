@@ -50,6 +50,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 	% are we handling a mult-labeled dataset?
 	multi_labeled = (size(Ytrain, 2) > 1);
+	if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
 
 	% deal with regularizers
 	if opts.reg_rs > 0

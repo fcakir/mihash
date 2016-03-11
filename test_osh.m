@@ -17,20 +17,10 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	if size(Ytrain, 2) == 1
 		trainY = floor(Ytrain/10);
 		testY  = floor(Ytest/10);
-	end
-
-	%{ obsolete
-	% for semi-supervised case, only do retrieval against LABELED training data
-	% NOTE assuming single-labeled examples
-	if ~all(Ytrain > 0)
-		labeled = find(Ytrain > 0);
-		myLogInfo('Doing retrieval against the %d(%.1f%%) labeled training examples', ...
-			length(labeled), length(labeled)/length(Ytrain)*100);
-		Ytrain  = Ytrain(labeled);
+		cateTrainTest = [];
 	else
-		labeled = [];
+		cateTrainTest = (trainY * testY' > 0);
 	end
-	%}
 
 	clear res bitflips train_iter train_time
 	for t = 1:opts.ntrials
@@ -48,7 +38,8 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				Htest  = (d.W'*testX' > 0);
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-				t_res(i) = get_results(Htrain, Htest, trainY, testY, opts);
+				t_res(i) = get_results(Htrain, Htest, trainY, testY, opts, cateTrainTest);
+
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;

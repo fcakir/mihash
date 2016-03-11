@@ -1,4 +1,4 @@
-function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
+function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 	% input: 
 	%   Htrain - (logical) training binary codes
 	%   Htest  - (logical) testing binary codes
@@ -6,6 +6,8 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 	%   Ytest  - (int32) testing labels
 	% output:
 	%  mAP - mean Average Precision
+	if nargin < 6, cateTrainTest = []; end
+	use_cateTrainTest = ~isempty(cateTrainTest);
 
 	trainsize = length(Ytrain);
 	testsize  = length(Ytest);
@@ -15,7 +17,11 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		%sim = Htrain'*Htest;
 		AP  = zeros(1, testsize);
 		parfor j = 1:testsize
-			labels = 2*double(Ytrain==Ytest(j))-1;
+			if use_cateTrainTest
+				labels = 2*cateTrainTest(:, j)-1;
+			else
+				labels = 2*double(Ytrain==Ytest(j))-1;
+			end
 			[~, ~, info] = vl_pr(labels, double(sim(:, j)));
 			AP(j) = info.ap;
 		end
@@ -32,12 +38,17 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 		%sim = Htrain'*Htest;
 
 		parfor i = 1:testsize
+			if use_cateTrainTest 
+				labels = cateTrainTest(:, i);
+			else
+				labels = (Ytrain == Ytest(i));
+			end
 			sim_i = sim(:, i);
 			%th = binsearch(sim_i, K);
 			%[~, I] = sort(sim_i(sim_i>th), 'descend');
 			[~, I] = sort(sim_i, 'descend');
 			I = I(1:K);
-			prec_k(i) = mean(Ytrain(I) == Ytest(i));
+			prec_k(i) = mean(labels(I));
 		end
 		%prec_k = prec_k(~isnan(prec_k));
 		res = mean(prec_k);
@@ -53,7 +64,11 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts)
 
 		% NOTE 'for' has better CPU usage
 		for j=1:testsize
-			labels = (Ytrain==Ytest(j));
+			if use_cateTrainTest
+				labels = cateTrainTest(:, j);
+			else
+				labels = (Ytrain == Ytest(j));
+			end
 			ind = find(R-sim(:,j) <= 2*N);
 			if ~isempty(ind)
 				prec_n(j) = mean(labels(ind));
