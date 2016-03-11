@@ -40,6 +40,18 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		% semi-supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L);
 
+	elseif strcmp(dataset, 'nus')
+		if opts.windows
+			basedir = '\\ivcfs1\codebooks\hashing_project\data';
+		else
+			basedir = '/research/codebooks/hashing_project/data';
+		end
+    load([basedir '/nuswide/AllNuswide_fc7.mat']);  % FVs
+    Y = load([basedir '/nuswide/AllLabels81.txt']);
+		X = double(FVs);  clear FVs
+		T = 30;
+		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T);
+
 	else, error(['unknown dataset: ' dataset]); end
 
 	whos Xtrain Ytrain Xtest Ytest
@@ -107,4 +119,31 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 	ind    = randperm(ntest);
 	Xtest  = Xtest(ind, :);
 	Ytest  = Ytest(ind);
+end
+
+
+% --------------------------------------------------------
+function [Xtrain, Ytrain, Xtest, Ytest] = ...
+		split_train_test_nus(gist, tags, tstperclass)
+
+	% normalize features
+	gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+	gist = normalize(gist);  % then scale to unit length
+
+	% construct test and training set
+	num_classes = 81;
+	testsize    = num_classes * tstperclass;
+	ind         = randperm(size(gist, 1));
+	Xtest       = gist(ind(1:testsize), :);
+	Ytest       = tags(ind(1:testsize), :);
+	Xtrain      = gist(ind(testsize+1:end), :);
+	Ytrain      = tags(ind(testsize+1:end), :);
+
+	% randomize again
+	ind    = randperm(size(Xtrain, 1));
+	Xtrain = Xtrain(ind, :);
+	Ytrain = Ytrain(ind, :);
+	ind    = randperm(size(Xtest, 1));
+	Xtest  = Xtest(ind, :);
+	Ytest  = Ytest(ind, :);
 end
