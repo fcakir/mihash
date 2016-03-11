@@ -75,8 +75,6 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 
 	assert(opts.nworkers>0 && opts.nworkers<=12);
 
-	% following the new hack...
-	assert(100/opts.ntests==round(100/opts.ntests), 'ntests not a divider of 100');
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -155,11 +153,9 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	if ~isempty(strfind(opts.metric, 'prec_k'))
 		% eg. prec_k3 is precision at k=3
 		opts.prec_k = sscanf(opts.metric(7:end), '%d');
-		opts.metric = 'prec_k';
 	elseif ~isempty(strfind(opts.metric, 'prec_n'))
 		% eg. prec_n3 is precision at n=3
 		opts.prec_n = sscanf(opts.metric(7:end), '%d');
-		opts.metric = 'prec_n';
 	else 
 		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
 	end
