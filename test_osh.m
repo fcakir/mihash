@@ -3,15 +3,16 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	% and we need to compute/recompute the corresponding res_trial_fn's
 	global Xtest Ytest Ytrain
 
+	testX  = Xtest;
+	testY  = Ytest;
+	trainY = Ytrain;
+
 	% handle test_frac
 	if opts.test_frac < 1
 		myLogInfo('! only testing first %g%%', opts.test_frac*100);
 		idx = 1:round(size(Xtest, 1)*opts.test_frac);
 		testX = Xtest(idx, :);
 		testY = Ytest(idx, :);
-	else
-		testX = Xtest;
-		testY = Ytest;
 	end
 	if size(Ytrain, 2) == 1
 		trainY = floor(Ytrain/10);

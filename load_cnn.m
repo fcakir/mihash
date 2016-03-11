@@ -34,7 +34,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		clear pca_feats labels images
 		load([basedir '/places/places_alexnet_fc7pca128.mat']);
 		X = pca_feats;
-		Y = labels + 1;
+		Y = (labels + 1)*10;
 		T = 20;
 		L = opts.labelspercls;  % default 2500, range {0}U[500, 5000]
 		% semi-supervised
