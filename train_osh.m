@@ -92,6 +92,18 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			num_labeled = num_labeled + 1;
 			[target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 				slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
+
+			% When a labelled items comes find its neighors from the reservoir
+			if opts.reg_smooth > 0 && opts.reg_rs > 0
+				% hack: for the reservoir, smooth mapping is assumed
+				if i > reservoir_size
+					resY = 2*single(W'*samplegist' > 0)-1;
+					qY = 2* single(W'*spoint > 0)-1;
+					[~, ind] = sort(resY' * qY,'descend');
+				end
+			end
+
+
 		else  
 			% unlabeled
 			isLabeled = false;
@@ -100,13 +112,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			if opts.reg_maxent > 0  % update maxent regularizer
 				U = U*num_unlabeled + spoint'*spoint;
 				U = U/num_unlabeled;
-			elseif opts.reg_smooth > 0 && opts.reg_rs > 0
-				% hack: for the reservoir, smooth mapping is assumed
-				if i > reservoir_size
-					resY = 2*single(W'*samplegist' > 0)-1;
-					qY = 2* single(W'*spoint > 0)-1;
-					[~, ind] = sort(resY' * qY,'descend');
-				end
+		
 			end
 		end
 
@@ -165,7 +171,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		if opts.reg_maxent > 0  &&  num_unlabeled > 10
 			% TODO hard-coded starting threshold of 10 unlabeled examples
 			W = W - opts.reg_maxent * U * W;
-		elseif opts.reg_smooth > 0 && i > reservoir_size
+		elseif opts.reg_smooth > 0 && i > reservoir_size && isLabeled
 			W = reg_smooth(W,[spoint;samplegist(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
