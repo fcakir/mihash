@@ -1,4 +1,6 @@
-function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
+function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts, normalizeX)
+	if nargin < 3, normalizeX = 1; end
+	if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
 
 	if opts.windows
 		basedir = '\\ivcfs1\codebooks\hashing_project\data';
@@ -13,7 +15,12 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
 		gistlabels  = [trainlabels+1; testlabels+1];  % NOTE labels are 0 to 9
 		gistlabels = gistlabels .* 10;
 		tstperclass = 100;
-		%opts.noTrainingPoints = 2000;  % # points used for training
+
+		if normalizeX 
+			% normalize features
+			gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+			gist = normalize(double(gist));  % then scale to unit length
+		end
 		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
@@ -22,7 +29,12 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
 		gistlabels  = labels+1;  % NOTE labels are 0 to 396
 		gistlabels = gistlabels .* 10;
 		tstperclass = 10;
-		%opts.noTrainingPoints = 3970;  % # points used for training
+
+		if normalizeX 
+			% normalize features
+			gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+			gist = normalize(double(gist));  % then scale to unit length
+		end
 		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test(gist, gistlabels, tstperclass);
 
@@ -30,7 +42,12 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts)
     gist = load([basedir '/nuswide/BoW_int.dat']);
     tags = load([basedir '/nuswide/AllLabels81.txt']);
     tstperclass = 30;
-		%opts.noTrainingPoints = 20*81;
+
+		if normalizeX 
+			% normalize features
+			gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+			gist = normalize(double(gist));  % then scale to unit length
+		end
 		[Xtrain, Ytrain, Xtest, Ytest] = ...
 			split_train_test_nus(gist, tags, tstperclass);
 

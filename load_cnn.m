@@ -1,4 +1,7 @@
-function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
+function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
+	if nargin < 3, normalizeX = 1; end
+	if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
+
 	% NOTE: labels are originally [0, L-1], first add 1 to make [1, L]
 	%       then multiply by 10 to make [10, L*10]
 	%
@@ -22,8 +25,16 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		Y = [traininglabels+1; testlabels+1];
 		Y = Y .* 10;
 		T = 100;
+
+		if normalizeX 
+			% normalize features
+			X = bsxfun(@minus, X, mean(X,1));  % first center at 0
+			X = normalize(double(X));  % then scale to unit length
+		end
+
 		% fully supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T);
+
 
 	elseif strcmp(dataset, 'places')
 		if opts.windows
@@ -38,8 +49,16 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
 		Y = (labels + 1)*10;
 		T = 20;
 		L = opts.labelspercls;  % default 2500, range {0}U[500, 5000]
+
+		if normalizeX 
+			% normalize features
+			X = bsxfun(@minus, X, mean(X,1));  % first center at 0
+			X = normalize(double(X));  % then scale to unit length
+		end
+
 		% semi-supervised
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L);
+
 
 	elseif strcmp(dataset, 'nus')
 		if opts.windows
@@ -51,6 +70,13 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts)
     Y = load([basedir '/nuswide/AllLabels81.txt']);
 		X = double(FVs);  clear FVs
 		T = 30;
+
+		if normalizeX 
+			% normalize features
+			X = bsxfun(@minus, X, mean(X,1));  % first center at 0
+			X = normalize(double(X));  % then scale to unit length
+		end
+
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T);
 
 	else, error(['unknown dataset: ' dataset]); end
@@ -72,9 +98,6 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 	X = X(I, :);
 	Y = Y(I);
 
-	% normalize features
-	X = bsxfun(@minus, X, mean(X,1));  % first center at 0
-	X = normalize(double(X));  % then scale to unit length
 	D = size(X, 2)
 
 	labels = unique(Y);
