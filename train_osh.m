@@ -138,13 +138,19 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				% 3) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
 				% NOTE: get_opts() ensures only one scenario will happen
 
-				if opts.update_interval > 0 || ...
-						(opts.adaptive > 0 && bf_temp > table_thr(length(seenLabels))) || ...
+				if opts.update_interval > 0  ||  (opts.adaptive > 0 && bf_temp > table_thr(length(seenLabels))) || ...
 						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					bitflips_res = bitflips_res + bf_temp;
-					update_table = true;
 					Hres = Hnew;
+
 				end
+				
+				if (opts.update_interval > 0 &&  mod(i,opts.update_interval) == 0) ||  (opts.adaptive > 0 && bf_temp > table_thr(length(seenLabels))) || ...
+						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+					update_table = true;
+
+				end
+			
 			end
 		end
 

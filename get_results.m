@@ -17,11 +17,11 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 		%sim = Htrain'*Htest;
 		AP  = zeros(1, testsize);
 		parfor j = 1:testsize
-			if use_cateTrainTest
-				labels = 2*cateTrainTest(:, j)-1;
-			else
+			%if use_cateTrainTest
+			%	labels = 2*cateTrainTest(:, j)-1;
+			%else
 				labels = 2*double(Ytrain==Ytest(j))-1;
-			end
+			%end
 			[~, ~, info] = vl_pr(labels, double(sim(:, j)));
 			AP(j) = info.ap;
 		end
@@ -38,11 +38,11 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 		%sim = Htrain'*Htest;
 
 		parfor i = 1:testsize
-			if use_cateTrainTest 
-				labels = cateTrainTest(:, i);
-			else
+			%if use_cateTrainTest 
+			%	labels = cateTrainTest(:, i);
+			%else
 				labels = (Ytrain == Ytest(i));
-			end
+			%end
 			sim_i = sim(:, i);
 			%th = binsearch(sim_i, K);
 			%[~, I] = sort(sim_i(sim_i>th), 'descend');
