@@ -1,0 +1,17 @@
+scRunCIFAR.m
+    compare LSH/OKH/OSH performance on CIFAR-10 dataset
+
+scRunGIST.m
+    compare LSH/OKH/OSH performance on GIST-1M dataset
+
+scRunMNIST.m
+    compare LSH/OKH/OSH performance on MNIST dataset
+
+scRunSYNTC.m
+    compare LSH/OKH/OSH performance on synthetic dataset
+
+scRunSYNTC_Mu.m
+    compare LSH/OKH/OSH performance on synthetic dataset, under multiple parameter settings
+
+scClstGIST.m
+    run k-means clustering to obtain pseudo class labels for GIST-1M dataset

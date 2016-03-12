@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Setup>
+   <DatasetName>SYNTC</DatasetName>
+   <DataTrnType>Stream</DataTrnType>
+   <ClassCnt>100</ClassCnt>
+   <BatchCnt>100</BatchCnt>
+   <InstFeatDimCnt>1000</InstFeatDimCnt>
+   <InstCntInBatch>100000</InstCntInBatch>
+   <EvaluationType>Sel</EvaluationType>
+</Setup>
