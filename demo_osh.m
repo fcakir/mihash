@@ -57,9 +57,9 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 	% 2. load data (only if necessary)
 	global Xtrain Xtest Ytrain Ytest Dtype
 	Dtype_this = [dataset '_' ftype];
-	if strcmp(Dtype_this, Dtype)
+	if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
 		myLogInfo('Dataset already loaded for %s', Dtype_this);
-	elseif isempty(Dtype) && (any(run_trial) || ~all(res_exist))
+	elseif (any(run_trial) || ~all(res_exist))
 		myLogInfo('Loading data for %s...', Dtype_this);
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
 		Dtype = Dtype_this;

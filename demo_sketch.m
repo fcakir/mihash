@@ -120,11 +120,12 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	%ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
 
 	% Hack for Places
-	ip.addParamValue('labelspercls', 2500, @isscalar);
+	ip.addParamValue('labelspercls', 0, @isscalar);
 
 	% NOTE specific for online sketching hashing
 	ip.addParamValue('sketchsize', 200, @isscalar);
 	ip.addParamValue('nbatches', 20, @isscalar);
+	ip.addParamValue('onlyfinal', 1, @isscalar);
 	
 	% parse input
 	ip.parse(varargin{:});
@@ -177,6 +178,9 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-sketch%d-%dpts-%dbatches', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.sketchsize, opts.noTrainingPoints, opts.nbatches);
+	if opts.onlyfinal
+		opts.identifier = [opts.identifier, '-final'];
+	end
 	myLogInfo('identifier: %s', opts.identifier);
 
 	% set expdir

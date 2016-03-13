@@ -1,6 +1,28 @@
 function train_okh(run_trial, opts)
 
 	global Xtrain Ytrain
+
+	tic;
+	% sample support samples (300) from the FIRST HALF of training set
+	nhalf = floor(size(Xtrain, 1)/2);
+	ind = randperm(nhalf, 300);
+	Xanchor = Xtrain(ind, :);
+
+	% estimate sigma for Gaussian kernel using samples from the SECOND HALF
+	ind = randperm(nhalf, 2000);
+	Xval = Xtrain(nhalf+ind, :);
+	Kval = sqdist(Xval', Xanchor');
+	sigma = mean(mean(Kval, 2));
+	myLogInfo('Estimated sigma = %g', sigma);
+	clear Xval Kval
+
+  % preliminary for testing
+  % kernel mapping the whole set
+  KX = exp(-0.5*sqdist(Xtrain', Xanchor')/sigma^2)';
+  KX = [KX; ones(1,size(KX,2))];
+	%clear Xanchor
+	myLogInfo('Preprocessing took %f sec', toc);
+
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
@@ -23,7 +45,7 @@ function train_okh(run_trial, opts)
 		prefix = sprintf('%s/trial%d', opts.expdir, t);
 
 		% do SGD optimization
-		[train_time(t), update_time(t), bit_flips(t)] = OKH(Xtrain, Ytrain, ...
+		[train_time(t), update_time(t), bit_flips(t)] = OKH(KX, Xanchor, sigma, Ytrain, ...
 			prefix, test_iters, t, opts);
 	end
 
@@ -35,26 +57,21 @@ end
 
 
 function [train_time, update_time, bitflips] = OKH(...
-		Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+		KX, Xanchor, sigma, Ytrain, prefix, test_iters, trialNo, opts)
 
   % init
+	[d, ntrain_all] = size(KX);
   r = opts.nbits;
   para.c = opts.c; %0.1;
   para.alpha = opts.alpha; %0.2;
-  para.anchor = anchor;  % TODO
-  d = size(anchor,1);
-  W = rand(d+1,r)-0.5;
+  para.anchor = Xanchor;
+  %W = rand(d+1,r)-0.5;
+  W = rand(d,r)-0.5;
 	H = [];
 
-  % preliminary for testing
-  % kernel mapping the whole set
-  KX = sqdist(X',anchor');
-  KX = exp(-KX/(2*opts.sigma^2));  % TODO
-  KX = KX';
-  n  = size(KX,2);
-  KX = [KX; ones(1,n)];
-
-  clear X;
+	train_time = 0;
+	update_time = 0;
+	bitflips = 0;
 
   %rX = KX(:,idxTrain); %set being search in testing 
   %tX = KX(:,idxTest); %query set in testing
@@ -67,8 +84,8 @@ function [train_time, update_time, bitflips] = OKH(...
     idx_j = Ytrain(2*i);   %idxTrain(dataIdx(2*i));
     s = 2*(idx_i==idx_j)-1;
     
-    xi = Xtrain(2*i-1, :)'; %KX(:,idx_i);
-    xj = Xtrain(2*i, :)';   %X(:,idx_j);
+    xi = KX(:, 2*i-1); %KX(:,idx_i);
+    xj = KX(:, 2*i);   %X(:,idx_j);
 
     % hash function update
     t_ = tic;
@@ -78,13 +95,14 @@ function [train_time, update_time, bitflips] = OKH(...
 
 		% KH: update table
 		if i == 1 || i == number_iterations || ...
-				(opts.update_interval > 0 && ~mod(i, opts.update_interval/2))
+				(opts.update_interval == 2 && i == number_iterations) || ...
+				(opts.update_interval > 2 && ~mod(i, opts.update_interval/2))
 			t_ = tic;
 			% NOTE assuming smooth mapping
-			Hnew = (traingist * W > 0)';
+			Hnew = (W' * KX > 0);
 			if ~isempty(H)
 				bitdiff = xor(H, Hnew);
-				bitdiff = sum(bitdiff(:))/n;
+				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
 				myLogInfo('[T%02d] HT update @%d, bitdiff=%g', trialNo, i, bitdiff);
 			else
@@ -108,7 +126,8 @@ function [train_time, update_time, bitflips] = OKH(...
 
 	% KH: save final model, etc
 	F = [prefix '.mat'];
-	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
+	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
+		'Xanchor', 'sigma');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end

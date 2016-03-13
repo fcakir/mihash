@@ -51,9 +51,9 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 	% 2. load data (only if necessary)
 	global Xtrain Xtest Ytrain Ytest Dtype
 	Dtype_this = [dataset '_' ftype];
-	if strcmp(Dtype_this, Dtype)
+	if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
 		myLogInfo('Dataset already loaded for %s', Dtype_this);
-	elseif isempty(Dtype) && (any(run_trial) || ~all(res_exist))
+	elseif (any(run_trial) || ~all(res_exist))
 		myLogInfo('Loading data for %s...', Dtype_this);
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
 		Dtype = Dtype_this;
@@ -62,7 +62,7 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 	% 3. TRAINING: run all _necessary_ trials (handled by train_osh)
 	if any(run_trial)
 		myLogInfo('Training models...');
-		train_adapthash(run_trial, opts);
+		train_okh(run_trial, opts);
 	end
 	myLogInfo('Training is done.');
 
@@ -72,7 +72,7 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 		myLogInfo('Testing models...');
 		myLogInfo('<<NOTE>> OKH uses pairs, so each iteration uses 2 examples');
 		opts.noTrainingPoints = opts.noTrainingPoints / 2;
-		test_osh(resfn, res_trial_fn, res_exist, opts);
+		test_okh(resfn, res_trial_fn, res_exist, opts);
 	end
 	myLogInfo('Testing is done.');
 end
@@ -112,7 +112,6 @@ function opts = get_opts_okh(ftype, dataset, nbits, varargin)
 		'/research/object_detection/cachedir/online-hashing/okh', @isstr);
 	ip.addParamValue('c', 0.1, @isscalar);
 	ip.addParamValue('alpha', 0.2, @isscalar);
-	ip.addParamValue('sigma', 0.9, @isscalar);
 
 
 	% parse input
@@ -169,8 +168,8 @@ function opts = get_opts_okh(ftype, dataset, nbits, varargin)
 	end
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%s-%d%s-A%gB%gS%g', opts.dataset, opts.ftype, ...
-		opts.nbits, opts.mapping, opts.alpha, opts.beta, opts.stepsize);
+	opts.identifier = sprintf('%s-%s-%d%s-C%gA%g', opts.dataset, opts.ftype, ...
+		opts.nbits, opts.mapping, opts.c, opts.alpha);
 	if opts.update_interval > 0
 		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	else

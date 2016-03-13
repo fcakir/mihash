@@ -141,8 +141,14 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 		train_time = train_time + toc(t_);
 
 		% KH: update table
-		if i == 1 || i == number_iterations || ...
-				(opts.update_interval > 0 && ~mod(i, opts.update_interval/2))
+		update_table = false;
+		if i == 1 || i == number_iterations
+			update_table = true;
+		elseif (opts.update_interval == 2 && ismember(i, test_iters)) || ...
+				(opts.update_interval > 2 && ~mod(i, opts.update_interval/2))
+			update_table = true;
+		end
+		if update_table
 			t_ = tic;
 			% NOTE assuming smooth mapping
 			Hnew = (traingist * W > 0)';
