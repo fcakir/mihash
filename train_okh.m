@@ -2,27 +2,6 @@ function train_okh(run_trial, opts)
 
 	global Xtrain Ytrain
 
-	tic;
-	% sample support samples (300) from the FIRST HALF of training set
-	nhalf = floor(size(Xtrain, 1)/2);
-	ind = randperm(nhalf, 300);
-	Xanchor = Xtrain(ind, :);
-
-	% estimate sigma for Gaussian kernel using samples from the SECOND HALF
-	ind = randperm(nhalf, 2000);
-	Xval = Xtrain(nhalf+ind, :);
-	Kval = sqdist(Xval', Xanchor');
-	sigma = mean(mean(Kval, 2));
-	myLogInfo('Estimated sigma = %g', sigma);
-	clear Xval Kval
-
-  % preliminary for testing
-  % kernel mapping the whole set
-  KX = exp(-0.5*sqdist(Xtrain', Xanchor')/sigma^2)';
-  KX = [KX; ones(1,size(KX,2))];
-	%clear Xanchor
-	myLogInfo('Preprocessing took %f sec', toc);
-
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
@@ -45,7 +24,7 @@ function train_okh(run_trial, opts)
 		prefix = sprintf('%s/trial%d', opts.expdir, t);
 
 		% do SGD optimization
-		[train_time(t), update_time(t), bit_flips(t)] = OKH(KX, Xanchor, sigma, Ytrain, ...
+		[train_time(t), update_time(t), bit_flips(t)] = OKH(Xtrain, Ytrain, ...
 			prefix, test_iters, t, opts);
 	end
 
@@ -57,7 +36,27 @@ end
 
 
 function [train_time, update_time, bitflips] = OKH(...
-		KX, Xanchor, sigma, Ytrain, prefix, test_iters, trialNo, opts)
+		Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+
+	tic;
+	% sample support samples (300) from the FIRST HALF of training set
+	nhalf = floor(size(Xtrain, 1)/2);
+	ind = randperm(nhalf, 300);
+	Xanchor = Xtrain(ind, :);
+
+	% estimate sigma for Gaussian kernel using samples from the SECOND HALF
+	ind = randperm(nhalf, 2000);
+	Xval = Xtrain(nhalf+ind, :);
+	Kval = sqdist(Xval', Xanchor');
+	sigma = mean(mean(Kval, 2));
+	myLogInfo('Estimated sigma = %g', sigma);
+	clear Xval Kval
+
+  % preliminary for testing
+  % kernel mapping the whole set
+  KX = exp(-0.5*sqdist(Xtrain', Xanchor')/sigma^2)';
+  KX = [KX; ones(1,size(KX,2))];
+	%clear Xanchor
 
   % init
 	[d, ntrain_all] = size(KX);
@@ -69,9 +68,10 @@ function [train_time, update_time, bitflips] = OKH(...
   W = rand(d,r)-0.5;
 	H = [];
 
-	train_time = 0;
-	update_time = 0;
 	bitflips = 0;
+	update_time = 0;
+	train_time = toc;
+	myLogInfo('Preprocessing took %f sec', train_time);
 
   %rX = KX(:,idxTrain); %set being search in testing 
   %tX = KX(:,idxTest); %query set in testing

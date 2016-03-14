@@ -45,10 +45,10 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
 	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
-	ip.addParamValue('rs_sm_neigh_size',5,@isscalar); % neighbor size for smoothness
+	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 
 	% Hack for Places
-	ip.addParamValue('labelspercls', 2500, @isscalar);
+	ip.addParamValue('labelspercls', 0, @isscalar);
 	
 	% parse input
 	ip.parse(varargin{:});
@@ -146,7 +146,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
 	if opts.reg_smooth > 0
-		opts.identifier = sprintf('%s-SM%g', opts.identifier, opts.reg_smooth);
+		opts.identifier = sprintf('%s-SM%gN%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size);
 	end
 	myLogInfo('identifier: %s', opts.identifier);
 

@@ -57,6 +57,14 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 		myLogInfo('Loading data for %s...', Dtype_this);
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
 		Dtype = Dtype_this;
+
+		% DEBUG
+		if opts.debug
+			ind = randperm(size(Xtrain, 1), 10000);
+			Xtrain = Xtrain(ind, :);
+			Ytrain = Ytrain(ind);
+		end
+		% DEBUG
 	end
 
 	% 3. TRAINING: run all _necessary_ trials (handled by train_osh)
@@ -87,6 +95,8 @@ function opts = get_opts_okh(ftype, dataset, nbits, varargin)
 	ip.addParamValue('ftype', ftype, @isstr);
 	ip.addParamValue('dataset', dataset, @isstr);
 	ip.addParamValue('nbits', nbits, @isscalar);
+
+	ip.addParamValue('debug', 0, @isscalar);
 
 	ip.addParamValue('nworkers', 6, @isscalar);
 	ip.addParamValue('randseed', 12345, @isscalar);
@@ -198,6 +208,4 @@ function opts = get_opts_okh(ftype, dataset, nbits, varargin)
 		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
 	end
 
-	% FINISHED
-	disp(opts);
 end

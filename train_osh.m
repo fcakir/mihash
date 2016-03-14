@@ -97,7 +97,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			if opts.reg_smooth > 0 && opts.reg_rs > 0
 				% hack: for the reservoir, smooth mapping is assumed
 				if i > reservoir_size
-					resY = 2*single(W'*samplegist' > 0)-1;
+					resY = 2*single(W'*Xsample' > 0)-1;
 					qY = 2* single(W'*spoint > 0)-1;
 					[~, ind] = sort(resY' * qY,'descend');
 				end
@@ -139,7 +139,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				% NOTE: get_opts() ensures only one scenario will happen
 
 				if opts.update_interval > 0  ||  ...
-						(opts.adaptive > 0 && bf_temp > 0.8*opts.nbits)%20*table_thr(max(1, length(seenLabels)))) || ...
+						(opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels)))) || ...
 						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					bitflips_res = bitflips_res + bf_temp;
 					Hres = Hnew;
@@ -147,7 +147,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				end
 				
 				if (opts.update_interval > 0 &&  mod(i,opts.update_interval) == 0) || ...
-						(opts.adaptive > 0 && bf_temp > 0.8*opts.nbits)%20*table_thr(max(1, length(seenLabels)))) || ...
+						(opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels)))) || ...
 						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					update_table = true;
 
@@ -176,11 +176,12 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
 		% either max entropy or smoothness, but not both
-		if opts.reg_maxent > 0  &&  num_unlabeled > 10
+		if isLabeled && opts.reg_maxent > 0  &&  num_unlabeled > 10
 			% TODO hard-coded starting threshold of 10 unlabeled examples
 			W = W - opts.reg_maxent * U * W;
+			
 		elseif opts.reg_smooth > 0 && i > reservoir_size && isLabeled
-			W = reg_smooth(W,[spoint;samplegist(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
+			W = reg_smooth(W,[spoint;Xsample(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
 
