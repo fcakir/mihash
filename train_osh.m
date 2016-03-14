@@ -371,7 +371,7 @@ end
 % smoothness regularizer
 function W = reg_smooth(W, points, reg_smooth)
 	reg_smooth = reg_smooth/size(points,1);
-    try
+   % try
 	for i = 1:size(W,2)
         gradWi = zeros(size(W,1),1);
 		for j = 2:size(points,1)
@@ -380,8 +380,8 @@ function W = reg_smooth(W, points, reg_smooth)
         end
         W(:,i) = W(:,i) - reg_smooth * gradWi;
     end
-    catch e
-        disp(e.message);
-        keyboard
-    end
+   %catch e
+    %    disp(e.message);
+    %    keyboard
+    %end
 end
