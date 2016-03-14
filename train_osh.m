@@ -98,7 +98,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				% hack: for the reservoir, smooth mapping is assumed
 				if i > reservoir_size
 					resY = 2*single(W'*Xsample' > 0)-1;
-					qY = 2* single(W'*spoint > 0)-1;
+					qY = 2* single(W'*spoint' > 0)-1;
 					[~, ind] = sort(resY' * qY,'descend');
 				end
 			end
