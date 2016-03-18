@@ -5,7 +5,7 @@ function train_osh(run_trial, opts)
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
-	parfor t = 1:opts.ntrials
+	for t = 1:opts.ntrials
 		if run_trial(t) == 0
 			myLogInfo('Trial %02d not required, skipped', t);
 			continue;
@@ -370,11 +370,17 @@ end
 % smoothness regularizer
 function W = reg_smooth(W, points, reg_smooth)
 	reg_smooth = reg_smooth/size(points,1);
-
+   % try
 	for i = 1:size(W,2)
-		for j = 1:size(points,2)-1
-			W(:,i) = W(:,i) + reg_smooth*(points(1,:)*(W(:,i)'*points(j+1,:)) + ...
-				(W(:,i)'*points(1,:))*points(j+1,:));
-		end
-	end
+        gradWi = zeros(size(W,1),1);
+		for j = 2:size(points,1)
+            gradWi = gradWi + points(1,:)'*(W(:,i)'*points(j,:)') + ...
+				(W(:,i)'*points(1,:)')*points(j,:)';
+        end
+        W(:,i) = W(:,i) - reg_smooth * gradWi;
+    end
+   %catch e
+    %    disp(e.message);
+    %    keyboard
+    %end
 end
