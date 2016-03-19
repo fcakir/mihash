@@ -1,4 +1,4 @@
-function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
+function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(dataset, opts, normalizeX)
 	if nargin < 3, normalizeX = 1; end
 	if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
 
@@ -33,7 +33,11 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
 		end
 
 		% fully supervised
-		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T);
+		% TODO names
+		[ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, 0);
+		Xtrain = X(ind_train, :);
+		Xtest  = X(ind_test, :);
+		Names  = [];
 
 
 	elseif strcmp(dataset, 'places')
@@ -57,7 +61,12 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
 		end
 
 		% semi-supervised
-		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L);
+		[ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, L);
+		Xtrain = X(ind_train, :);
+		Xtest  = X(ind_test, :);
+		clear Names
+		Names.train = images(ind_train);
+		Names.test  = images(ind_test);
 
 
 	elseif strcmp(dataset, 'nus')
@@ -77,7 +86,9 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
 			X = normalize(double(X));  % then scale to unit length
 		end
 
+		% TODO Names
 		[Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T);
+		Names = [];
 
 	else, error(['unknown dataset: ' dataset]); end
 
@@ -86,7 +97,7 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_cnn(dataset, opts, normalizeX)
 end
 
 % --------------------------------------------------------
-function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
+function [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, L)
 	% X: original features
 	% Y: original labels
 	% T: # test points per class
@@ -94,17 +105,19 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 	if nargin < 4, L = 0; end
 
 	% randomize
-	I = randperm(size(X, 1));
-	X = X(I, :);
-	Y = Y(I);
+	%I = randperm(size(X, 1));
+	%X = X(I, :);
+	%Y = Y(I);
 
 	D = size(X, 2)
 
 	labels = unique(Y);
 	ntest  = length(labels) * T;
 	ntrain = size(X, 1) - ntest;
-	Xtrain = zeros(ntrain, D);  Xtest = zeros(ntest, D);
+	%Xtrain = zeros(ntrain, D);  Xtest = zeros(ntest, D);
 	Ytrain = zeros(ntrain, 1);  Ytest = zeros(ntest, 1);
+	ind_train = [];
+	ind_test  = [];
 	
 	% construct test and training set
 	cnt = 0;
@@ -112,16 +125,18 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 		% find examples in this class, randomize ordering
 		ind = find(Y == labels(i));
 		n_i = length(ind);
-		%ind = ind(randperm(n_i));
+		ind = ind(randperm(n_i));
 
 		% assign test
-		Xtest((i-1)*T+1:i*T, :) = X(ind(1:T), :);
+		%Xtest((i-1)*T+1:i*T, :) = X(ind(1:T), :);
 		Ytest((i-1)*T+1:i*T)    = labels(i);
+		ind_test = [ind_test; ind(1:T)];
 
 		% assign train
 		st = cnt + 1; 
 		ed = cnt + n_i - T;
-		Xtrain(st:ed, :) = X(ind(T+1:end), :);
+		%Xtrain(st:ed, :) = X(ind(T+1:end), :);
+		ind_train = [ind_train; ind(T+1:end)];
 		Ytrain(st:ed)    = labels(i);
 		if L > 0  
 			% if requested, hide some labels
@@ -138,11 +153,14 @@ function [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(X, Y, T, L)
 
 	% randomize again
 	ind    = randperm(ntrain);
-	Xtrain = Xtrain(ind, :);
+	%Xtrain = Xtrain(ind, :);
 	Ytrain = Ytrain(ind);
+	ind_train = ind_train(ind);
+
 	ind    = randperm(ntest);
-	Xtest  = Xtest(ind, :);
+	%Xtest  = Xtest(ind, :);
 	Ytest  = Ytest(ind);
+	ind_test = ind_test(ind);
 end
 
 

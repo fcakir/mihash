@@ -73,7 +73,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.ntests = 2;
 	end
 
-	assert(opts.nworkers>0 && opts.nworkers<=12);
+	assert(opts.nworkers>=0 && opts.nworkers<=12);
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
@@ -86,7 +86,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% matlabpool handling
-	if matlabpool('size') == 0
+	if matlabpool('size') == 0 && opts.nworkers > 0
 		myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
 		matlabpool close force local  % clear up zombies
 		matlabpool(opts.nworkers);
