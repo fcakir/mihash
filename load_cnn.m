@@ -37,7 +37,9 @@ function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(dataset, opts, normali
 		[ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, 0);
 		Xtrain = X(ind_train, :);
 		Xtest  = X(ind_test, :);
-		Names  = [];
+		clear Names
+		Names.train = num2cell(ind_train);
+		Names.test = num2cell(ind_test);
 
 
 	elseif strcmp(dataset, 'places')

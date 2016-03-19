@@ -104,6 +104,8 @@ end
 
 % ---------------------------------------------------------------
 function vis_cifar(sim, trainY, testY, Names)
+        % load cifar images
+        load('/research/cbi/sbargal_work_dir/CIFAR/cifar_dataset.mat');
 	% sample one(?) test image from each class 
 	K = 2;
 	for y = 1:10
@@ -111,6 +113,12 @@ function vis_cifar(sim, trainY, testY, Names)
 		ind = ind(randperm(length(ind), K));
 
 		for i = ind'
+			%name = Names.test{i};
+	                fn = sprintf('query%d.png', i);
+		
+			im = reshape(cifarImgs(cell2mat(Names.test{i}),:),32,32,3);
+        	        imwrite(im, fn);
+
 			myLogInfo('Label %d, top 10 retrieved labels:', testY(i));
 
 			% get top 10 results
@@ -118,7 +126,8 @@ function vis_cifar(sim, trainY, testY, Names)
 
 			for j = 1:10
 				fprintf('%d ', trainY(ind(j)));
-				im = somehow_get_image( Names.train(ind(j)) );
+				% im = somehow_get_image( Names.train(ind(j)) );
+				im = reshape(cifarImgs(cell2mat(Names.train{ind(j)}),:),32,32,3);
 				fn = sprintf('query%d_retrieval%d.png', i, j);
 				imwrite(im, fn);
 			end
@@ -126,3 +135,4 @@ function vis_cifar(sim, trainY, testY, Names)
 		end
 	end
 end
+
