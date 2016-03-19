@@ -47,31 +47,62 @@ function demo_retrieval(dataset)
 
 
 	% visualize
+	if ~exist('res', 'dir'), mkdir('res'); end
 	visFunc(sim, floor(Ytrain/10), floor(Ytest/10), Names);
 
 end
 
 
+% ---------------------------------------------------------------
 function vis_places(sim, trainY, testY, Names)
+
 	% sample some test images
 	K = 20; %(?)
 	for i = randperm(length(testY), K)
-		myLogInfo('Label %d, top 10 retrieved labels:', testY(i));
+		name = Names.test{i};
+		fn = sprintf('res/query%d.png', i);
+		try
+			web_save(name, fn);
+		catch, name, continue
+		end
+		myLogInfo('saved %s', fn);
 
 		% get top 10 results
+		myLogInfo('Label %d, top 10 retrieved labels:', testY(i));
 		[val, ind] = sort(sim(:, i), 'descend');
 
 		for j = 1:10
 			fprintf('%d ', trainY(ind(j)));
-			im = somehow_get_image( Names.train(ind(j)) );
-			fn = sprintf('query%d_retrieval%d.png', i, j);
-			imwrite(im, fn);
+			name = Names.train{ind(j)};
+			fn = sprintf('res/query%d_retrieval%02d.png', i, j);
+			try
+				web_save(name, fn);
+			catch, name, continue;
+			end
 		end
 		fprintf('\n\n');
 	end
 end
 
 
+function web_save(name, fn)
+	prefix = 'http://monday.csail.mit.edu/cmr/RGB';
+
+	[path, imfn, ext] = fileparts(name);  % get image name
+	[path, cls, ~] = fileparts(path);  % get class name
+	[path, c, ~] = fileparts(path);  % get preceeding string
+	if length(c) == 1  % single character
+		url = sprintf('%s/%s/%s/%s', prefix, c, cls, [imfn ext]);
+	else
+		supercls = c;
+		[path, c, ~] = fileparts(path);
+		url = sprintf('%s/%s/%s/%s/%s', prefix, c, supercls, cls, [imfn ext]);
+	end
+
+	urlwrite(url, fn);
+end
+
+% ---------------------------------------------------------------
 function vis_cifar(sim, trainY, testY, Names)
 	% sample one(?) test image from each class 
 	K = 2;
