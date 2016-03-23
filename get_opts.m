@@ -21,7 +21,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('mapping', 'smooth', @isstr);
 	ip.addParamValue('stepsize', 0.1, @isscalar);
 	ip.addParamValue('SGDBoost', 0, @isscalar);
-	ip.addParamValue('randseed', 12345, @isscalar);
+	%ip.addParamValue('randseed', 12345, @isscalar);
 	ip.addParamValue('localdir', ...
 		'/research/object_detection/cachedir/online-hashing', @isstr);
 	ip.addParamValue('noTrainingPoints', 20000, @isscalar);
@@ -99,7 +99,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% set randseed -- don't change the randseed if don't have to!
-	rng(opts.randseed);
+	%rng(opts.randseed);
 
 	% FC: if mapping is not smooth, set update_interval to noTrainingPoints
 	if ~strcmp(opts.mapping, 'smooth') && opts.update_interval > 0 && ...
