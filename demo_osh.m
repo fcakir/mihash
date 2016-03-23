@@ -73,7 +73,7 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 	myLogInfo('Training is done.');
 
 	% 4. TESTING: run all _necessary_ trials
-	if ~all(res_exist)
+	if ~all(res_exist) || ~exist(resfn, 'file')
 		myLogInfo('Testing models...');
 		test_osh(resfn, res_trial_fn, res_exist, opts);
 	end
