@@ -151,7 +151,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
 	if opts.reg_smooth > 0
-		opts.identifier = sprintf('%s-SM%gN%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size);
+		opts.identifier = sprintf('%s-SM%gN%dSS%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 	end
 	myLogInfo('identifier: %s', opts.identifier);
 
