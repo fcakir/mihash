@@ -46,7 +46,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
-
+	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
+	
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
 	
@@ -109,6 +110,10 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.update_interval = opts.noTrainingPoints;
 	end
 
+	% if smoothness not applied set sample reservoir size to the entire reservoir
+	if opts.reg_smooth == -1
+		opts.sampleResSize = opts.samplesize;
+	end
 	% [hack] for places
 	if strcmp(opts.dataset, 'places')
 		if opts.labelspercls > 0

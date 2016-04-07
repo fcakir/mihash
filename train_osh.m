@@ -170,8 +170,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		% TODO when to use rs.reg.?
 		if isLabeled && opts.reg_rs > 0  &&  i > reservoir_size
+			
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-			W = sgd_update(W, Xsample, Hres, stepsizes, opts.SGDBoost);
+			ind = randperm(size(Xsample,1));
+			W = sgd_update(W, Xsample(ind(1:opts.sampleResSize),:), Hres(ind(1:opts.sampleResSize),:), ...
+					stepsizes(ind(1:opts.sampleResSize)), opts.SGDBoost);
 		end
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
