@@ -75,7 +75,7 @@ function resfn = demo_adapthash(ftype, dataset, nbits, varargin)
 	myLogInfo('Training is done.');
 
 	% 4. TESTING: run all _necessary_ trials
-	if ~all(res_exist)
+	if ~all(res_exist) || ~exist(resfn, 'file')
 		% NOTE reusing test_osh for AdaptHash
 		myLogInfo('Testing models...');
 		myLogInfo('<<NOTE>> AdaptHash uses pairs, so each iteration uses 2 examples');

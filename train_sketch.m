@@ -6,6 +6,7 @@ function train_sketch(run_trial, opts)
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
+	opts.nbatches = ceil(opts.noTrainingPoints / opts.batchsize);
 	parfor t = 1:opts.ntrials
 		if run_trial(t) == 0
 			myLogInfo('Trial %02d not required, skipped', t);
@@ -17,7 +18,14 @@ function train_sketch(run_trial, opts)
 		if opts.onlyfinal
 			test_batchInds = opts.nbatches;
 		else
-			test_batchInds = 1:opts.nbatches;
+			test_batchInds = zeros(1, opts.ntests);
+			test_batchInds(1) = 1;
+			test_batchInds(end) = opts.nbatches;
+			interval = round(opts.nbatches/(opts.ntests-1));
+			for i = 1:opts.ntests-2
+				ind = interval*i + randi([1 round(interval/3)]) - round(interval/6);
+				test_batchInds(i+1) = ind;
+			end
 		end
 
 		% do Online Sketching Hashing
@@ -77,7 +85,7 @@ function [train_time, update_time, bitflips] = online_sketching_hashing(...
 		numUseToTrain = size(Xtrain, 1);
 	end
 	batchCnt = opts.nbatches;
-	batchsize = ceil(numUseToTrain/batchCnt);
+	batchsize = opts.batchsize; %ceil(numUseToTrain/batchCnt);
 	myLogInfo('%d batches of size %d', batchCnt, batchsize);
 
 	for batchInd = 1 : batchCnt
@@ -200,16 +208,11 @@ function [train_time, update_time, bitflips] = online_sketching_hashing(...
 
 
 		%%%% save intermediate models
-		if ~opts.onlyfinal || (opts.onlyfinal && batchInd==batchCnt)
+		if (~opts.onlyfinal && ismember(batchInd, test_batchInds)) || ...
+				(opts.onlyfinal && batchInd==batchCnt)
 			F = sprintf('%s_batch%d.mat', prefix, batchInd);
 			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time');
 			if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
-		end
-
-		if opts.onlyfinal
-			myLogInfo('[T%02d] batch %d/%d Func %.2fs', ...
-				trialNo, batchInd, batchCnt, train_time);
-		else
 			myLogInfo('[T%02d] batch%d/%d Func %.2fs, Table %.2fs #BF=%g', ...
 				trialNo, batchInd, batchCnt, train_time, update_time, bitflips);
 		end

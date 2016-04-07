@@ -1,6 +1,6 @@
 % To run this script you need to initialize dataset to 'cifar' or 'places'
-dataset = 'places';
 dataset = 'cifar';
+dataset = 'places';
 
 use_avg_curve = false;
 
@@ -12,7 +12,7 @@ end
 
 lambda = [0.01, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 50, 100];
 if strcmp(dataset, 'places')
-	lambda = [lambda, 500, 1000];
+	lambda = [lambda, 200, 500, 1000];
 	T = 3;
 	U = 100;
 	N = 20e3;
@@ -21,7 +21,7 @@ if strcmp(dataset, 'places')
 	y_lims = [5.1, 11]*1e-4;
 	y_tick = (6:11)*1e-4;
 else
-	lambda = [0.0001, 0.001, lambda];
+	lambda = [0.001, lambda];
 	T = 10;
 	U = 50;
 	N = 10e3;
@@ -34,23 +34,13 @@ colors = { [0.466 0.674 0.188], [0 0.447 0.741],[0.85,0.325,0.098], [0.929,0.694
 % , [0.301,0.745,0.933], [0.635, 0.078, 0.184],[0.95,0.95,0],[0.8,0,0.8]};
 
 h = figure;
-set(h,'position',[100 100 600 360])
+set(h,'position',[100 100 650 390])
 hold on;
 
-%----------------------CIFAR
-%if strcmp(dataset,'cifar')
 
-%{
-try
-	% hack for Cifar: use lambda=0.001 for baseline results, baseline seems wrong
-	% for some reason
-	load(sprintf('%s/%s-cnn-32smooth-B0S0.1-RS50L0.0001U%d/%dpts_20tests/%s_10trials.mat', ...
-		path, dataset, U, N, metric)); 
-catch
-	%}
-	load(sprintf('%s/%s-cnn-32smooth-B0S0.1-U%d/%dpts_20tests/%s_%dtrials.mat', ...
-		path, dataset, U, N, metric, T)); 
-%end
+load(sprintf('%s/%s-cnn-32smooth-B0S0.1-U%d/%dpts_20tests/%s_%dtrials.mat', ...
+	path, dataset, U, N, metric, T)); 
+
 if use_avg_curve 
 	[train_iter, res] = avg_curve(res, train_iter);
 	Area = train_iter(end) - train_iter(1);
