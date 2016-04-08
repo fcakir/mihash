@@ -60,8 +60,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-	assert(~(opts.update_interval>0 && (opts.flip_thresh>0 || opts.adaptive>0)), ...
-		'update_interval cannot be used with flip_thresh or adaptive');
+	assert(~(opts.update_interval>0 && opts.flip_thresh>0), ...
+		'update_interval cannot be used with flip_thresh');
 	if opts.adaptive > 0, 
 		assert(opts.flip_thresh<=0, 'adaptive cannot have flip_thresh>0'); 
 	end
@@ -124,14 +124,25 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
+
 	if opts.reg_rs > 0
-		% reservoir: use update_interval or flip_thresh or adaptive
+		% 1. reservoir: use update_interval or flip_thresh or adaptive
 		if opts.update_interval > 0
 			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
 				opts.samplesize, opts.reg_rs, opts.update_interval);
+
+			% 1.1. new scenario: use update_interval in conjunction with adaptive
+			if opts.adaptive > 0
+				opts.identifier = [opts.identifier 'Ada'];
+				myLogInfo('Using update_interval + adaptive!')
+			end
+
+		% 2. using flip_thresh alone
 		elseif opts.flip_thresh > 0
 			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
 				opts.samplesize, opts.reg_rs, opts.flip_thresh);
+
+		% 3. using adaptive alone
 		else
 			assert(opts.adaptive > 0);
 			opts.identifier = sprintf('%s-RS%dL%gAda', opts.identifier, ...
@@ -142,6 +153,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		assert(opts.update_interval > 0);
 		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	end
+
 	if opts.reg_maxent > 0
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
