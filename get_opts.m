@@ -111,9 +111,6 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% if smoothness not applied set sample reservoir size to the entire reservoir
-	if opts.reg_smooth == -1
-		opts.sampleResSize = opts.samplesize;
-	end
 	% [hack] for places
 	if strcmp(opts.dataset, 'places')
 		if opts.labelspercls > 0
