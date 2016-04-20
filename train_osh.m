@@ -74,6 +74,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 	% SGD iterations
 	i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
+	update_iters = []; % keep track of when the hash table updates happen
 	num_labeled = 0;
 	num_unlabeled = 0;
 	for i = 1:opts.noTrainingPoints
@@ -82,6 +83,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		spoint = Xtrain(i, :);
 		slabel = Ytrain(i, :);
 
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		% Assign ECOC, etc
+		%
 		if (~multi_labeled && mod(slabel, 10) == 0) || ...
 				(multi_labeled && sum(slabel) > 0)
 			% labeled (single- or multi-label): assign target code(s)
@@ -102,8 +106,6 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 					[~, ind] = sort(resY' * qY,'descend');
 				end
 			end
-
-
 		else  
 			% unlabeled
 			isLabeled = false;
@@ -112,47 +114,75 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			if opts.reg_maxent > 0  % update maxent regularizer
 				U = U*num_unlabeled + spoint'*spoint;
 				U = U/num_unlabeled;
-		
 			end
 		end
 
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		% Do we need to update the hash table?
+		%
 		update_table = false;
-		if opts.reg_rs > 0  % reservoir update
+
+		if i == 1 || i == opts.noTrainingPoints 
+			% update on first & last iteration no matter what
+			update_table = true;  
+		end
+
+		if opts.reg_rs <= 0
+			% no reservoir -- use update_interval
+			update_table = ~mod(i, opts.update_interval);
+		else
+			% using reservoir
+			%
+			% first update the reservoir
 			[Xsample, Ysample, priority_queue] = update_reservoir(...
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 
+			% compute new reservoir hash table (do not update yet)
 			% a hack -we always use smooth mapping for reservoir samples 
-			%ropts = opts;
-			%ropts.mapping = 'smooth';
-			%build_hash_table(W, Xsample, Ysample, seenLabels, M_ecoc, ropts)';
 			Hnew = (W' * Xsample' > 0)';
+
+			% do we need to update the actual hash table?
 			if isempty(Hres)
+				% yes
 				Hres = Hnew;  
 				if strcmp(opts.mapping,'smooth'), update_table = true; end
 			else
 				bitdiff = xor(Hres, Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
-				% signal update when:
-				% 1) using update_interval (for rs_baseline)
-				% 2) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
-				% 3) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
+
+				THR = table_thr(max(1, length(seenLabels)));
+
+				% signal update of actual hash table, when:
+				%
+				% 1) using update_interval ONLY (for rs_baseline)
+				% 2) using update_interval + adaptive
+				% 3) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
+				% 4) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
+				%
 				% NOTE: get_opts() ensures only one scenario will happen
-
-				if opts.update_interval > 0  ||  ...
-						(opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels)))) || ...
-						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
-					bitflips_res = bitflips_res + bf_temp;
-					Hres = Hnew;
-
-				end
-				
-				if (opts.update_interval > 0 &&  mod(i,opts.update_interval) == 0) || ...
-						(opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels)))) || ...
-						(opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+				%
+				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
+					% cases 1, 2
+					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > THR)
+						update_table = true;
+					end
+				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > THR)
+					% case 3
 					update_table = true;
-
+				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+					% case 4
+					update_table = true;
 				end
 			
+				% update reservoir hash table, when:
+				%
+				% 1) using update_interval only (update reservoir table each iter)
+				% 2) all other cases: when update_table is signaled
+				%
+	 			if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
+					bitflips_res = bitflips_res + bf_temp;
+					Hres = Hnew;
+				end
 			end
 		end
 
@@ -190,14 +220,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
-		if i == 1 || i == opts.noTrainingPoints 
-			% update on first & last iteration no matter what
-			update_table = true;  
-		elseif opts.reg_rs <= 0
-			% NOTE: if using reservoir, update_table is already set.
-			update_table = ~mod(i, opts.update_interval);
-		end
+		%
 		if update_table
+			update_iters = [update_iters, i];
+
 			t_ = tic;
 			if multi_labeled
 				Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
@@ -209,9 +235,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				bitdiff = xor(H, Hnew);
 				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
-				myLogInfo('[T%02d] HT update @%d, bitdiff=%g', trialNo, i, bitdiff);
+				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
 			else
-				myLogInfo('[T%02d] HT udpate @%d', trialNo, i);
+				myLogInfo('[T%02d] HT Update#%d @%d', trialNo, numel(update_iters), i);
 			end
 			H = Hnew;
 			update_time = update_time + toc(t_);
@@ -219,28 +245,26 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% cache intermediate model to disk
+		%
 		if ismember(i, test_iters)
 			F = sprintf('%s_iter%d.mat', prefix, i);
-			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'seenLabels');
+			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', ...
+				'seenLabels', 'update_iters');
 			if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
 
 			myLogInfo(['[T%02d] %s\n' ...
-				'            (%d/%d)  SGD %.2fs, HTU %.2fs\n' ...
+				'            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
 				'            L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
-				trialNo, opts.identifier, i, opts.noTrainingPoints, train_time, update_time, ...
+				trialNo, opts.identifier, i, opts.noTrainingPoints, ...
+				train_time, update_time, numel(update_iters), ...
 				num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
-
-			% DEBUG
-			%Htest = (W'*Xtest' > 0);
-			%get_results(H, Htest, Ytrain, Ytest, opts);
-			%disp('.');
-			% DEBUG
 		end
 	end % end for
 
 	% save final model, etc
 	F = [prefix '.mat'];
-	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
+	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
+		'update_iters');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end

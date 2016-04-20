@@ -74,7 +74,7 @@ function resfn = demo_sketch(ftype, dataset, nbits, varargin)
 	myLogInfo('Training is done.');
 
 	% 4. TESTING: run all _necessary_ trials
-	if ~all(res_exist)
+	if ~all(res_exist) || ~exist(resfn, 'file')
 		myLogInfo('Testing models...');
 		test_sketch(resfn, res_trial_fn, res_exist, opts);
 	end
@@ -113,6 +113,7 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 
 	ip.addParamValue('nworkers', 6, @isscalar);
 	ip.addParamValue('ntrials', 5, @isscalar);
+	ip.addParamValue('ntests', 20, @isscalar);  % <1 for faster testing
 	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
@@ -124,8 +125,8 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 
 	% NOTE specific for online sketching hashing
 	ip.addParamValue('sketchsize', 200, @isscalar);
-	ip.addParamValue('nbatches', 20, @isscalar);
-	ip.addParamValue('onlyfinal', 1, @isscalar);
+	ip.addParamValue('batchsize', 50, @isscalar);
+	ip.addParamValue('onlyfinal', 0, @isscalar);
 	
 	% parse input
 	ip.parse(varargin{:});
@@ -176,8 +177,8 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	end
 
 	% identifier string for the current experiment
-	opts.identifier = sprintf('%s-%s-%d%s-sketch%d-%dpts-%dbatches', opts.dataset, opts.ftype, ...
-		opts.nbits, opts.mapping, opts.sketchsize, opts.noTrainingPoints, opts.nbatches);
+	opts.identifier = sprintf('%s-%s-%d%s-Ske%dBat%d-%dpts-%dtests', opts.dataset, opts.ftype, ...
+		opts.nbits, opts.mapping, opts.sketchsize, opts.batchsize, opts.noTrainingPoints, opts.ntests);
 	if opts.onlyfinal
 		opts.identifier = [opts.identifier, '-final'];
 	end

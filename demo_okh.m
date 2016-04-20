@@ -75,7 +75,7 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 	myLogInfo('Training is done.');
 
 	% 4. TESTING: run all _necessary_ trials
-	if ~all(res_exist)
+	if ~all(res_exist) || ~exist(resfn, 'file')
 		% NOTE reusing test_osh for OKH
 		myLogInfo('Testing models...');
 		myLogInfo('<<NOTE>> OKH uses pairs, so each iteration uses 2 examples');
@@ -115,7 +115,7 @@ function opts = get_opts_okh(ftype, dataset, nbits, varargin)
 	ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
 
 	% Hack for Places
-	ip.addParamValue('labelspercls', 2500, @isscalar);
+	ip.addParamValue('labelspercls', 0, @isscalar);
 	
 	% OKH-specific
 	ip.addParamValue('localdir', ...
