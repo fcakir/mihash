@@ -150,7 +150,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				bitdiff = xor(Hres, Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
 
-				THR = table_thr(max(1, length(seenLabels)));
+				%THR = table_thr(max(1, length(seenLabels)));
 
 				% signal update of actual hash table, when:
 				%
@@ -163,10 +163,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				%
 				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
 					% cases 1, 2
-					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > THR)
+					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
 						update_table = true;
 					end
-				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > THR)
+				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
 					% case 3
 					update_table = true;
 				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
