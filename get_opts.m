@@ -11,7 +11,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%  localdir (string) where to save stuff
 	%  noTrainingPoints (int) # of training points 
 	%  override (int) override previous results {0, 1}
-	% 
+	%  tstScenario (int) testing scenario to be used {1 (default -old version),2}
 	ip = inputParser;
 	% default values
 	ip.addParamValue('ftype', ftype, @isstr);
@@ -47,10 +47,13 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
-	
+		
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
 	
+	% Testing scenario
+	ip.addParamValue('tstScenario',1,@isscalar);
+
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -75,7 +78,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	assert(opts.nworkers>=0 && opts.nworkers<=12);
-
+	assert(ismember(opts.tstScenario,[1,2]);
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -162,11 +165,13 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	if opts.reg_smooth > 0
 		opts.identifier = sprintf('%s-SM%gN%dSS%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 	end
+
+	
 	myLogInfo('identifier: %s', opts.identifier);
 
 	% set expdir
 	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+	opts.expdir = sprintf('%s/%gpts_%dtests_scenario%d', expdir_base, opts.noTrainingPoints, opts.ntests, opts.tstScenario);
 	if ~exist(expdir_base, 'dir'), 
 		mkdir(expdir_base);
 		if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end

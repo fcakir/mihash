@@ -226,10 +226,18 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 			t_ = tic;
 			if multi_labeled
-				Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
-			else
-				% single-label case: use the TRUE labels to build hash table
-				Hnew = build_hash_table(W, Xtrain, floor(Ytrain/10), seenLabels, M_ecoc, opts);
+				if opts.tstScenario == 1
+					Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+				else	
+					Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
+				end
+			else					
+				if opts.tstScenario == 1
+					% single-label case: use the TRUE labels to build hash table
+					Hnew = build_hash_table(W, Xtrain, floor(Ytrain/10), seenLabels, M_ecoc, opts);
+				else
+					Hnew = build_hash_table(W, Xtrain(1:i,:), floor(Ytrain(1:i,:)/10), seenLabels, M_ecoc, opts);
+				end	
 			end
 			if ~isempty(H)
 				bitdiff = xor(H, Hnew);
@@ -264,7 +272,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	% save final model, etc
 	F = [prefix '.mat'];
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
-		'update_iters');
+		'update_iters','seenLabels');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
