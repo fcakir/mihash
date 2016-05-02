@@ -240,7 +240,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				end	
 			end
 			if ~isempty(H)
-				bitdiff = xor(H, Hnew(:,update_iters(end-1)));
+				bitdiff = xor(H, Hnew(:,1:update_iters(end-1)));
 				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
 				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
