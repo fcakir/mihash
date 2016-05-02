@@ -78,7 +78,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	assert(opts.nworkers>=0 && opts.nworkers<=12);
-	assert(ismember(opts.tstScenario,[1,2]);
+	assert(ismember(opts.tstScenario,[1,2]));
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
