@@ -22,6 +22,8 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 		cateTrainTest = (trainY * testY' > 0);
 	end
 
+	opts.nbatches = ceil(opts.noTrainingPoints/opts.batchsize);
+
 	clear res bitflips train_iter train_time
 	for t = 1:opts.ntrials
 		if res_exist(t)

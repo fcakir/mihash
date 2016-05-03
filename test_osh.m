@@ -35,10 +35,12 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				iter = trial_model.test_iters(i);
 				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
 				Htrain = d.H;
-				Htest  = (d.W'*testX' > 0);
+				 
+				ind = ismember(testY,unique(d.seenLabels));
+				Htest  = (d.W'*testX(ind,:)' > 0);
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
-				t_res(i) = get_results(Htrain, Htest, trainY, testY, opts, cateTrainTest);
+				t_res(i) = get_results(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
 
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;

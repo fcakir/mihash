@@ -11,7 +11,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%  localdir (string) where to save stuff
 	%  noTrainingPoints (int) # of training points 
 	%  override (int) override previous results {0, 1}
-	% 
+	%  tstScenario (int) testing scenario to be used {1 (default -old version),2}
 	ip = inputParser;
 	% default values
 	ip.addParamValue('ftype', ftype, @isstr);
@@ -46,10 +46,14 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
-
+	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
+		
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
 	
+	% Testing scenario
+	ip.addParamValue('tstScenario',1,@isscalar);
+
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -60,8 +64,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.test_frac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-	assert(~(opts.update_interval>0 && (opts.flip_thresh>0 || opts.adaptive>0)), ...
-		'update_interval cannot be used with flip_thresh or adaptive');
+	assert(~(opts.update_interval>0 && opts.flip_thresh>0), ...
+		'update_interval cannot be used with flip_thresh');
 	if opts.adaptive > 0, 
 		assert(opts.flip_thresh<=0, 'adaptive cannot have flip_thresh>0'); 
 	end
@@ -74,7 +78,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	assert(opts.nworkers>=0 && opts.nworkers<=12);
-
+	assert(ismember(opts.tstScenario,[1,2]));
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -109,6 +113,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.update_interval = opts.noTrainingPoints;
 	end
 
+	% if smoothness not applied set sample reservoir size to the entire reservoir
 	% [hack] for places
 	if strcmp(opts.dataset, 'places')
 		if opts.labelspercls > 0
@@ -124,14 +129,25 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
+
 	if opts.reg_rs > 0
-		% reservoir: use update_interval or flip_thresh or adaptive
+		% 1. reservoir: use update_interval or flip_thresh or adaptive
 		if opts.update_interval > 0
 			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
 				opts.samplesize, opts.reg_rs, opts.update_interval);
+
+			% 1.1. new scenario: use update_interval in conjunction with adaptive
+			if opts.adaptive > 0
+				opts.identifier = [opts.identifier 'Ada'];
+				myLogInfo('Using update_interval + adaptive!')
+			end
+
+		% 2. using flip_thresh alone
 		elseif opts.flip_thresh > 0
 			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
 				opts.samplesize, opts.reg_rs, opts.flip_thresh);
+
+		% 3. using adaptive alone
 		else
 			assert(opts.adaptive > 0);
 			opts.identifier = sprintf('%s-RS%dL%gAda', opts.identifier, ...
@@ -142,17 +158,20 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		assert(opts.update_interval > 0);
 		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
 	end
+
 	if opts.reg_maxent > 0
 		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
 	end
 	if opts.reg_smooth > 0
-		opts.identifier = sprintf('%s-SM%gN%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size);
+		opts.identifier = sprintf('%s-SM%gN%dSS%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 	end
+
+	
 	myLogInfo('identifier: %s', opts.identifier);
 
 	% set expdir
 	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+	opts.expdir = sprintf('%s/%gpts_%dtests_scenario%d', expdir_base, opts.noTrainingPoints, opts.ntests, opts.tstScenario);
 	if ~exist(expdir_base, 'dir'), 
 		mkdir(expdir_base);
 		if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
