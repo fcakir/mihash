@@ -47,6 +47,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
 	maxLabelSize  = 205; % Sun
+	numLabels     = numel(unique(Ytrain));
 
 	% are we handling a mult-labeled dataset?
 	multi_labeled = (size(Ytrain, 2) > 1);
@@ -77,11 +78,19 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	update_iters = []; % keep track of when the hash table updates happen
 	num_labeled = 0;
 	num_unlabeled = 0;
+
+	% [OPTIONAL] order training points according to label arrival strategy
+	if opts.pObserve > 0
+		train_ind = get_ordering(Ytrain, opts);
+	else
+		train_ind = 1:opts.noTrainingPoints;
+	end
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;  
 		% new training point
-		spoint = Xtrain(i, :);
-		slabel = Ytrain(i, :);
+		ind = train_ind(i);
+		spoint = Xtrain(ind, :);
+		slabel = Ytrain(ind, :);
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% Assign ECOC, etc
@@ -277,6 +286,56 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 
+
+% -----------------------------------------------------------
+% label arrival strategy
+% NOTE: does not handle multi-labeled case yet
+function ind = get_ordering(Y, opts)
+	labels = round(Y/10);
+	labels = labels(1:opts.noTrainingPoints);
+	numLabels = numel(unique(labels));
+
+	labeledExamples = cell(1, numLabels);
+	for n = 1:numLabels
+		labeledExamples{n} = find(labels == labels(n));
+	end
+
+	% use the first example from the first label
+	ind = 1;
+	seenLabInds = 1;
+	remnLabInds = 2:numLabels;
+
+	% fill in from the second
+	for i = 2:opts.noTrainingPoints
+		% determine the next label
+		if rand < opts.pObserve
+			% get a new label
+			L = randi([1, length(remnLabInds)]);
+			newLabel = remnLabInds(L);
+			assert(~ismember(newLabel, seenLabInds));
+			seenLabInds = [seenLabInds, newLabel];
+			remnLabInds(L) = [];
+		else
+			% use a seen label
+			L = randi([1, length(seenLabInds)]);
+			newLabel = seenLabInds(L);
+		end
+
+		% get the next example with this label
+		ind = [ind, labeledExamples{newLabel}(1)];
+		labeledExamples{newLabel}(1) = [];
+
+		if numel(seenLabInds) == numLabels, 
+			myLogInfo('All labels are seen @ t=%d/%d', i, opts.noTrainingPoints);
+			break; 
+		end
+	end
+
+	if i < opts.noTrainingPoints
+		ind = [ind, setdiff(1:opts.noTrainingPoints, ind)];
+	end
+end
+
 % -----------------------------------------------------------
 % SGD mini-batch update
 function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
@@ -321,7 +380,7 @@ end
 function [W, H, ECOCs] = init_osh(Xtrain, opts, bigM)
 	% randomly generate candidate codewords, store in ECOCs
 	if nargin < 3, bigM = 10000; end
-			
+
 	% NOTE ECOCs now is a BINARY (0/1) MATRIX!
 	ECOCs = logical(zeros(bigM, opts.nbits));
 	for t = 1:opts.nbits
@@ -406,17 +465,17 @@ end
 % smoothness regularizer
 function W = reg_smooth(W, points, reg_smooth)
 	reg_smooth = reg_smooth/size(points,1);
-   % try
+	% try
 	for i = 1:size(W,2)
-        gradWi = zeros(size(W,1),1);
+		gradWi = zeros(size(W,1),1);
 		for j = 2:size(points,1)
-            gradWi = gradWi + points(1,:)'*(W(:,i)'*points(j,:)') + ...
+			gradWi = gradWi + points(1,:)'*(W(:,i)'*points(j,:)') + ...
 				(W(:,i)'*points(1,:)')*points(j,:)';
-        end
-        W(:,i) = W(:,i) - reg_smooth * gradWi;
-    end
-   %catch e
-    %    disp(e.message);
-    %    keyboard
-    %end
+		end
+		W(:,i) = W(:,i) - reg_smooth * gradWi;
+	end
+	%catch e
+	%    disp(e.message);
+	%    keyboard
+	%end
 end

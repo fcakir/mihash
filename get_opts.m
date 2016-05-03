@@ -54,6 +54,9 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% Testing scenario
 	ip.addParamValue('tstScenario',1,@isscalar);
 
+	% for label arrival strategy: prob. of observing a new label
+	ip.addParamValue('pObserve', 0, @isscalar);
+
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -171,7 +174,13 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 
 	% set expdir
 	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-	opts.expdir = sprintf('%s/%gpts_%dtests_scenario%d', expdir_base, opts.noTrainingPoints, opts.ntests, opts.tstScenario);
+	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+	if opts.pObserve > 0
+		opts.expdir = sprintf('%s_arr%g', opts.expdir, opts.pObserve);
+	end
+	if opts.tstScenario == 2
+		opts.expdir = sprintf('%s_scenario%d', opts.expdir, opts.tstScenario);
+	end
 	if ~exist(expdir_base, 'dir'), 
 		mkdir(expdir_base);
 		if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
