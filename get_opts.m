@@ -55,6 +55,11 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('tstScenario',1,@isscalar);
 
 	% for label arrival strategy: prob. of observing a new label
+	% NOTE: if pObserve is too small then it may exhaust examples in some class 
+	%       before getting a new label
+	% - For CIFAR  0.002 seems good (observe all labels @~5k)
+	% - For PLACES 0.025 (observe all labels @~9k)
+	%              0.05  (observe all labels @~5k)
 	ip.addParamValue('pObserve', 0, @isscalar);
 
 	% parse input
@@ -176,6 +181,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
 	opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
 	if opts.pObserve > 0
+		assert(opts.pObserve < 1);
 		opts.expdir = sprintf('%s_arr%g', opts.expdir, opts.pObserve);
 	end
 	if opts.tstScenario == 2
