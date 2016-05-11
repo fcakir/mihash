@@ -40,8 +40,13 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				Htest  = (d.W'*testX(ind,:)' > 0);
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);
+				
+		%		ok = opts.prec_k;
+		%		if size(Htrain,2) < opts.prec_k	
+		%			opts.prec_k = size(Htrain,2);
+		%		end
 				t_res(i) = get_results(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
-
+		%		opts.prec_k = ok;
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;
