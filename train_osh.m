@@ -236,6 +236,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% hash index update
 		%
 		if update_table
+			W_last = W;
 			update_iters = [update_iters, i];
 
 			t_ = tic;
