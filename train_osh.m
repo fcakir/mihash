@@ -226,6 +226,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			W = reg_smooth(W,[spoint;Xsample(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
+		
+		% Avoid hash index updated if hash mapping has not been changed 
+		if ~(i == 1 || i == opts.noTrainingPoints) && sum(abs(W_last(:) - W(:))) < 1e-6
+			update_table = false;
+		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
