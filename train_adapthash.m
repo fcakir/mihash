@@ -70,6 +70,7 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 	bitflips = 0;
 	train_time = 0;
 	update_time = 0;
+	update_iters = [];
 	% KH
 
 	for i=1:number_iterations
@@ -148,17 +149,27 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 				(opts.update_interval > 2 && ~mod(i, opts.update_interval/2))
 			update_table = true;
 		end
+
+
+ 		% Avoid hash index updated if hash mapping has not been changed 
+		if ~(i == 1 || i == opts.noTrainingPoints) && sum(abs(W_last(:) - W(:))) < 1e-6
+			update_table = false;
+		end
+		
 		if update_table
+			W_last = W;
+			update_iters = [update_iters, i];
 			t_ = tic;
+
 			% NOTE assuming smooth mapping
 			Hnew = (traingist * W > 0)';
 			if ~isempty(H)
 				bitdiff = xor(H, Hnew);
 				bitdiff = sum(bitdiff(:))/n;
 				bitflips = bitflips + bitdiff;
-				myLogInfo('[T%02d] HT update @%d, bitdiff=%g', trialNo, i, bitdiff);
+				myLogInfo('[T%02d] HT update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
 			else
-				myLogInfo('[T%02d] HT udpate @%d', trialNo, i);
+				myLogInfo('[T%02d] HT update#%d @%d', trialNo, numel(update_iters), i);
 			end
 			H = Hnew;
 			update_time = update_time + toc(t_);
@@ -167,18 +178,18 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 		% KH: save intermediate model
 		if ismember(i, test_iters)
 			F = sprintf('%s_iter%d.mat', prefix, i);
-			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time');
+			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time','update_iters');
 			if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
 
-			myLogInfo('[T%02d] (%d/%d) SGD %.2fs, HTU %.2fs, #BF=%g', ...
-				trialNo, i, number_iterations, train_time, update_time, bitflips);
+			myLogInfo('[T%02d] (%d/%d) SGD %.2fs, HTU %.2fs, %d Updates #BF=%g', ...
+				trialNo, i, number_iterations, train_time, update_time, numel(update_iters), bitflips);
 		end
 
 	end
 
 	% KH: save final model, etc
 	F = [prefix '.mat'];
-	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters');
+	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters','update_iters');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
