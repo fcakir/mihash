@@ -152,7 +152,7 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 
 
  		% Avoid hash index updated if hash mapping has not been changed 
-		if ~(i == 1 || i == opts.noTrainingPoints) && sum(abs(W_last(:) - W(:))) < 1e-6
+		if ~(i == 1 || i == number_iterations) && sum(abs(W_last(:) - W(:))) < 1e-6
 			update_table = false;
 		end
 		

@@ -6,6 +6,9 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	testX  = Xtest;
 	testY  = Ytest;
 	trainY = Ytrain;
+	
+	[st, i] = dbstack();
+	caller = st(2).name;
 
 	% handle test_frac
 	if opts.test_frac < 1
@@ -35,8 +38,13 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				iter = trial_model.test_iters(i);
 				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
 				Htrain = d.H;
-				 
-				ind = ismember(testY,unique(d.seenLabels));
+
+				if strcmp(caller,'demo_adapthash') 
+					ind = 1:size(testX,1);
+				else
+					ind = ismember(testY,unique(d.seenLabels));
+				end
+				
 				Htest  = (d.W'*testX(ind,:)' > 0);
 
 				fprintf('Trial %d, Iter %5d/%d, ', t, iter, opts.noTrainingPoints);

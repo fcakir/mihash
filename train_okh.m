@@ -71,6 +71,7 @@ function [train_time, update_time, bitflips] = OKH(...
 	bitflips = 0;
 	update_time = 0;
 	train_time = toc;
+	update_iters = [];
 	myLogInfo('Preprocessing took %f sec', train_time);
 
   %rX = KX(:,idxTrain); %set being search in testing 
@@ -92,11 +93,24 @@ function [train_time, update_time, bitflips] = OKH(...
     W = OKHlearn(xi,xj,s,W,para);
     train_time = train_time + toc(t_);
 
-
+		update_table = false;
 		% KH: update table
-		if i == 1 || i == number_iterations || ...
-				(opts.update_interval == 2 && i == number_iterations) || ...
+		if i == 1 || i == number_iterations
+			update_table = true;
+		elseif	(opts.update_interval == 2 && i == number_iterations) || ...
 				(opts.update_interval > 2 && ~mod(i, opts.update_interval/2))
+			update_table = true;
+		end
+
+		% Avoid hash index updated if hash mapping has not been changed 
+		if ~(i == 1 || i == number_iterations) && sum(abs(W_last(:) - W(:))) < 1e-6
+			update_table = false;
+		end
+
+		if update_table
+			W_last = W;
+			update_iters = [update_iters, i];
+
 			t_ = tic;
 			% NOTE assuming smooth mapping
 			Hnew = (W' * KX > 0);
@@ -104,9 +118,9 @@ function [train_time, update_time, bitflips] = OKH(...
 				bitdiff = xor(H, Hnew);
 				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
-				myLogInfo('[T%02d] HT update @%d, bitdiff=%g', trialNo, i, bitdiff);
+				myLogInfo('[T%02d] HT update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
 			else
-				myLogInfo('[T%02d] HT udpate @%d', trialNo, i);
+				myLogInfo('[T%02d] HT udpate#%d @%d', trialNo, numel(update_iters), i);
 			end
 			H = Hnew;
 			update_time = update_time + toc(t_);
@@ -115,11 +129,11 @@ function [train_time, update_time, bitflips] = OKH(...
 		% KH: save intermediate model
 		if ismember(i, test_iters)
 			F = sprintf('%s_iter%d.mat', prefix, i);
-			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time');
+			save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time','update_iters');
 			if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
 
-			myLogInfo('[T%02d] (%d/%d) OKH %.2fs, HTU %.2fs, #BF=%g', ...
-				trialNo, i, number_iterations, train_time, update_time, bitflips);
+			myLogInfo('[T%02d] (%d/%d) OKH %.2fs, HTU %.2fs, %d Updates, #BF=%g', ...
+				trialNo, i, number_iterations, train_time, update_time, numel(update_iters), bitflips);
 		end
 
   end
@@ -127,7 +141,7 @@ function [train_time, update_time, bitflips] = OKH(...
 	% KH: save final model, etc
 	F = [prefix '.mat'];
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
-		'Xanchor', 'sigma');
+		'Xanchor', 'sigma','update_iters');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
