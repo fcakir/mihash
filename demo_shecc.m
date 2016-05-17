@@ -31,7 +31,8 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	else
 		run_trial = zeros(1, opts.ntrials);
 		for t = 1:opts.ntrials
-			if exist(res_trial_fn{t}, 'file')
+			trial_model_file = sprintf('%s/trial%d.mat', opts.expdir, t);
+			if exist(trial_model_file, 'file')
 				run_trial(t) = 0;
 			else
 				run_trial(t) = 1;
@@ -51,7 +52,6 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 		Dtype = Dtype_this;
 
 	end
-
 	% 3. TRAINING: run all _necessary_ trials (handled by train_osh)
 	if any(run_trial)
 		myLogInfo('Training models...');
@@ -207,7 +207,8 @@ function [traintimes] = shecc(Xtrain, Ytrain, prefix, trialNo, opts)
 	
 	classLabels = unique(train_labels);
 	noOfClasses = length(classLabels);
-	
+	assert(noOfClasses == length(unique(Ytrain)), ...
+	sprintf('Not all labels are observed in train_data\nTry increasing size\nQuiting...'));
 	% M is ECOC matrix 
 	M = zeros(noOfClasses, opts.nbits);
 
@@ -381,11 +382,15 @@ function test_shecc(resfn, res_trial_fn, res_exist, opts)
 				 end
 			else
 				myLogInfo('[T%02d]: Bucket mapping', t);
-
+			try
 				for i=1:noOfClasses
 					ind = find(classLabels(i) == trainY);
 					Htrain(:,ind) = repmat(trial_model.M(i,:)',1,length(ind));
 				end
+			catch ME	
+				disp(ME.message);
+				keyboard
+			end
 			end
 			
 			% map test data
