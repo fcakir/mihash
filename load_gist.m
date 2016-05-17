@@ -39,9 +39,9 @@ function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(dataset, opts, normalizeX)
 			split_train_test(gist, gistlabels, tstperclass);
 
 	elseif strcmp(dataset, 'nus')
-    gist = load([basedir '/nuswide/BoW_int.dat']);
-    tags = load([basedir '/nuswide/AllLabels81.txt']);
-    tstperclass = 30;
+	    gist = load([basedir '/nuswide/BoW_int.dat']);
+	    tags = load([basedir '/nuswide/AllLabels81.txt']);
+	    tstperclass = 30;
 
 		if normalizeX 
 			% normalize features

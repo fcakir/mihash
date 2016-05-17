@@ -42,6 +42,27 @@ function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(dataset, opts, normali
 		Names.test = num2cell(ind_test);
 
 
+	elseif strcmp(dataset, 'sun')
+
+		load('/research/codebooks/hashing_project/data/sun397/alltrain_sun_fc7_final.mat');
+    
+		X = alldata;
+		Y = allclasses;
+		Y = (Y + 1)*10;  % NOTE labels are 0 to 396
+		T = 10;
+		clear alldata allclasses
+
+		if normalizeX 
+			% normalize features
+			X = bsxfun(@minus, X, mean(X,1));  % first center at 0
+			X = normalize(double(X));  % then scale to unit length
+		end
+		[ind_train, ind_test, Ytrain, Ytest] = ...
+			split_train_test(X, Y, T ,0);
+
+		Xtrain = X(ind_train, :);
+		Xtest  = X(ind_test, :);
+
 	elseif strcmp(dataset, 'places')
 		if opts.windows
 			basedir = '\\kraken\object_detection\data';
@@ -77,8 +98,8 @@ function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(dataset, opts, normali
 		else
 			basedir = '/research/codebooks/hashing_project/data';
 		end
-    load([basedir '/nuswide/AllNuswide_fc7.mat']);  % FVs
-    Y = load([basedir '/nuswide/AllLabels81.txt']);
+	    load([basedir '/nuswide/AllNuswide_fc7.mat']);  % FVs
+	    Y = load([basedir '/nuswide/AllLabels81.txt']);
 		X = double(FVs);  clear FVs
 		T = 30;
 
