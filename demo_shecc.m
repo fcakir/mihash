@@ -4,10 +4,78 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 
 	% add libsvm-weights to path
 	addpath(genpath('/research/codebooks/hashing_project/code/libsvm-weights/'));
+	
+	if opts.override == 1		
+		opts.use_larger_model = 0;
+	end
+	if opts.use_larger_model == 1
+		larger_model_testing = 0;
 
+		% create dir for larger code lengths
+		expdir_folders = arrayfun(@(r) sprintf('%s-%s-%d%s-A%g-L%s', opts.dataset, opts.ftype, ...
+			r, opts.mapping, opts.alpha,opts.learner),opts.nbits+1:opts.nbits+1+1e3,'UniformOutput',0);
+		
+		expdir_folders = cellfun(@(r) sprintf('%s-%dpts', r, ...
+			opts.noTrainingPoints),expdir_folders,'UniformOutput',0);
+		
+		expdir_folders = cellfun(@(r) sprintf('%s/%s', opts.localdir,r),expdir_folders,'UniformOutput',0);
 
-	% 0. result files
+		expdir_folders_exist = cell2mat(cellfun(@(r) exist(r,'file'),expdir_folders,'UniformOutput',0));
+		
+		if any(expdir_folders_exist)
+			myLogInfo('Found model for lenghtier codes!');
+			k = find(expdir_folders_exist);
+			oexpdir = opts.expdir;
+			opts.expdir = expdir_folders{k(1)};
+			
+			run_trial = zeros(1, opts.ntrials);
+			for t = 1:opts.ntrials
+				trial_model_file = sprintf('%s/trial%d.mat',opts.expdir , t);
+				
+				if exist(trial_model_file, 'file')
+					run_trial(t) = 0;
+				else
+					run_trial(t) = 1;
+				end
+			end
+
+			if any(run_trial)
+				myLogInfo('Missing trials for larger code model, running for actual code length.');
+				opts.expdir = oexpdir;
+				opts.use_larger_model = 0;
+			else
+				% Check whether results already exist
+				c_Rprefix = sprintf('%s/%s', oexpdir, opts.metric);
+				
+				% 0. result files
+				if opts.test_frac < 1
+					c_Rprefix = sprintf('%s_frac%g', c_Rprefix, opts.test_frac);
+				end
+
+				c_resfn = sprintf('%s_%dtrials.mat', c_Rprefix, opts.ntrials);
+				c_res_trial_fn = cell(1, opts.ntrials);
+
+				for t = 1:opts.ntrials 
+					c_res_trial_fn{t} = sprintf('%s_trial%d.mat', c_Rprefix, t);
+				end
+
+				c_res_exist = cellfun(@(r) exist(r, 'file'), c_res_trial_fn);
+				
+				if ~all(c_res_exist) || ~exist(c_resfn, 'file')
+					larger_model_testing = 1;
+				end
+			end
+
+		else
+			myLogInfo('No model for lenghtier codes.');
+			opts.use_larger_model = 0;
+		end
+			
+	end
+
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
+	
+	% 0. result files
 	if opts.test_frac < 1
 		Rprefix = sprintf('%s_frac%g', Rprefix, opts.test_frac);
 	end
@@ -24,7 +92,6 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 		res_exist = cellfun(@(r) exist(r, 'file'), res_trial_fn);
 	end
 
-
 	% 1. determine which (training) trials to run
 	if opts.override
 		run_trial = ones(1, opts.ntrials);
@@ -39,14 +106,12 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 			end
 		end
 	end
-
-
 	% 2. load data (only if necessary)
 	global Xtrain Xtest Ytrain Ytest Dtype
 	Dtype_this = [dataset '_' ftype];
 	if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
 		myLogInfo('Dataset already loaded for %s', Dtype_this);
-	elseif (any(run_trial) || ~all(res_exist))
+	elseif (any(run_trial) || ~all(res_exist)) || (opts.use_larger_model == 1 && larger_model_testing == 1)
 		myLogInfo('Loading data for %s...', Dtype_this);
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
 		Dtype = Dtype_this;
@@ -58,14 +123,18 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 		train_shecc(run_trial, opts);
 	end
 	myLogInfo('Training is done.');
-
 	% 4. TESTING: run all _necessary_ trials
-	if ~all(res_exist) || ~exist(resfn, 'file')
-		% NOTE reusing test_osh for AdaptHash
+	if (opts.use_larger_model == 0 && ~(all(res_exist) && exist(resfn, 'file')))
 		myLogInfo('Testing models...');
 		test_shecc(resfn, res_trial_fn, res_exist, opts);
+	elseif (opts.use_larger_model == 1 && larger_model_testing == 1)
+		myLogInfo('Testing with larger models...');
+		test_shecc(c_resfn, c_res_trial_fn, c_res_exist, opts);
 	end
 	myLogInfo('Testing is done.');
+	if opts.use_larger_model
+		resfn = c_resfn;
+	end
 end
 
 
@@ -86,14 +155,14 @@ function opts = get_opts_shecc(ftype, dataset, nbits, varargin)
 	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('noTrainingPoints', 2000, @isscalar);
 	ip.addParamValue('mapping', 'smooth', @isstr);
-
+	
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('learner','tree',@isstr);
 	ip.addParamValue('localdir', ...
 		'/research/object_detection/cachedir/online-hashing/shecc', @isstr);
-	ip.addParamValue('alpha', 0.9, @isscalar);
-
+	ip.addParamValue('alpha', 0.01, @isscalar);
+	ip.addParamValue('use_larger_model',1,@isscalar);
 	% parse input
 	ip.parse(varargin{:});
 	opts = ip.Results;
@@ -104,6 +173,7 @@ function opts = get_opts_shecc(ftype, dataset, nbits, varargin)
 	assert(ismember(opts.mapping,{'smooth','bucket'}));
 	assert(opts.test_frac > 0);
 	assert(opts.nworkers>0 && opts.nworkers<=12);
+	assert(opts.use_larger_model ==1 || opts.use_larger_model == 0);
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
@@ -385,7 +455,7 @@ function test_shecc(resfn, res_trial_fn, res_exist, opts)
 			try
 				for i=1:noOfClasses
 					ind = find(classLabels(i) == trainY);
-					Htrain(:,ind) = repmat(trial_model.M(i,:)',1,length(ind));
+					Htrain(:,ind) = repmat(trial_model.M(i,1:opts.nbits)',1,length(ind));
 				end
 			catch ME	
 				disp(ME.message);
@@ -411,8 +481,8 @@ function test_shecc(resfn, res_trial_fn, res_exist, opts)
 			% get_results expects logical type 
 			Htrain = logical((Htrain + 1)./2);
 			Htest = logical((Htest + 1)./2);
-			t_res(i) = get_results(Htrain, Htest, trainY, testY, opts, cateTrainTest);
-			t_train_time(i) = trial_model.traintimes;
+			t_res = get_results(Htrain, Htest, trainY, testY, opts, cateTrainTest);
+			t_train_time = trial_model.traintimes;
 			clear Htrain Htest
 			save(res_trial_fn{t}, 't_res', 't_train_time');
 		end
