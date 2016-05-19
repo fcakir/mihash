@@ -26,7 +26,7 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 			myLogInfo('Found model for lenghtier codes!');
 			k = find(expdir_folders_exist);
 			oexpdir = opts.expdir;
-			opts.expdir = expdir_folders{k(1)};
+			opts.expdir = expdir_folders{k(end)};
 			
 			run_trial = zeros(1, opts.ntrials);
 			for t = 1:opts.ntrials
@@ -386,7 +386,11 @@ function [traintimes] = shecc(Xtrain, Ytrain, prefix, trialNo, opts)
 
 	% KH: save final model, etc
 	F = [prefix '.mat'];
-	save(F, 'classifier', 'traintimes','M');
+	try
+		save(F, 'classifier', 'traintimes','M');
+	catch
+		save(F, 'classifier', 'traintimes','M','-v7.3');
+	end
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
