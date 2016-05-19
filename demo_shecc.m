@@ -5,10 +5,10 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	% add libsvm-weights to path
 	addpath(genpath('/research/codebooks/hashing_project/code/libsvm-weights/'));
 	
-	if opts.override == 1		
+	if opts.override	
 		opts.use_larger_model = 0;
 	end
-	if opts.use_larger_model == 1
+	if opts.use_larger_model
 		larger_model_testing = 0;
 
 		% create dir for larger code lengths
@@ -111,7 +111,7 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	Dtype_this = [dataset '_' ftype];
 	if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
 		myLogInfo('Dataset already loaded for %s', Dtype_this);
-	elseif (any(run_trial) || ~all(res_exist)) || (opts.use_larger_model == 1 && larger_model_testing == 1)
+	elseif (any(run_trial) || ~all(res_exist)) || (opts.use_larger_model && larger_model_testing)
 		myLogInfo('Loading data for %s...', Dtype_this);
 		eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
 		Dtype = Dtype_this;
@@ -124,10 +124,10 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	end
 	myLogInfo('Training is done.');
 	% 4. TESTING: run all _necessary_ trials
-	if (opts.use_larger_model == 0 && ~(all(res_exist) && exist(resfn, 'file')))
+	if (~opts.use_larger_model && ~(all(res_exist) && exist(resfn, 'file')))
 		myLogInfo('Testing models...');
 		test_shecc(resfn, res_trial_fn, res_exist, opts);
-	elseif (opts.use_larger_model == 1 && larger_model_testing == 1)
+	elseif (opts.use_larger_model && larger_model_testing)
 		myLogInfo('Testing with larger models...');
 		test_shecc(c_resfn, c_res_trial_fn, c_res_exist, opts);
 	end
@@ -386,11 +386,7 @@ function [traintimes] = shecc(Xtrain, Ytrain, prefix, trialNo, opts)
 
 	% KH: save final model, etc
 	F = [prefix '.mat'];
-	try
-		save(F, 'classifier', 'traintimes','M');
-	catch
-		save(F, 'classifier', 'traintimes','M','-v7.3');
-	end
+	save(F, 'classifier', 'traintimes','M','-v7.3');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
