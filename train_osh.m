@@ -137,8 +137,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		end
 
 		if opts.reg_rs <= 0
-			% no reservoir -- use update_interval
-			update_table = ~mod(i, opts.update_interval);
+			if ~update_table
+				% no reservoir -- use update_interval
+				update_table = ~mod(i, opts.update_interval);
+			end
 		else
 			% using reservoir
 			%
