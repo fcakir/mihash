@@ -38,7 +38,9 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				iter = trial_model.test_iters(i);
 				d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
 				Htrain = d.H;
-
+				
+				% AdaptHash uses test_osh, currently it doesn't work with the 
+				% 'label arriving strategy' scenario. 
 				if strcmp(caller,'demo_adapthash') 
 					ind = 1:size(testX,1);
 				else
