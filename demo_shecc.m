@@ -27,6 +27,7 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 			k = find(expdir_folders_exist);
 			oexpdir = opts.expdir;
 			opts.expdir = expdir_folders{k(end)};
+			myLogInfo('Using model %s',opts.expdir);
 			
 			run_trial = zeros(1, opts.ntrials);
 			for t = 1:opts.ntrials
