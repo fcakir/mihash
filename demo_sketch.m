@@ -137,6 +137,7 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(opts.test_frac > 0);
 	assert(opts.nworkers>0 && opts.nworkers<=12);
+	assert(opts.batchsize>=opts.nbits, 'batchsize < nbits!');
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
