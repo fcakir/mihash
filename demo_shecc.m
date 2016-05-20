@@ -10,68 +10,70 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	end
 	if opts.use_larger_model
 		larger_model_testing = 0;
-
-		% create dir for larger code lengths
-		expdir_folders = arrayfun(@(r) sprintf('%s-%s-%d%s-A%g-L%s', opts.dataset, opts.ftype, ...
-			r, opts.mapping, opts.alpha,opts.learner),opts.nbits+1:opts.nbits+1+1e3,'UniformOutput',0);
-		
-		expdir_folders = cellfun(@(r) sprintf('%s-%dpts', r, ...
-			opts.noTrainingPoints),expdir_folders,'UniformOutput',0);
-		
-		expdir_folders = cellfun(@(r) sprintf('%s/%s', opts.localdir,r),expdir_folders,'UniformOutput',0);
-
-		expdir_folders_exist = cell2mat(cellfun(@(r) exist(r,'file'),expdir_folders,'UniformOutput',0));
-		
-		if any(expdir_folders_exist)
-			myLogInfo('Found model for lenghtier codes!');
-			k = find(expdir_folders_exist);
-			oexpdir = opts.expdir;
-			opts.expdir = expdir_folders{k(end)};
-			myLogInfo('Using model %s',opts.expdir);
+		mappings = {'smooth','bucket'};
+		for mi=1:length(mappings)
+			% create dir for larger code lengths
+			expdir_folders = arrayfun(@(r) sprintf('%s-%s-%d%s-A%g-L%s', opts.dataset, opts.ftype, ...
+				r, mappings{mi}, opts.alpha,opts.learner),opts.nbits+1:opts.nbits+1+1e3,'UniformOutput',0);
 			
-			run_trial = zeros(1, opts.ntrials);
-			for t = 1:opts.ntrials
-				trial_model_file = sprintf('%s/trial%d.mat',opts.expdir , t);
+			expdir_folders = cellfun(@(r) sprintf('%s-%dpts', r, ...
+				opts.noTrainingPoints),expdir_folders,'UniformOutput',0);
+			
+			expdir_folders = cellfun(@(r) sprintf('%s/%s', opts.localdir,r),expdir_folders,'UniformOutput',0);
+
+			expdir_folders_exist = cell2mat(cellfun(@(r) exist(r,'file'),expdir_folders,'UniformOutput',0));
+			
+			if any(expdir_folders_exist)
+				myLogInfo('Found model for lenghtier codes!');
+				k = find(expdir_folders_exist);
+				oexpdir = opts.expdir;
+				opts.expdir = expdir_folders{k(end)};
+				myLogInfo('Using model %s',opts.expdir);
 				
-				if exist(trial_model_file, 'file')
-					run_trial(t) = 0;
+				run_trial = zeros(1, opts.ntrials);
+				for t = 1:opts.ntrials
+					trial_model_file = sprintf('%s/trial%d.mat',opts.expdir , t);
+					
+					if exist(trial_model_file, 'file')
+						run_trial(t) = 0;
+					else
+						run_trial(t) = 1;
+					end
+				end
+
+				if any(run_trial)
+					myLogInfo('Missing trials for larger code model, running for actual code length.');
+					opts.expdir = oexpdir;
+					opts.use_larger_model = 0;
 				else
-					run_trial(t) = 1;
-				end
-			end
+					% Check whether results already exist
+					c_Rprefix = sprintf('%s/%s', oexpdir, opts.metric);
+					
+					% 0. result files
+					if opts.test_frac < 1
+						c_Rprefix = sprintf('%s_frac%g', c_Rprefix, opts.test_frac);
+					end
 
-			if any(run_trial)
-				myLogInfo('Missing trials for larger code model, running for actual code length.');
-				opts.expdir = oexpdir;
-				opts.use_larger_model = 0;
+					c_resfn = sprintf('%s_%dtrials.mat', c_Rprefix, opts.ntrials);
+					c_res_trial_fn = cell(1, opts.ntrials);
+
+					for t = 1:opts.ntrials 
+						c_res_trial_fn{t} = sprintf('%s_trial%d.mat', c_Rprefix, t);
+					end
+
+					c_res_exist = cellfun(@(r) exist(r, 'file'), c_res_trial_fn);
+					
+					if ~all(c_res_exist) || ~exist(c_resfn, 'file')
+						larger_model_testing = 1;
+					end
+					break;
+				end
+
 			else
-				% Check whether results already exist
-				c_Rprefix = sprintf('%s/%s', oexpdir, opts.metric);
-				
-				% 0. result files
-				if opts.test_frac < 1
-					c_Rprefix = sprintf('%s_frac%g', c_Rprefix, opts.test_frac);
-				end
-
-				c_resfn = sprintf('%s_%dtrials.mat', c_Rprefix, opts.ntrials);
-				c_res_trial_fn = cell(1, opts.ntrials);
-
-				for t = 1:opts.ntrials 
-					c_res_trial_fn{t} = sprintf('%s_trial%d.mat', c_Rprefix, t);
-				end
-
-				c_res_exist = cellfun(@(r) exist(r, 'file'), c_res_trial_fn);
-				
-				if ~all(c_res_exist) || ~exist(c_resfn, 'file')
-					larger_model_testing = 1;
-				end
+				myLogInfo('No model for lenghtier codes.');
+				opts.use_larger_model = 0;
 			end
-
-		else
-			myLogInfo('No model for lenghtier codes.');
-			opts.use_larger_model = 0;
 		end
-			
 	end
 
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);

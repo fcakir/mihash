@@ -5,7 +5,7 @@ function train_osh(run_trial, opts)
 	train_time  = zeros(1, opts.ntrials);
 	update_time = zeros(1, opts.ntrials);
 	bit_flips   = zeros(1, opts.ntrials);
-	parfor t = 1:opts.ntrials
+	for t = 1:opts.ntrials
 		if run_trial(t) == 0
 			myLogInfo('Trial %02d not required, skipped', t);
 			continue;
