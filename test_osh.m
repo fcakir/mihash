@@ -43,8 +43,22 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 				% 'label arriving strategy' scenario. 
 				if strcmp(caller,'demo_adapthash') 
 					ind = 1:size(testX,1);
-				else
-					ind = ismember(testY,unique(d.seenLabels));
+                else
+                    % We're removing test items in which their labels have
+                    % not been observed. However this can cause huge
+                    % flunctuations in performance at the beginning. For
+                    % instance at very first iteration we've seen only a
+                    % label, thus we remove all items that do not belong to that
+                    % label from the test. Depending on the label, the mAP
+                    % can be very high or low. This should depend on the
+                    % testing scenario, imo, for default and 'smooth'
+                    % mapping simply apply the hash mapping to all test and
+                    % train data -and report the performance.
+                    if opts.tstScenario == 2
+                        ind = ismember(testY,unique(d.seenLabels));
+                    else
+                        ind = 1:size(testX, 1);
+                    end
 				end
 				
 				Htest  = (d.W'*testX(ind,:)' > 0);
@@ -80,18 +94,19 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	if opts.showplots
 		% draw curves, with auto figure saving
 		figname = sprintf('%s_iter.fig', resfn);
-		show_res(figname, res, train_iter, 'iterations', opts.identifier);
+		show_res(figname, res, train_iter, 'iterations', opts.identifier, opts.override);
 		figname = sprintf('%s_cpu.fig', resfn);
-		show_res(figname, res, train_time, 'CPU time', opts.identifier);
+		show_res(figname, res, train_time, 'CPU time', opts.identifier, opts.override);
 		figname = sprintf('%s_flip.fig', resfn);
-		show_res(figname, res, bitflips, 'bit flips', opts.identifier);
+		show_res(figname, res, bitflips, 'bit flips', opts.identifier, opts.override);
 		drawnow;
 	end
 end
 
 % -----------------------------------------------------------
-function show_res(figname, Y, X, xlb, ttl)
-	try
+function show_res(figname, Y, X, xlb, ttl, override)
+	try 
+        assert(~override);
 		openfig(figname);
 	catch
 		[px, py] = avg_curve(Y, X);

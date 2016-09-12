@@ -78,4 +78,5 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 		test_osh(resfn, res_trial_fn, res_exist, opts);
 	end
 	myLogInfo('Testing is done.');
+    diary('off')
 end

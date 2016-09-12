@@ -98,10 +98,10 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	end
 
 	% matlabpool handling
-	if matlabpool('size') == 0 && opts.nworkers > 0
+	if isempty(gcp('nocreate')) && opts.nworkers > 0
 		myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
-		matlabpool close force local  % clear up zombies
-		matlabpool(opts.nworkers);
+		delete(gcp('nocreate'))  % clear up zombies
+		p = parpool(opts.nworkers);
 	end
 
 	% make localdir
@@ -206,8 +206,21 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.prec_n = sscanf(opts.metric(7:end), '%d');
 	else 
 		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
-	end
-
+    end
+    
+    % hold a diary -save it to opts.expdir
+    if opts.override
+        unix(['rm -f ' opts.expdir '/diary*']);
+    end
+    diary_index = 1;
+    opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);    
+    while exist(opts.diary_name,'file') && ~opts.override
+        diary_index = diary_index + 1;
+        opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
+    end
+    
+    diary(opts.diary_name);
+    diary('on');
 	% FINISHED
 	disp(opts);
 end

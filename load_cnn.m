@@ -23,6 +23,10 @@ function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(dataset, opts, normali
 		load([basedir '/cifar-10/descriptors/testlabelsCNN.mat']); % testlabels
 		X = [trainCNN; testCNN];
 		Y = [traininglabels+1; testlabels+1];
+        ind = randperm(length(Y));
+        X = X(ind, :);
+        Y = Y(ind);
+        clear ind
 		Y = Y .* 10;
 		T = 100;
 
@@ -132,7 +136,7 @@ function [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, L)
 	%X = X(I, :);
 	%Y = Y(I);
 
-	D = size(X, 2)
+	D = size(X, 2);
 
 	labels = unique(Y);
 	ntest  = length(labels) * T;

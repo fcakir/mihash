@@ -48,6 +48,12 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	train_time    = 0;   update_time  = 0;
 	maxLabelSize  = 205; % Sun
 	numLabels     = numel(unique(Ytrain));
+    
+    
+    ind = randperm(ntrain_all);
+    Xsample = Xtrain(ind(1:opts.samplesize),:);
+    Ysample = Ytrain(ind(1:opts.samplesize));
+    clear ind;
 
 	% are we handling a mult-labeled dataset?
 	multi_labeled = (size(Ytrain, 2) > 1);
@@ -57,8 +63,8 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
 		reservoir_size = opts.samplesize;
-		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-		Ysample        = zeros(reservoir_size, 1);
+		%Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+		%Ysample        = zeros(reservoir_size, 1);
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
 		if opts.adaptive > 0
@@ -84,13 +90,15 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		train_ind = get_ordering(trialNo, Ytrain, opts);
 	else
 		train_ind = 1:opts.noTrainingPoints;
-	end
+    end
+    ret_val = 0;
+    % STREAMING BEGINS...
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;  
 		% new training point
 		ind = train_ind(i);
 		spoint = Xtrain(ind, :);
-		slabel = Ytrain(ind, :);
+		slabel = Ytrain(ind, :);        
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% Assign ECOC, etc
@@ -128,7 +136,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% Do we need to update the hash table?
-		%
+		% Comment: A more natural way is to update the hash mapping first
 		update_table = false;
 
 		if i == 1 || i == opts.noTrainingPoints 
@@ -145,8 +153,8 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			% using reservoir
 			%
 			% first update the reservoir
-			[Xsample, Ysample, priority_queue] = update_reservoir(...
-				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
+			%[Xsample, Ysample, priority_queue] = update_reservoir(...
+			%	Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 
 			% compute new reservoir hash table (do not update yet)
 			% a hack -we always use smooth mapping for reservoir samples 
@@ -156,7 +164,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			if isempty(Hres)
 				% yes
 				Hres = Hnew;  
-				if strcmp(opts.mapping,'smooth'), update_table = true; end
+				if strcmp(opts.mapping,'smooth'), update_table = true; res_bf = 0; end
 			else
 				bitdiff = xor(Hres, Hnew);
 				bf_temp = sum(bitdiff(:))/reservoir_size;
@@ -174,15 +182,21 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				%
 				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
 					% cases 1, 2
+                    % check whether to do an update to the hash table
+                    pret_val = ret_val;
+                    ret_val = trigger_update(W, Xsample, Ysample, Hres, Hnew, reservoir_size);
 					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
 						update_table = true;
+                        res_bf = bf_temp;
 					end
 				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
 					% case 3
 					update_table = true;
+                    res_bf = bf_temp;
 				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
 					% case 4
 					update_table = true;
+                    res_bf = bf_temp;
 				end
 			
 				% update reservoir hash table, when:
@@ -190,8 +204,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				% 1) using update_interval only (update reservoir table each iter)
 				% 2) all other cases: when update_table is signaled
 				%
-	 			if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
-					bitflips_res = bitflips_res + bf_temp;
+	 			%if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
+				if update_table
+                    bitflips_res = bitflips_res + bf_temp;
 					Hres = Hnew;
 				end
 			end
@@ -264,7 +279,8 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				end
 				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
-				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
+                if ~exist('res_bf','var'), res_bf = -1; end
+				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g, res. bit_diff=%g, trig. val=%g (%g)', trialNo, numel(update_iters), i, bitdiff, res_bf, ret_val, abs(ret_val - pret_val));
 			else
 				myLogInfo('[T%02d] HT Update#%d @%d', trialNo, numel(update_iters), i);
 			end
@@ -380,7 +396,7 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 		for i = 1:size(points, 1)
 			xi = points(i, :);
 			ci = codes(i, :);
-			id = (xi * W .* ci <= 1);  % logical indexing > find()
+			id = (xi * W .* ci < 1);  % logical indexing > find()
 			n  = sum(id);
 			if n > 0
 				W(:,id) = W(:,id) + stepsizes(i)*repmat(xi',[1 n])*diag(ci(id)); 
@@ -431,7 +447,7 @@ end
 % -----------------------------------------------------------
 % find target codes for a new labeled example
 function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-		slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
+		slabel, seenLabels, M_ecoc, i_ecoc, ECOCs)
 	assert(sum(slabel) ~= 0, 'Error: finding target codes for unlabeled example');
 
 	if numel(slabel) == 1  
