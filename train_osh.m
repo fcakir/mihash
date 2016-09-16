@@ -184,7 +184,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 					% cases 1, 2
                     % check whether to do an update to the hash table
                     pret_val = ret_val;
-                    ret_val = trigger_update(W, Xsample, Ysample, Hres, Hnew, reservoir_size);
+                    ret_val = trigger_update(W, Xsample, Ysample, Hres, Hnew, reservoir_size,i);
 					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
 						update_table = true;
                         res_bf = bf_temp;
