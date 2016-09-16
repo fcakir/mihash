@@ -9,7 +9,7 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 
 	% 0. result files
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
-	if opts.test_frac < 1
+	if opts.testFrac < 1
 		Rprefix = sprintf('%s_frac%g', Rprefix);
 	end
 

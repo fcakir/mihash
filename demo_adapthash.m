@@ -4,7 +4,7 @@ function resfn = demo_adapthash(ftype, dataset, nbits, varargin)
 
 	% 0. result files
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
-	if opts.test_frac < 1
+	if opts.testFrac < 1
 		Rprefix = sprintf('%s_frac%g', Rprefix);
 	end
 
@@ -108,11 +108,11 @@ function opts = get_opts_adapthash(ftype, dataset, nbits, varargin)
 
 	ip.addParamValue('ntests', 20, @isscalar);
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
-	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
+	ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('showplots', 1, @isscalar);
 
 	% controling when to update hash table
-	ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
+	ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
 
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
@@ -132,11 +132,11 @@ function opts = get_opts_adapthash(ftype, dataset, nbits, varargin)
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(strcmp(opts.mapping, 'smooth'), 'only doing SMOOTH mapping for now');
-	assert(opts.test_frac > 0);
+	assert(opts.testFrac > 0);
 	assert(opts.nworkers>0 && opts.nworkers<=12);
 	assert(mod(opts.noTrainingPoints, 2)==0);
-	if opts.update_interval > 0
-		assert(mod(opts.update_interval, 2) == 0);
+	if opts.updateInterval > 0
+		assert(mod(opts.updateInterval, 2) == 0);
 	end
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -180,8 +180,8 @@ function opts = get_opts_adapthash(ftype, dataset, nbits, varargin)
 	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-A%gB%gS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.alpha, opts.beta, opts.stepsize);
-	if opts.update_interval > 0
-		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
+	if opts.updateInterval > 0
+		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.updateInterval);
 	else
 		opts.ntests = 2;
 	end
