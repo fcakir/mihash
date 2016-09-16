@@ -5,7 +5,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%  stepsize (float) is step size in SGD
 	%  SGDBoost (integer) is 0 for OSHEG, 1 for OSH
 	%  randseed (int) random seed for repeatable experiments
-	%  update_interval (int) update hash table
+	%  updateInterval (int) update hash table
 	%  test_interval (int) save/test intermediate model
 	%  sampleratio (float) reservoir size, % of training set
 	%  localdir (string) where to save stuff
@@ -31,17 +31,17 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('nworkers', 6, @isscalar);
 	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('ntests', 10, @isscalar);
-	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
+	ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
 	% controling when to update hash table
-	% default: save every opts.update_interval iterations
-	% IF use reservoir AND opts.flip_thresh > 0, THEN use opts.flip_thresh
-	ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
-	ip.addParamValue('flip_thresh', -1, @isscalar);      % use with reservoir
+	% default: save every opts.updateInterval iterations
+	% IF use reservoir AND opts.flipThresh > 0, THEN use opts.flipThresh
+	ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
+	ip.addParamValue('flipThresh', -1, @isscalar);      % use with reservoir
 	ip.addParamValue('adaptive', -1, @isscalar);         % use with reservoir
 
-	ip.addParamValue('samplesize', 50, @isscalar);    % reservoir size
+	ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size
 	ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
 	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
@@ -70,16 +70,16 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
-	assert(opts.test_frac > 0);
+	assert(opts.testFrac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-	assert(~(opts.update_interval>0 && opts.flip_thresh>0), ...
-		'update_interval cannot be used with flip_thresh');
+	assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
+		'updateInterval cannot be used with flipThresh');
 	if opts.adaptive > 0, 
-		assert(opts.flip_thresh<=0, 'adaptive cannot have flip_thresh>0'); 
+		assert(opts.flipThresh<=0, 'adaptive cannot have flipThresh>0'); 
 	end
 
 	if ~strcmp(opts.mapping,'smooth')
-		opts.update_interval = opts.noTrainingPoints;
+		opts.updateInterval = opts.noTrainingPoints;
 		myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
 			'\n setting ntests to 2'])
 		opts.ntests = 2;
@@ -113,12 +113,12 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% set randseed -- don't change the randseed if don't have to!
 	%rng(opts.randseed);
 
-	% FC: if mapping is not smooth, set update_interval to noTrainingPoints
-	if ~strcmp(opts.mapping, 'smooth') && opts.update_interval > 0 && ...
-			(opts.update_interval ~= opts.noTrainingPoints)
-		myLogInfo('Mapping: %s. Overriding update_interval=%d to noTrainingPoints=%d', ...
-			opts.mapping, opts.update_interval, opts.noTrainingPoints);
-		opts.update_interval = opts.noTrainingPoints;
+	% FC: if mapping is not smooth, set updateInterval to noTrainingPoints
+	if ~strcmp(opts.mapping, 'smooth') && opts.updateInterval > 0 && ...
+			(opts.updateInterval ~= opts.noTrainingPoints)
+		myLogInfo('Mapping: %s. Overriding updateInterval=%d to noTrainingPoints=%d', ...
+			opts.mapping, opts.updateInterval, opts.noTrainingPoints);
+		opts.updateInterval = opts.noTrainingPoints;
 	end
 
 	% if smoothness not applied set sample reservoir size to the entire reservoir
@@ -139,32 +139,32 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
 
 	if opts.reg_rs > 0
-		% 1. reservoir: use update_interval or flip_thresh or adaptive
-		if opts.update_interval > 0
+		% 1. reservoir: use updateInterval or flipThresh or adaptive
+		if opts.updateInterval > 0
 			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
-				opts.samplesize, opts.reg_rs, opts.update_interval);
+				opts.reservoirSize, opts.reg_rs, opts.updateInterval);
 
-			% 1.1. new scenario: use update_interval in conjunction with adaptive
+			% 1.1. new scenario: use updateInterval in conjunction with adaptive
 			if opts.adaptive > 0
 				opts.identifier = [opts.identifier 'Ada'];
-				myLogInfo('Using update_interval + adaptive!')
+				myLogInfo('Using updateInterval + adaptive!')
 			end
 
-		% 2. using flip_thresh alone
-		elseif opts.flip_thresh > 0
+		% 2. using flipThresh alone
+		elseif opts.flipThresh > 0
 			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
-				opts.samplesize, opts.reg_rs, opts.flip_thresh);
+				opts.reservoirSize, opts.reg_rs, opts.flipThresh);
 
 		% 3. using adaptive alone
 		else
 			assert(opts.adaptive > 0);
 			opts.identifier = sprintf('%s-RS%dL%gAda', opts.identifier, ...
-				opts.samplesize, opts.reg_rs);
+				opts.reservoirSize, opts.reg_rs);
 		end
 	else
-		% no reservoir (baseline): use update_interval
-		assert(opts.update_interval > 0);
-		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.update_interval);
+		% no reservoir (baseline): use updateInterval
+		assert(opts.updateInterval > 0);
+		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.updateInterval);
 	end
 
 	if opts.reg_maxent > 0
