@@ -53,7 +53,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	maxLabelSize  = 205; % Sun
 	numLabels     = numel(unique(Ytrain));
 
-	debug = 1;
+	debug = 0;
 	if debug  % DEBUG: keep reservoir fixed
 		ind = randperm(ntrain_all);
 		Xsample = Xtrain(ind(1:opts.reservoirSize),:);
@@ -171,7 +171,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% reservoir update & compute new reservoir hash table
 		%
 		if opts.reg_rs > 0
-			[Xsample, Ysample, priority_queue, ~] = update_reservoir(...  
+			[Xsample, Ysample, priority_queue, ind] = update_reservoir(...  
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 			
 			% compute new reservoir hash table (do not update yet)
@@ -180,7 +180,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 			% NOTE: the old reservoir hash table needs updating too
 			%       since Xsample has possibly changed.
-            Hres = (W_lastupdate' * Xsample' > 0)';
+            if isempty(Hres)
+                Hres = (W_lastupdate' * Xsample' > 0)';
+            elseif (ind > 0)
+                Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+            end
         else
             Hres = [];Hres_new = [];
         end
@@ -243,7 +247,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
 		'update_iters','seenLabels');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
-    myLogInfo('\# of Hash Table Updates=%g', length(update_iters));
+    myLogInfo('# of Hash Table Updates=%g', length(update_iters));
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 
