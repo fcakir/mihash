@@ -10,7 +10,7 @@ function resfn = demo_sketch(ftype, dataset, nbits, varargin)
 
 	% 0. result files
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
-	if opts.test_frac < 1
+	if opts.testFrac < 1
 		Rprefix = sprintf('%s_frac%g', Rprefix);
 	end
 
@@ -90,7 +90,7 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	%  stepsize (float) is step size in SGD
 	%  SGDBoost (integer) is 0 for OSHEG, 1 for OSH
 	%  randseed (int) random seed for repeatable experiments
-	%  update_interval (int) update hash table
+	%  updateInterval (int) update hash table
 	%  test_interval (int) save/test intermediate model
 	%  sampleratio (float) reservoir size, % of training set
 	%  localdir (string) where to save stuff
@@ -114,11 +114,11 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	ip.addParamValue('nworkers', 6, @isscalar);
 	ip.addParamValue('ntrials', 5, @isscalar);
 	ip.addParamValue('ntests', 20, @isscalar);  % <1 for faster testing
-	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
+	ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
 	% controling when to update hash table
-	%ip.addParamValue('update_interval', -1, @isscalar);  % use with baseline
+	%ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
 
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
@@ -135,7 +135,7 @@ function opts = get_opts_sketch(ftype, dataset, nbits, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
-	assert(opts.test_frac > 0);
+	assert(opts.testFrac > 0);
 	assert(opts.nworkers>0 && opts.nworkers<=12);
 	assert(opts.batchsize>=opts.nbits, 'batchsize < nbits!');
 

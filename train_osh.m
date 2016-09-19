@@ -43,19 +43,24 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	% init
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
 
+	% NOTE: W_lastupdate keeps track of the last W used to update the hash table
+	%       W_lastupdate is NOT the W from last iteration
+	W_lastupdate = W;  
+
 	ntrain_all    = size(Xtrain, 1);
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
 	maxLabelSize  = 205; % Sun
 	numLabels     = numel(unique(Ytrain));
-    
-    debug = 0;
-    if debug
-        ind = randperm(ntrain_all);
-        Xsample = Xtrain(ind(1:opts.samplesize),:);
-        Ysample = Ytrain(ind(1:opts.samplesize));
-        clear ind;
-    end
+
+	debug = 0;
+	if debug  % DEBUG: keep reservoir fixed
+		ind = randperm(ntrain_all);
+		Xsample = Xtrain(ind(1:opts.reservoirSize),:);
+		Ysample = Ytrain(ind(1:opts.reservoirSize));
+		clear ind;
+	end
+
 	% are we handling a mult-labeled dataset?
 	multi_labeled = (size(Ytrain, 2) > 1);
 	if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
@@ -63,23 +68,20 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	% deal with regularizers
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
-		reservoir_size = opts.samplesize;
+		reservoir_size = opts.reservoirSize;
 		if ~debug
-            Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-            Ysample        = zeros(reservoir_size, 1);
-            priority_queue = zeros(1, reservoir_size);
-        end
+		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+		Ysample        = zeros(reservoir_size, 1);
+		end
+		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
+
+		% for adaptive threshold
 		if opts.adaptive > 0
-			persistent table_thr;
-			table_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
+			persistent adaptive_thr;
+			adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
 				1:maxLabelSize);
 		end
-	end
-	if opts.reg_maxent > 0
-		% use max entropy regularizer
-		num_unlabeled = 0;
-		U = zeros(size(Xtrain, 2));
 	end
 
 	% SGD iterations
@@ -93,9 +95,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		train_ind = get_ordering(trialNo, Ytrain, opts);
 	else
 		train_ind = 1:opts.noTrainingPoints;
-    end
-    ret_val = -1;ret_val2 = -1;res_bf = -1;
-    % STREAMING BEGINS...
+	end
+	ret_val = 0;
+
+	% STREAMING BEGINS...
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;  
 		% new training point
@@ -117,6 +120,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			[target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
 				slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
 
+			% if using smoothness regularizer:
 			% When a labelled items comes find its neighors from the reservoir
 			if opts.reg_smooth > 0 && opts.reg_rs > 0
 				% hack: for the reservoir, smooth mapping is assumed
@@ -131,15 +135,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			isLabeled = false;
 			slabel = zeros(size(slabel));  % mark as unlabeled for subsequent functions
 			num_unlabeled = num_unlabeled + 1;
-			if opts.reg_maxent > 0  % update maxent regularizer
-				U = U*num_unlabeled + spoint'*spoint;
-				U = U/num_unlabeled;
-			end
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash function update
-
+		%
 		% SGD-1. update W wrt. loss term(s)
 		if isLabeled
 			for c = 1:size(target_codes, 1)
@@ -151,140 +151,73 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% SGD-2. update W wrt. reservoir regularizer (if specified)
 		% TODO when to use rs.reg.?
 		if isLabeled && opts.reg_rs > 0  &&  i > reservoir_size
-			
+
 			stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
 			ind = randperm(size(Xsample,1));
 			W = sgd_update(W, Xsample(ind(1:opts.sampleResSize),:), Hres(ind(1:opts.sampleResSize),:), ...
-					stepsizes(ind(1:opts.sampleResSize)), opts.SGDBoost);
+				stepsizes(ind(1:opts.sampleResSize)), opts.SGDBoost);
 		end
 
 		% SGD-3. update W wrt. unsupervised regularizer (if specified)
-		% either max entropy or smoothness, but not both
-		if isLabeled && opts.reg_maxent > 0  &&  num_unlabeled > 10
-			% TODO hard-coded starting threshold of 10 unlabeled examples
-			W = W - opts.reg_maxent * U * W;
-			
-		elseif opts.reg_smooth > 0 && i > reservoir_size && isLabeled
-			W = reg_smooth(W,[spoint;Xsample(ind(1:opts.rs_sm_neigh_size),:)],opts.reg_smooth);
+		if opts.reg_smooth > 0 && i > reservoir_size && isLabeled
+			W = reg_smooth(W, ...
+				[spoint; Xsample(ind(1:opts.rs_sm_neigh_size),:)], ...
+				opts.reg_smooth);
 		end
 		train_time = train_time + toc(t_);
-		
-   		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		% Do we need to update the hash table?
-		update_table = false;
 
-		if i == 1 || i == opts.noTrainingPoints 
-			% update on first & last iteration no matter what
-			update_table = true;  
-		end
 
-		if opts.reg_rs <= 0
-			if ~update_table
-				% no reservoir -- use update_interval
-				update_table = ~mod(i, opts.update_interval);
-			end
-		else
-			% using reservoir
-			%
-            if ~debug
-			% first update the reservoir
-                [Xsample, Ysample, priority_queue] = update_reservoir(...
-                	Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
-            end
-			% compute new reservoir hash table (do not update yet)
-			% a hack -we always use smooth mapping for reservoir samples 
-			Hnew = (W' * Xsample' > 0)';
-
-			% do we need to update the actual hash table?
-			if isempty(Hres)
-				% yes
-				Hres = Hnew;  
-				if strcmp(opts.mapping,'smooth'), update_table = true; res_bf = 0; end
-            else
-                Hres = (W_last' * Xsample' > 0)';
-                bitdiff = xor(Hres, Hnew);
-				bf_temp = sum(bitdiff(:))/reservoir_size;
-
-				%THR = table_thr(max(1, length(seenLabels)));
-
-				% signal update of actual hash table, when:
-				%
-				% 1) using update_interval ONLY (for rs_baseline)
-				% 2) using update_interval + adaptive
-				% 3) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
-				% 4) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
-				%
-				% NOTE: get_opts() ensures only one scenario will happen
-				%
-				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
-					% cases 1, 2
-                    % check whether to do an update to the hash table
-                    %pret_val = ret_val;
-                    [ret_val, ret_val2] = trigger_update(W, W_last, Xsample, Ysample, Hres, Hnew, reservoir_size, i);
-					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
-						update_table = true;
-                        res_bf = bf_temp;
-					end
-				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
-					% case 3
-					update_table = true;
-                    res_bf = bf_temp;
-				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
-					% case 4
-					update_table = true;
-                    res_bf = bf_temp;
-				end
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		% reservoir update & compute new reservoir hash table
+		%
+		if opts.reg_rs > 0
+			[Xsample, Ysample, priority_queue, ind] = update_reservoir(...  
+				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 			
-				% update reservoir hash table, when:
-				%
-				% 1) using update_interval only (update reservoir table each iter)
-				% 2) all other cases: when update_table is signaled
-				%
-	 			%if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
-				if update_table
-                    bitflips_res = bitflips_res + bf_temp;
-					%Hres = Hnew;
-				end
+			% compute new reservoir hash table (do not update yet)
+			% a hack: we always use smooth mapping for reservoir samples 
+			Hres_new = (W' * Xsample' > 0)';
+
+			% NOTE: the old reservoir hash table needs updating too
+			%       since Xsample has possibly changed.
+			if isempty(Hres)
+				Hres = (W_lastupdate' * Xsample' > 0)';
+			elseif (ind > 0)
+				Hres(ind, :) = (W_lastupdate' * Xsample(ind, :)' > 0)';
 			end
 		end
 
-        
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
 		%
+		% determine whether to update or not, based on bitflip threshold
+		if opts.adaptive > 0
+			bf_thr = adaptive_thr(max(1, length(seenLabels)));
+			[update_table, bf_res] = trigger_update(i, opts, ...
+				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
+		else
+			[update_table, bf_res] = trigger_update(i, opts, ...
+				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+		end
+
 		if update_table
-			W_last = W;
+			W_lastupdate = W;  % W_lastupdate: last W used to update hash table
 			update_iters = [update_iters, i];
 
+			% update reservoir hash table
+			Hres = Hres_new;
+			bitflips_res = bitflips_res + bf_res;
+
+			% update actual hash table
 			t_ = tic;
-			if multi_labeled
-				if opts.tstScenario == 1
-					Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
-				else	
-					Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
-				end
-			else					
-				if opts.tstScenario == 1
-					% single-label case: use the TRUE labels to build hash table
-					Hnew = build_hash_table(W, Xtrain, floor(Ytrain/10), seenLabels, M_ecoc, opts);
-				else
-					Hnew = build_hash_table(W, Xtrain(1:i,:), floor(Ytrain(1:i,:)/10), seenLabels, M_ecoc, opts);
-				end	
-			end
-			if ~isempty(H)
-				if opts.tstScenario == 2
-					bitdiff = xor(H, Hnew(:,1:update_iters(end-1)));
-				else
-					bitdiff = xor(H, Hnew);
-				end
-				bitdiff = sum(bitdiff(:))/ntrain_all;
-				bitflips = bitflips + bitdiff;
-				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g, res. bit_diff=%g, MAX MI=%g, MI diff.=%g', trialNo, numel(update_iters), i, bitdiff, res_bf, ret_val2, ret_val);
-			else
-				myLogInfo('[T%02d] HT Update#%d @%d', trialNo, numel(update_iters), i);
-			end
-			H = Hnew;
+			[H, bf_all] = update_hash_table(H, W, Xtrain, Ytrain, ...
+				multi_labeled, seenLabels, M_ecoc, opts);
+
+			bitflips = bitflips + bf_all;
 			update_time = update_time + toc(t_);
+
+			myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, bf_res=%g', ...
+				trialNo, numel(update_iters), i, bf_all, bf_res);
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -310,74 +243,8 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
 		'update_iters','seenLabels');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
+
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
-end
-
-
-% -----------------------------------------------------------
-% label arrival strategy
-% NOTE: does not handle multi-labeled case yet
-function ind = get_ordering(trialNo, Y, opts)
-	labels = round(Y/10);
-	labels = labels(1:opts.noTrainingPoints);
-	uniqLabels = unique(labels);
-	numLabels = numel(uniqLabels);
-
-	labeledExamples = cell(1, numLabels);
-	for n = 1:numLabels
-		labeledExamples{n} = find(labels == uniqLabels(n));
-	end
-
-	% use the first example from the first label
-	ind = 1;
-	seenLabInds = 1;
-	remnLabInds = 2:numLabels;
-	exhausted   = cellfun(@(x) isempty(x), labeledExamples);
-
-	% fill in from the second
-	for i = 2:opts.noTrainingPoints
-		% determine the next label
-		if rand < opts.pObserve
-			% get a new label
-			L = randi([1, length(remnLabInds)]);
-			newLabel = remnLabInds(L);
-			assert(~ismember(newLabel, seenLabInds));
-			seenLabInds = [seenLabInds, newLabel];
-			remnLabInds(L) = [];
-		else
-			% use a seen label
-			% make sure it's not an already-exhausted label
-			nonempty = find(~exhausted(seenLabInds));
-			assert(~isempty(nonempty), 'Seen labels are all exhausted!?');
-			L = randi([1, length(nonempty)]);
-			newLabel = seenLabInds(nonempty(L));
-		end
-
-		% get the next example with this label
-		ind = [ind, labeledExamples{newLabel}(1)];
-		labeledExamples{newLabel}(1) = [];
-		exhausted(newLabel) = isempty(labeledExamples{newLabel});
-
-		if numel(seenLabInds) == numLabels
-			myLogInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, i, opts.noTrainingPoints);
-			break;
-		end
-		if all(exhausted(seenLabInds))
-			myLogInfo('[T%02d] Seen labels are exhausted @ t=%d/%d', trialNo, i, opts.noTrainingPoints);
-			break;
-		end
-	end
-
-	% second stage: randomly sample the rest
-	if i < opts.noTrainingPoints
-		ind = [ind, setdiff(1:opts.noTrainingPoints, ind)];
-	end
-	for j = numLabels:opts.noTrainingPoints
-		if numel(unique(labels(ind(1:j)))) == numLabels
-			myLogInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, j, opts.noTrainingPoints);
-			break;
-		end
-	end
 end
 
 % -----------------------------------------------------------
@@ -416,6 +283,38 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 				W(:,j) = W(:,j) - st * c1 * exp(-ci(j)*W(:,j)'*xi')*-ci(j)*xi';
 			end
 		end
+	end
+end
+
+% -----------------------------------------------------------
+% do actual hash table update
+function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
+		multi_labeled, seenLabels, M_ecoc, opts)
+
+	% recover true labels for single-label case
+	if ~multi_labeled, Ytrain = floor(Ytrain/10); end
+
+	% build new table
+	if opts.tstScenario == 1
+		Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+	else
+		% TODO: what does it mean?
+		error('not implemented yet');
+		%Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
+	end
+
+	% compute bitflips
+	if isempty(H)
+		bitflips = 0;
+	else
+		if opts.tstScenario == 2
+			% TODO: what does it mean?
+			error('not implemented yet');
+			%bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
+		else
+			bitdiff = xor(H, Hnew);
+		end
+		bitflips = sum(bitdiff(:))/size(Xtrain, 1);
 	end
 end
 
@@ -486,12 +385,16 @@ end
 
 % -----------------------------------------------------------
 % reservoir sampling, update step, based on random sort
-function [Xsample, Ysample, priority_queue] = update_reservoir(...
+function [Xsample, Ysample, priority_queue, ind] = update_reservoir(...
 		Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size)
+	% outputs: 
+	%   Xsample, Ysample, priority_queue: updated
+	%   ind: updated index (0 for no update)
 	if i <= reservoir_size
 		Xsample(i, :)     = spoint;
 		Ysample(i)        = slabel;
 		priority_queue(i) = rand;
+		ind = i;
 	else
 		% pop max from priority queue
 		[maxval, maxind] = max(priority_queue);
@@ -501,6 +404,9 @@ function [Xsample, Ysample, priority_queue] = update_reservoir(...
 			priority_queue(maxind) = r;
 			Xsample(maxind, :)     = spoint;
 			Ysample(maxind)        = slabel;
+			ind = maxind;
+		else
+			ind = 0;  % no update
 		end
 	end
 end

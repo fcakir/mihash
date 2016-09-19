@@ -50,8 +50,8 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 					c_Rprefix = sprintf('%s/%s', oexpdir, opts.metric);
 					
 					% 0. result files
-					if opts.test_frac < 1
-						c_Rprefix = sprintf('%s_frac%g', c_Rprefix, opts.test_frac);
+					if opts.testFrac < 1
+						c_Rprefix = sprintf('%s_frac%g', c_Rprefix, opts.testFrac);
 					end
 
 					c_resfn = sprintf('%s_%dtrials.mat', c_Rprefix, opts.ntrials);
@@ -79,8 +79,8 @@ function resfn = demo_shecc(ftype, dataset, nbits, varargin)
 	Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
 	
 	% 0. result files
-	if opts.test_frac < 1
-		Rprefix = sprintf('%s_frac%g', Rprefix, opts.test_frac);
+	if opts.testFrac < 1
+		Rprefix = sprintf('%s_frac%g', Rprefix, opts.testFrac);
 	end
 
 	resfn = sprintf('%s_%dtrials.mat', Rprefix, opts.ntrials);
@@ -160,7 +160,7 @@ function opts = get_opts_shecc(ftype, dataset, nbits, varargin)
 	ip.addParamValue('mapping', 'smooth', @isstr);
 	
 	ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
-	ip.addParamValue('test_frac', 1, @isscalar);  % <1 for faster testing
+	ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 	ip.addParamValue('learner','tree',@isstr);
 	ip.addParamValue('localdir', ...
 		'/research/object_detection/cachedir/online-hashing/shecc', @isstr);
@@ -174,7 +174,7 @@ function opts = get_opts_shecc(ftype, dataset, nbits, varargin)
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
 	assert(ismember(opts.mapping,{'smooth','bucket'}));
-	assert(opts.test_frac > 0);
+	assert(opts.testFrac > 0);
 	assert(opts.nworkers>0 && opts.nworkers<=12);
 	assert(opts.use_larger_model ==1 || opts.use_larger_model == 0);
 
@@ -411,10 +411,10 @@ function test_shecc(resfn, res_trial_fn, res_exist, opts)
 	[st, i] = dbstack();
 	caller = st(2).name;
 
-	% handle test_frac
-	if opts.test_frac < 1
-		myLogInfo('! only testing first %g%%', opts.test_frac*100);
-		idx = 1:round(size(Xtest, 1)*opts.test_frac);
+	% handle testFrac
+	if opts.testFrac < 1
+		myLogInfo('! only testing first %g%%', opts.testFrac*100);
+		idx = 1:round(size(Xtest, 1)*opts.testFrac);
 		testX = Xtest(idx, :);
 		testY = Ytest(idx, :);
 	end

@@ -97,8 +97,8 @@ function [train_time, update_time, bitflips] = OKH(...
 		% KH: update table
 		if i == 1 || i == number_iterations
 			update_table = true;
-		elseif	(opts.update_interval == 2 && i == number_iterations) || ...
-				(opts.update_interval > 2 && ~mod(i, opts.update_interval/2))
+		elseif	(opts.updateInterval == 2 && i == number_iterations) || ...
+				(opts.updateInterval > 2 && ~mod(i, opts.updateInterval/2))
 			update_table = true;
 		end
 

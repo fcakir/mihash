@@ -7,10 +7,10 @@ function test_okh(resfn, res_trial_fn, res_exist, opts)
 	testY  = Ytest;
 	trainY = Ytrain;
 
-	% handle test_frac
-	if opts.test_frac < 1
-		myLogInfo('! only testing first %g%%', opts.test_frac*100);
-		idx = 1:round(size(Xtest, 1)*opts.test_frac);
+	% handle testFrac
+	if opts.testFrac < 1
+		myLogInfo('! only testing first %g%%', opts.testFrac*100);
+		idx = 1:round(size(Xtest, 1)*opts.testFrac);
 		testX = Xtest(idx, :);
 		testY = Ytest(idx, :);
 	end

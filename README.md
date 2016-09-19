@@ -8,9 +8,9 @@ by: SAB, FC, KH, (SS)
 
 For example, CIFAR GIST features, 16 bits, smooth mapping (default), 3 random trials, use 5,000 training points, update hash table every 200 iters, and test at 10 checkpoints.
 ``` matlab
-demo_osh('gist', 'cifar', 16, 'ntrials', 3, 'noTrainingPoints', 5000, 'update_interval', 200, 'ntests', 10);
+demo_osh('gist', 'cifar', 16, 'ntrials', 3, 'noTrainingPoints', 5000, 'updateInterval', 200, 'ntests', 10);
 ```
-for more parameters, refer to get_opts.m
+for more parameters, refer to 'get_opts.m'
 
 
 ## intermediate results
