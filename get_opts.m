@@ -39,7 +39,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% IF use reservoir AND opts.flipThresh > 0, THEN use opts.flipThresh
 	ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
 	ip.addParamValue('flipThresh', -1, @isscalar);      % use with reservoir
-	ip.addParamValue('adaptive', -1, @isscalar);         % use with reservoir
+	ip.addParamValue('adaptive', -1, @isscalar);        % use with reservoir
+	ip.addParamValue('trigger', 'bf', @isstr);          % use with reservoir
 
 	ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size
 	ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
