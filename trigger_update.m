@@ -1,4 +1,4 @@
-function update_table = trigger_update(W, Xsample, Ysample, Hres, Hnew, reservoir_size, count)
+function [update_table, arg2] = trigger_update(W, W_last, Xsample, Ysample, Hres, Hnew, reservoir_size, count)
 typ = 6;
 if (typ == 1)
     thr = 0.05;
@@ -164,6 +164,7 @@ elseif (typ == 6)
     assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
     % if Q is the (hamming) distance - x axis
     % estimate P(Q|+), P(Q|-) & P(Q)
+    Hres = (W_last' * Xsample' > 0)';
     hdist = (2*Hres - 1)* (2*Hres - 1)';
     hdist = (-hdist + no_bits)./2;   
     condent = zeros(1,reservoir_size);
@@ -199,6 +200,7 @@ elseif (typ == 6)
     
     assert(all(Qent-condent >= 0));
     % estimate P(Q)
+    assert(isequal((W'*Xsample' > 0)', Hnew));
     hdistn = (2*Hnew - 1)* (2*Hnew - 1)';
     hdistn = (-hdistn + no_bits)./2;   
     condentn = zeros(1,reservoir_size);
@@ -234,13 +236,13 @@ elseif (typ == 6)
     
     assert(all(Qentn - condentn >= 0));
     
-    figure('Visible','off');
-    bar([mean(Qent) mean(Qent - condent) mean(Qentn - condentn)]);
-    ylim([0 10]);
-    legend(sprintf('Max mean MI :%g, Current mean MI: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
-    saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-I/ent%05d.png', count));
-    update_table = sum(Qent - condent);
-    
+    %figure('Visible','off');
+    %bar([mean(Qent) mean(Qent - condent) mean(Qentn - condentn)]);
+    %ylim([0 10]);
+    %legend(sprintf('Max mean MI :%g, Current mean MI: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
+    %saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-I/ent%05d.png', count));
+    update_table = mean(Qentn - condentn) - mean(Qent - condent);
+    arg2 = mean(Qentn);
 end
 
 

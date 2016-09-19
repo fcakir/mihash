@@ -49,12 +49,13 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	maxLabelSize  = 205; % Sun
 	numLabels     = numel(unique(Ytrain));
     
-    
-    ind = randperm(ntrain_all);
-    Xsample = Xtrain(ind(1:opts.samplesize),:);
-    Ysample = Ytrain(ind(1:opts.samplesize));
-    clear ind;
-
+    debug = 0;
+    if debug
+        ind = randperm(ntrain_all);
+        Xsample = Xtrain(ind(1:opts.samplesize),:);
+        Ysample = Ytrain(ind(1:opts.samplesize));
+        clear ind;
+    end
 	% are we handling a mult-labeled dataset?
 	multi_labeled = (size(Ytrain, 2) > 1);
 	if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
@@ -63,9 +64,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	if opts.reg_rs > 0
 		% use reservoir sampling regularizer
 		reservoir_size = opts.samplesize;
-		%Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-		%Ysample        = zeros(reservoir_size, 1);
-		priority_queue = zeros(1, reservoir_size);
+		if ~debug
+            Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+            Ysample        = zeros(reservoir_size, 1);
+            priority_queue = zeros(1, reservoir_size);
+        end
 		Hres           = [];  % mapped binary codes for the reservoir
 		if opts.adaptive > 0
 			persistent table_thr;
@@ -91,7 +94,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	else
 		train_ind = 1:opts.noTrainingPoints;
     end
-    ret_val = 0;
+    ret_val = -1;ret_val2 = -1;res_bf = -1;
     % STREAMING BEGINS...
 	for i = 1:opts.noTrainingPoints
 		t_ = tic;  
@@ -135,84 +138,6 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		% Do we need to update the hash table?
-		% Comment: A more natural way is to update the hash mapping first
-		update_table = false;
-
-		if i == 1 || i == opts.noTrainingPoints 
-			% update on first & last iteration no matter what
-			update_table = true;  
-		end
-
-		if opts.reg_rs <= 0
-			if ~update_table
-				% no reservoir -- use update_interval
-				update_table = ~mod(i, opts.update_interval);
-			end
-		else
-			% using reservoir
-			%
-			% first update the reservoir
-			%[Xsample, Ysample, priority_queue] = update_reservoir(...
-			%	Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
-
-			% compute new reservoir hash table (do not update yet)
-			% a hack -we always use smooth mapping for reservoir samples 
-			Hnew = (W' * Xsample' > 0)';
-
-			% do we need to update the actual hash table?
-			if isempty(Hres)
-				% yes
-				Hres = Hnew;  
-				if strcmp(opts.mapping,'smooth'), update_table = true; res_bf = 0; end
-			else
-				bitdiff = xor(Hres, Hnew);
-				bf_temp = sum(bitdiff(:))/reservoir_size;
-
-				%THR = table_thr(max(1, length(seenLabels)));
-
-				% signal update of actual hash table, when:
-				%
-				% 1) using update_interval ONLY (for rs_baseline)
-				% 2) using update_interval + adaptive
-				% 3) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
-				% 4) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
-				%
-				% NOTE: get_opts() ensures only one scenario will happen
-				%
-				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
-					% cases 1, 2
-                    % check whether to do an update to the hash table
-                    pret_val = ret_val;
-                    ret_val = trigger_update(W, Xsample, Ysample, Hres, Hnew, reservoir_size,i);
-					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
-						update_table = true;
-                        res_bf = bf_temp;
-					end
-				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
-					% case 3
-					update_table = true;
-                    res_bf = bf_temp;
-				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
-					% case 4
-					update_table = true;
-                    res_bf = bf_temp;
-				end
-			
-				% update reservoir hash table, when:
-				%
-				% 1) using update_interval only (update reservoir table each iter)
-				% 2) all other cases: when update_table is signaled
-				%
-	 			%if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
-				if update_table
-                    bitflips_res = bitflips_res + bf_temp;
-					Hres = Hnew;
-				end
-			end
-		end
-
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash function update
 
 		% SGD-1. update W wrt. loss term(s)
@@ -244,11 +169,86 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		end
 		train_time = train_time + toc(t_);
 		
-		% Avoid hash index updated if hash mapping has not been changed 
-		if ~(i == 1 || i == opts.noTrainingPoints) && sum(abs(W_last(:) - W(:))) < 1e-6
-			update_table = false;
+   		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		% Do we need to update the hash table?
+		update_table = false;
+
+		if i == 1 || i == opts.noTrainingPoints 
+			% update on first & last iteration no matter what
+			update_table = true;  
 		end
 
+		if opts.reg_rs <= 0
+			if ~update_table
+				% no reservoir -- use update_interval
+				update_table = ~mod(i, opts.update_interval);
+			end
+		else
+			% using reservoir
+			%
+            if ~debug
+			% first update the reservoir
+                [Xsample, Ysample, priority_queue] = update_reservoir(...
+                	Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
+            end
+			% compute new reservoir hash table (do not update yet)
+			% a hack -we always use smooth mapping for reservoir samples 
+			Hnew = (W' * Xsample' > 0)';
+
+			% do we need to update the actual hash table?
+			if isempty(Hres)
+				% yes
+				Hres = Hnew;  
+				if strcmp(opts.mapping,'smooth'), update_table = true; res_bf = 0; end
+            else
+                Hres = (W_last' * Xsample' > 0)';
+                bitdiff = xor(Hres, Hnew);
+				bf_temp = sum(bitdiff(:))/reservoir_size;
+
+				%THR = table_thr(max(1, length(seenLabels)));
+
+				% signal update of actual hash table, when:
+				%
+				% 1) using update_interval ONLY (for rs_baseline)
+				% 2) using update_interval + adaptive
+				% 3) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
+				% 4) #bitflips > flip_thresh (for rs, NOT USING adaptive threshold)
+				%
+				% NOTE: get_opts() ensures only one scenario will happen
+				%
+				if opts.update_interval > 0 && mod(i,opts.update_interval) == 0
+					% cases 1, 2
+                    % check whether to do an update to the hash table
+                    %pret_val = ret_val;
+                    [ret_val, ret_val2] = trigger_update(W, W_last, Xsample, Ysample, Hres, Hnew, reservoir_size, i);
+					if (opts.adaptive <= 0) || (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
+						update_table = true;
+                        res_bf = bf_temp;
+					end
+				elseif (opts.update_interval <= 0) && (opts.adaptive > 0 && bf_temp > table_thr(max(1, length(seenLabels))))
+					% case 3
+					update_table = true;
+                    res_bf = bf_temp;
+				elseif (opts.flip_thresh > 0 && bf_temp > opts.flip_thresh)
+					% case 4
+					update_table = true;
+                    res_bf = bf_temp;
+				end
+			
+				% update reservoir hash table, when:
+				%
+				% 1) using update_interval only (update reservoir table each iter)
+				% 2) all other cases: when update_table is signaled
+				%
+	 			%if (opts.update_interval > 0 && opts.adaptive <= 0) || update_table
+				if update_table
+                    bitflips_res = bitflips_res + bf_temp;
+					%Hres = Hnew;
+				end
+			end
+		end
+
+        
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
 		%
@@ -279,8 +279,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				end
 				bitdiff = sum(bitdiff(:))/ntrain_all;
 				bitflips = bitflips + bitdiff;
-                if ~exist('res_bf','var'), res_bf = -1; end
-				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g, res. bit_diff=%g, trig. val=%g (%g)', trialNo, numel(update_iters), i, bitdiff, res_bf, ret_val, abs(ret_val - pret_val));
+				myLogInfo('[T%02d] HT Update#%d @%d, bitdiff=%g, res. bit_diff=%g, MAX MI=%g, MI diff.=%g', trialNo, numel(update_iters), i, bitdiff, res_bf, ret_val2, ret_val);
 			else
 				myLogInfo('[T%02d] HT Update#%d @%d', trialNo, numel(update_iters), i);
 			end
