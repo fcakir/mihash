@@ -4,10 +4,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%  ntrials (int) # of random trials
 	%  stepsize (float) is step size in SGD
 	%  SGDBoost (integer) is 0 for OSHEG, 1 for OSH
-	%  randseed (int) random seed for repeatable experiments
 	%  updateInterval (int) update hash table
-	%  test_interval (int) save/test intermediate model
-	%  sampleratio (float) reservoir size, % of training set
 	%  localdir (string) where to save stuff
 	%  noTrainingPoints (int) # of training points 
 	%  override (int) override previous results {0, 1}
@@ -52,6 +49,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('labelspercls', 0, @isscalar);
 	
 	% Testing scenario
+	% TODO explain
 	ip.addParamValue('tstScenario',1,@isscalar);
 
 	% for label arrival strategy: prob. of observing a new label
@@ -136,41 +134,41 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	% identifier string for the current experiment
 	opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 		opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
+	idr = opts.identifier;
 
+	% handle reservoir
 	if opts.reg_rs > 0
-		% 1. reservoir: use updateInterval or flipThresh or adaptive
+		% using reservoir
+		idr = sprintf('%s-RS%dL%g', idr, opts.reservoirSize, opts.reg_rs);
+	
+		% in this order: U, (F, Ada) or (MI)
+		% only possible combinations:  U, U+Ada, F, Ada
 		if opts.updateInterval > 0
-			opts.identifier = sprintf('%s-RS%dL%gU%g', opts.identifier, ...
-				opts.reservoirSize, opts.reg_rs, opts.updateInterval);
-
-			% 1.1. new scenario: use updateInterval in conjunction with adaptive
-			if opts.adaptive > 0
-				opts.identifier = [opts.identifier 'Ada'];
-				myLogInfo('Using updateInterval + adaptive!')
+			idr = sprintf('%sU%d', idr, opts.updateInterval);
+		end
+		if strcmp(opts.trigger, 'bf')
+			if opts.flipThresh > 0
+				idr = sprintf('%sF%g', idr, opts.flipThresh);
 			end
-
-		% 2. using flipThresh alone
-		elseif opts.flipThresh > 0
-			opts.identifier = sprintf('%s-RS%dL%gF%g', opts.identifier, ...
-				opts.reservoirSize, opts.reg_rs, opts.flipThresh);
-
-		% 3. using adaptive alone
+			if opts.adaptive > 0
+				idr = [idr, 'Ada'];
+			end
 		else
-			assert(opts.adaptive > 0);
-			opts.identifier = sprintf('%s-RS%dL%gAda', opts.identifier, ...
-				opts.reservoirSize, opts.reg_rs);
+			% TODO trigger=mi
+			error('not implemented yet');
 		end
 	else
-		% no reservoir (baseline): use updateInterval
+		% no reservoir (baseline): must use updateInterval
 		assert(opts.updateInterval > 0);
-		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.updateInterval);
+		idr = sprintf('%s-U%d', idr, opts.updateInterval);
 	end
 
+	% handle smoothness reg
 	if opts.reg_smooth > 0
-		opts.identifier = sprintf('%s-SM%gN%dSS%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
+		idr = sprintf('%s-SM%gN%dSS%d', idr, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 	end
 
-	
+	opts.identifier = idr;
 	myLogInfo('identifier: %s', opts.identifier);
 
 	% set expdir
