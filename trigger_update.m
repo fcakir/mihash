@@ -1,5 +1,5 @@
 function [update_table, bitflips] = trigger_update(iter, opts, ...
-		W_last, W, Xtrain, Ytrain, Hres_old, Hres_new)
+		W_last, W, Xtrain, Ytrain, Hres_old, Hres_new, bf_thr)
 
 	% Do we need to update the hash table?
 	% Note: The hash mapping has been updated first, so is the reservoir hash table
@@ -31,6 +31,9 @@ function [update_table, bitflips] = trigger_update(iter, opts, ...
 	% ----------------------------------------------
 	% below: using reservoir
 	% the reservoir has been updated before this function
+	if nargin < 9 || isempty(bf_thr)
+		bf_thr = opts.flipThresh; 
+	end
 	
 	switch lower(opts.trigger)
 		case 'bf'
@@ -40,11 +43,6 @@ function [update_table, bitflips] = trigger_update(iter, opts, ...
 			% get bitflips
 			bitdiff  = xor(Hres_old, Hres_new);
 			bitflips = sum(bitdiff(:))/reservoir_size;
-
-
-			% (Kun: what is this doing?)
-			%THR = table_thr(max(1, length(seenLabels)));
-
 
 			% signal update of actual hash table, when:
 			%
@@ -62,15 +60,13 @@ function [update_table, bitflips] = trigger_update(iter, opts, ...
 				%pret_val = ret_val;
 				%ret_val = trigger_update_fatih(W, Xsample, Ysample, Hres, Hnew, reservoir_size);
 				%
-				if (opts.adaptive <= 0) || ...
-						(opts.adaptive > 0 && bitflips > table_thr(max(1, length(seenLabels))))
+				if (opts.adaptive <= 0) || (opts.adaptive > 0 && bitflips > bf_thr)
 					update_table = true;
 				end
-			elseif (opts.updateInterval <= 0) && ...
-					(opts.adaptive > 0 && bitflips > table_thr(max(1, length(seenLabels))))
+			elseif (opts.updateInterval <= 0) && (opts.adaptive > 0 && bitflips > bf_thr)
 				% case 3
 				update_table = true;
-			elseif (opts.flipThresh > 0) && (bitflips > opts.flipThresh)
+			elseif (opts.flipThresh > 0) && (bitflips > bf_thr)
 				% case 4
 				update_table = true;
 			else

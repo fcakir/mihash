@@ -75,10 +75,11 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		end
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
+
 		% for adaptive threshold
 		if opts.adaptive > 0
-			persistent table_thr;
-			table_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
+			persistent adaptive_thr;
+			adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
 				1:maxLabelSize);
 		end
 	end
@@ -190,9 +191,15 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
 		%
-		% determine whether to update or not
-		[update_table, bf_res] = trigger_update(i, opts, ...
-			W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+		% determine whether to update or not, based on bitflip threshold
+		if opts.adaptive > 0
+			bf_thr = adaptive_thr(max(1, length(seenLabels)));
+			[update_table, bf_res] = trigger_update(i, opts, ...
+				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
+		else
+			[update_table, bf_res] = trigger_update(i, opts, ...
+				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+		end
 
 		if update_table
 			W_lastupdate = W;  % W_lastupdate: last W used to update hash table
