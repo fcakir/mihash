@@ -82,13 +82,6 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				1:maxLabelSize);
 		end
 	end
-	%{
-	if opts.reg_maxent > 0
-		% use max entropy regularizer
-		num_unlabeled = 0;
-		U = zeros(size(Xtrain, 2));
-	end
-	%}
 
 	% SGD iterations
 	i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
@@ -141,12 +134,6 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			isLabeled = false;
 			slabel = zeros(size(slabel));  % mark as unlabeled for subsequent functions
 			num_unlabeled = num_unlabeled + 1;
-			%{
-			if opts.reg_maxent > 0  % update maxent regularizer
-				U = U*num_unlabeled + spoint'*spoint;
-				U = U/num_unlabeled;
-			end
-			%}
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,11 +162,6 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			W = reg_smooth(W, ...
 				[spoint; Xsample(ind(1:opts.rs_sm_neigh_size),:)], ...
 				opts.reg_smooth);
-		%{
-		elseif isLabeled && opts.reg_maxent > 0  &&  num_unlabeled > 10
-			% TODO hard-coded starting threshold of 10 unlabeled examples
-			W = W - opts.reg_maxent * U * W;
-		%}
 		end
 		train_time = train_time + toc(t_);
 

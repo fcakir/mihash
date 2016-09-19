@@ -40,11 +40,10 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
 	ip.addParamValue('flipThresh', -1, @isscalar);      % use with reservoir
 	ip.addParamValue('adaptive', -1, @isscalar);        % use with reservoir
-	ip.addParamValue('trigger', 'bf', @isstr);          % use with reservoir
+	ip.addParamValue('trigger', 'bf', @isstr);          % HT update trigger
 
 	ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size
 	ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
-	ip.addParamValue('reg_maxent', -1, @isscalar);    % max entropy reg. weight
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
@@ -70,7 +69,6 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% assertions
 	assert(ismember(opts.ftype, {'gist', 'cnn'}));
-	assert(~(opts.reg_maxent>0 && opts.reg_smooth>0));  % can't have both
 	assert(opts.testFrac > 0);
 	assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 	assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
@@ -168,9 +166,6 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 		opts.identifier = sprintf('%s-U%d', opts.identifier, opts.updateInterval);
 	end
 
-	if opts.reg_maxent > 0
-		opts.identifier = sprintf('%s-ME%g', opts.identifier, opts.reg_maxent);
-	end
 	if opts.reg_smooth > 0
 		opts.identifier = sprintf('%s-SM%gN%dSS%d', opts.identifier, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 	end
