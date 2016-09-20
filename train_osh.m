@@ -175,19 +175,19 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
 			
 			% compute new reservoir hash table (do not update yet)
-			% a hack: we always use smooth mapping for reservoir samples 
+			% NOTE: we always use smooth mapping for reservoir samples 
 			Hres_new = (W' * Xsample' > 0)';
 
 			% NOTE: the old reservoir hash table needs updating too
 			%       since Xsample has possibly changed.
-            if isempty(Hres)
-                Hres = (W_lastupdate' * Xsample' > 0)';
-            elseif (ind > 0)
-                Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
-            end
-        else
-            Hres = [];Hres_new = [];
-        end
+			if isempty(Hres)
+				Hres = (W_lastupdate' * Xsample' > 0)';
+			elseif (ind > 0)
+				Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+			end
+		else
+			Hres = []; Hres_new = [];
+		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
@@ -205,23 +205,23 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		if update_table
 			W_lastupdate = W;  % W_lastupdate: last W used to update hash table
 			update_iters = [update_iters, i];
-            % update reservoir hash table
-            if opts.reg_rs > 0
-                Hres = Hres_new;
-                if strcmpi(opts.trigger,'bf')
-                    bitflips_res = bitflips_res + ret_val;
-                end
-            end
+			% update reservoir hash table
+			if opts.reg_rs > 0
+				Hres = Hres_new;
+				if strcmpi(opts.trigger,'bf')
+					bitflips_res = bitflips_res + ret_val;
+				end
+			end
 			% update actual hash table
 			t_ = tic;
 			[H, bf_all] = update_hash_table(H, W, Xtrain, Ytrain, ...
-				multi_labeled, seenLabels, M_ecoc, opts);
+				multi_labeled, seenLabels, M_ecoc, opts, update_iters);
 
 			bitflips = bitflips + bf_all;
 			update_time = update_time + toc(t_);
 
-			myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, ret_val=%g', ...
-				trialNo, numel(update_iters), i, bf_all, ret_val);
+			myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, ret_val=%g(%s)', ...
+				trialNo, numel(update_iters), i, bf_all, ret_val, opts.trigger);
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -293,7 +293,7 @@ end
 % -----------------------------------------------------------
 % do actual hash table update
 function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
-		multi_labeled, seenLabels, M_ecoc, opts)
+		multi_labeled, seenLabels, M_ecoc, opts, update_iters)
 
 	% recover true labels for single-label case
 	if ~multi_labeled, Ytrain = floor(Ytrain/10); end
@@ -302,9 +302,8 @@ function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
 	if opts.tstScenario == 1
 		Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
 	else
-		% TODO: what does it mean?
-		error('not implemented yet');
-		%Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
+		i = update_iters(end);
+		Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
 	end
 
 	% compute bitflips
@@ -312,9 +311,7 @@ function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
 		bitflips = 0;
 	else
 		if opts.tstScenario == 2
-			% TODO: what does it mean?
-			error('not implemented yet');
-			%bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
+			bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
 		else
 			bitdiff = xor(H, Hnew);
 		end

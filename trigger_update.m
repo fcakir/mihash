@@ -69,15 +69,15 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 			elseif (opts.flipThresh > 0) && (bitflips > bf_thr)
 				% case 4
 				update_table = true;
-            end
-            ret_val = bitflips;
+			end
+			ret_val = bitflips;
 		case 'mi'
-            if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
-                [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
-                myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
-                update_table = mi_impr > opts.mi_thr;
-                ret_val = mi_impr;
-            end
+			if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
+				[mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+				myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
+				update_table = mi_impr > opts.mi_thr;
+				ret_val = mi_impr;
+			end
 		otherwise
 			error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
 	end
