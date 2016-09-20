@@ -1,11 +1,11 @@
-function [update_table, bitflips] = trigger_update(iter, opts, ...
-		W_last, W, Xtrain, Ytrain, Hres_old, Hres_new, bf_thr)
+function [update_table, ret_val] = trigger_update(iter, opts, ...
+		W_last, W, X, Y, Hres_old, Hres_new, bf_thr)
 
 	% Do we need to update the hash table?
 	% Note: The hash mapping has been updated first, so is the reservoir hash table
 	%
 	update_table = false;
-	bitflips = 0;
+	ret_val = -1;
 
 	% ----------------------------------------------
 	% update on first & last iteration no matter what
@@ -42,7 +42,7 @@ function [update_table, bitflips] = trigger_update(iter, opts, ...
 
 			% get bitflips
 			bitdiff  = xor(Hres_old, Hres_new);
-			bitflips = sum(bitdiff(:))/reservoir_size;
+			bitflips = sum(bitdiff(:))/opts.reservoirSize;
 
 			% signal update of actual hash table, when:
 			%
@@ -69,15 +69,100 @@ function [update_table, bitflips] = trigger_update(iter, opts, ...
 			elseif (opts.flipThresh > 0) && (bitflips > bf_thr)
 				% case 4
 				update_table = true;
-			else
-				error('it''s impossible to reach here, sth is wrong in get_opts()');
-			end
-
-		%case 'mi'
-		%	TODO
-			%update_table = trigger_mutualinfo();
+            end
+            ret_val = bitflips;
+		case 'mi'
+            if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
+                [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+                myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
+                update_table = mi_impr > opts.mi_thr;
+                ret_val = mi_impr;
+            end
 		otherwise
 			error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
 	end
 
+end
+
+
+function [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
+    cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+    no_bits = size(Hres,2);
+    assert(isequal(no_bits, size(Hnew,2)));
+    assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
+    % if Q is the (hamming) distance - x axis
+    % estimate P(Q|+), P(Q|-) & P(Q)
+    assert(isequal((W_last'*X' > 0)', Hres));
+    hdist = (2*Hres - 1)* (2*Hres - 1)';
+    hdist = (-hdist + no_bits)./2;   
+    condent = zeros(1,reservoir_size);
+    Qent = zeros(1, reservoir_size);
+    % make this faster
+    for j=1:reservoir_size
+        A = hdist(j, :); M = A(cateTrainTrain(j, :)); NM = A(~cateTrainTrain(j, :));
+        prob_Q_Cp = histcounts(M, 0:1:nbits, 'Normalization', 'probability'); % P(Q|+)
+        prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
+        prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
+        prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
+        prob_Cn   = 1 - prob_Cp; % P(-)
+        
+        % estimate H(Q) entropy
+        for q = 1:length(prob_Q)
+            if prob_Q(q) == 0, lg = 0; else lg = log2(prob_Q(q)); end
+            Qent(j) = Qent(j) - prob_Q(q) * lg;
+        end
+        
+        % estimate H(Q|C)
+        p = 0;
+        for q=1:length(prob_Q_Cp)
+            if prob_Q_Cp(q) == 0, lg = 0; else lg = log2(prob_Q_Cp(q)); end
+            p = p - prob_Q_Cp(q) * lg;
+        end
+        n = 0;
+        for q=1:length(prob_Q_Cn)
+            if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
+            n = n - prob_Q_Cn(q) * lg;
+        end
+        condent(j) = p * prob_Cp + n * prob_Cn;    
+    end
+    
+    assert(all(Qent-condent >= 0));
+    % estimate P(Q)
+    assert(isequal((W'*X' > 0)', Hnew));
+    hdistn = (2*Hnew - 1)* (2*Hnew - 1)';
+    hdistn = (-hdistn + no_bits)./2;   
+    condentn = zeros(1,reservoir_size);
+    Qentn = zeros(1, reservoir_size);
+    % make this faster
+    for j=1:reservoir_size
+        A = hdistn(j, :); M = A(cateTrainTrain(j, :)); NM = A(~cateTrainTrain(j, :));
+        prob_Q_Cp = histcounts(M, 0:1:nbits, 'Normalization', 'probability'); % P(Q|+)
+        prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
+        prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
+        prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
+        prob_Cn   = 1 - prob_Cp; % P(-)
+        
+        % estimate H(Q) entropy
+        for q = 1:length(prob_Q)
+            if prob_Q(q) == 0, lg = 0; else lg = log2(prob_Q(q)); end
+            Qentn(j) = Qentn(j) - prob_Q(q) * lg;
+        end
+        
+        % estimate H(Q|C)
+        p = 0;
+        for q=1:length(prob_Q_Cp)
+            if prob_Q_Cp(q) == 0, lg = 0; else lg = log2(prob_Q_Cp(q)); end
+            p = p - prob_Q_Cp(q) * lg;
+        end
+        n = 0;
+        for q=1:length(prob_Q_Cn)
+            if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
+            n = n - prob_Q_Cn(q) * lg;
+        end
+        condentn(j) = p * prob_Cp + n * prob_Cn;    
+    end
+    
+    assert(all(Qentn - condentn >= 0));
+    mi_impr = mean(Qentn - condentn) - mean(Qent - condent);
+    max_mi = mean(Qentn);
 end

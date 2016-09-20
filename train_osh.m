@@ -180,13 +180,14 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 			% NOTE: the old reservoir hash table needs updating too
 			%       since Xsample has possibly changed.
-			if isempty(Hres)
-				Hres = (W_lastupdate' * Xsample' > 0)';
-			elseif (ind > 0)
-				Hres(ind, :) = (W_lastupdate' * Xsample(ind, :)' > 0)';
-			end
-		end
-
+            if isempty(Hres)
+                Hres = (W_lastupdate' * Xsample' > 0)';
+            elseif (ind > 0)
+                Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+            end
+        else
+            Hres = [];Hres_new = [];
+        end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
@@ -194,21 +195,23 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% determine whether to update or not, based on bitflip threshold
 		if opts.adaptive > 0
 			bf_thr = adaptive_thr(max(1, length(seenLabels)));
-			[update_table, bf_res] = trigger_update(i, opts, ...
+			[update_table, ret_val] = trigger_update(i, opts, ...
 				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
 		else
-			[update_table, bf_res] = trigger_update(i, opts, ...
+			[update_table, ret_val] = trigger_update(i, opts, ...
 				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
 		end
 
 		if update_table
 			W_lastupdate = W;  % W_lastupdate: last W used to update hash table
 			update_iters = [update_iters, i];
-
-			% update reservoir hash table
-			Hres = Hres_new;
-			bitflips_res = bitflips_res + bf_res;
-
+            % update reservoir hash table
+            if opts.reg_rs > 0
+                Hres = Hres_new;
+                if strcmpi(opts.trigger,'bf')
+                    bitflips_res = bitflips_res + ret_val;
+                end
+            end
 			% update actual hash table
 			t_ = tic;
 			[H, bf_all] = update_hash_table(H, W, Xtrain, Ytrain, ...
@@ -217,8 +220,8 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			bitflips = bitflips + bf_all;
 			update_time = update_time + toc(t_);
 
-			myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, bf_res=%g', ...
-				trialNo, numel(update_iters), i, bf_all, bf_res);
+			myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, ret_val=%g', ...
+				trialNo, numel(update_iters), i, bf_all, ret_val);
 		end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -244,7 +247,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
 		'update_iters','seenLabels');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
-
+    myLogInfo('# of Hash Table Updates=%g', length(update_iters));
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 

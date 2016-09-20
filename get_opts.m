@@ -44,6 +44,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
+    ip.addParamValue('miThresh', 0, @isscalar);         % threshold for the mutual info
 		
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
@@ -153,9 +154,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 			if opts.adaptive > 0
 				idr = [idr, 'Ada'];
 			end
-		else
-			% TODO trigger=mi
-			error('not implemented yet');
+        else
+            idr = sprintf('%s-MI%g', idr, opts.miThresh);
 		end
 	else
 		% no reservoir (baseline): must use updateInterval
