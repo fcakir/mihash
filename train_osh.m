@@ -70,19 +70,21 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% use reservoir sampling regularizer
 		reservoir_size = opts.reservoirSize;
 		if ~debug
-		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-		Ysample        = zeros(reservoir_size, 1);
+    		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+        	Ysample        = zeros(reservoir_size, 1);
 		end
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
-
+        
 		% for adaptive threshold
 		if opts.adaptive > 0
 			persistent adaptive_thr;
 			adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
 				1:maxLabelSize);
 		end
-	end
+    else 
+        Xsample = []; Ysample = [];Hres = [];Hres_new = [];
+    end
 
 	% SGD iterations
 	i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
@@ -180,15 +182,12 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 			% NOTE: the old reservoir hash table needs updating too
 			%       since Xsample has possibly changed.
-			if isempty(Hres)
-				Hres = (W_lastupdate' * Xsample' > 0)';
-			elseif (ind > 0)
-				Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
-			end
-		else
-			Hres = []; Hres_new = [];
-		end
-
+            if isempty(Hres)
+                Hres = (W_lastupdate' * Xsample' > 0)';
+            elseif (ind > 0)
+                Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+            end
+        end
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
 		%
