@@ -190,13 +190,13 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
     c_h = c_h./ norm(c_h,1);
     h_ind = sorted_h(cumsum(c_h) <= fracHash);
     % 
-    figure('Visible','off');
-    bar(c_h);
-    vline(find((cumsum(c_h) <= fracHash) == 0,1));
+    %figure('Visible','off');
+    %bar(c_h);
+    %vline(find((cumsum(c_h) <= fracHash) == 0,1));
     %ylim([0 1]);
     %legend(sprintf('Max MI :%g, MI difference: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
-    saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
-    close(gcf);
+    %saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
+    %close(gcf);
 
 end
 
