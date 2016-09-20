@@ -69,8 +69,8 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 			elseif (opts.flipThresh > 0) && (bitflips > bf_thr)
 				% case 4
 				update_table = true;
-            end
-            ret_val = bitflips;
+			end
+			ret_val = bitflips;
 		case 'mi'
             if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
                 [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
