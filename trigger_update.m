@@ -1,4 +1,4 @@
-function [update_table, ret_val] = trigger_update(iter, opts, ...
+function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 		W_last, W, X, Y, Hres_old, Hres_new, bf_thr)
 
 	% Do we need to update the hash table?
@@ -6,6 +6,7 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 	%
 	update_table = false;
 	ret_val = -1;
+    h_ind = 1:opts.nbits;
 
 	% ----------------------------------------------
 	% update on first & last iteration no matter what
@@ -73,7 +74,7 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 			ret_val = bitflips;
 		case 'mi'
             if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
-                [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+                [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits, opts.fracHash);
                 %myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
                 update_table = mi_impr > opts.miThresh;
                 ret_val = mi_impr;
@@ -85,12 +86,13 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 end
 
 
-function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
+function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits, fracHash)
     
 
     no_bits = size(Hres,2);
     
     % assertions
+    assert(ceil(nbits*fracHash) > 0);
     assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
     assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
     
@@ -180,4 +182,21 @@ function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hne
     assert(all(Qentn - condentn >= 0));
     mi_impr = mean(Qentn - condentn) - mean(Qent - condent);
     max_mi = mean(Qentn);
+    
+    % which hash functions causes the most bitflips in the reservoir
+    [c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
+    %h_ind = sorted_h(1:ceil(fracHash*nbits));
+    %h_ind = 1:nbits;
+    c_h = c_h./ norm(c_h,1);
+    h_ind = sorted_h(cumsum(c_h) <= fracHash);
+    % 
+    figure('Visible','off');
+    bar(c_h);
+    vline(find((cumsum(c_h) <= fracHash) == 0,1));
+    %ylim([0 1]);
+    %legend(sprintf('Max MI :%g, MI difference: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
+    saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
+    close(gcf);
+
 end
+

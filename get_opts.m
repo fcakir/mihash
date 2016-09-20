@@ -44,8 +44,9 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
-    ip.addParamValue('miThresh', 0, @isscalar);         % threshold for the mutual info
-		
+    ip.addParamValue('miThresh', 0, @isscalar);       % threshold for the mutual info
+    ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
+    
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
 	
@@ -85,6 +86,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 
 	assert(opts.nworkers>=0 && opts.nworkers<=12);
 	assert(ismember(opts.tstScenario,[1,2]));
+    assert(opts.fracHash > 0 && opts.fracHash <= 1);
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -155,7 +157,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 				idr = [idr, 'Ada'];
 			end
         else
-            idr = sprintf('%s-MI%g', idr, opts.miThresh);
+            idr = sprintf('%s-MI%gTHR%g', idr, opts.miThresh, opts.fracHash);
 		end
 	else
 		% no reservoir (baseline): must use updateInterval
