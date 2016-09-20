@@ -42,7 +42,7 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 
 			% get bitflips
 			bitdiff  = xor(Hres_old, Hres_new);
-			bitflips = sum(bitdiff(:))/opts.reservoirSize;
+			bitflips = sum(bitdiff(:))/min(iter, opts.reservoirSize);
 
 			% signal update of actual hash table, when:
 			%
@@ -73,9 +73,9 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
             ret_val = bitflips;
 		case 'mi'
             if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
-                [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
-                myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
-                update_table = mi_impr > opts.mi_thr;
+                [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+                %myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
+                update_table = mi_impr > opts.miThresh;
                 ret_val = mi_impr;
             end
 		otherwise
@@ -85,16 +85,30 @@ function [update_table, ret_val] = trigger_update(iter, opts, ...
 end
 
 
-function [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
-    cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
+    
+
     no_bits = size(Hres,2);
-    assert(isequal(no_bits, size(Hnew,2)));
+    
+    % assertions
+    assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
     assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
+    
+    % take actual reservoir size into account
+    reservoir_size = min(iter, reservoir_size);
+    X = X(1:reservoir_size,:); Y = Y(1:reservoir_size);    
+    
+    Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
+    cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+    assert(isequal((W_last'*X' > 0)', Hres));
+    
+    % distance
+    hdist = (2*Hres - 1)*(2*Hres - 1)';
+    hdist = (-hdist + no_bits)./2;   
+    
     % if Q is the (hamming) distance - x axis
     % estimate P(Q|+), P(Q|-) & P(Q)
-    assert(isequal((W_last'*X' > 0)', Hres));
-    hdist = (2*Hres - 1)* (2*Hres - 1)';
-    hdist = (-hdist + no_bits)./2;   
+    
     condent = zeros(1,reservoir_size);
     Qent = zeros(1, reservoir_size);
     % make this faster
@@ -127,8 +141,9 @@ function [mi_impr, max_mi] = trigger_mutualinfo(W, W_last, X, Y, Hres, Hnew, res
     end
     
     assert(all(Qent-condent >= 0));
-    % estimate P(Q)
     assert(isequal((W'*X' > 0)', Hnew));
+    
+    % estimate P(Q)
     hdistn = (2*Hnew - 1)* (2*Hnew - 1)';
     hdistn = (-hdistn + no_bits)./2;   
     condentn = zeros(1,reservoir_size);
