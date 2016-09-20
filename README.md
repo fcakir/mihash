@@ -1,6 +1,6 @@
 # online-hashing
 
-Reducing hash table udpates during online hashing
+Online hashing with reservoir sampling
 
 by: SAB, FC, KH, (SS)
 
@@ -10,11 +10,11 @@ For example, CIFAR GIST features, 16 bits, smooth mapping (default), 3 random tr
 ``` matlab
 demo_osh('gist', 'cifar', 16, 'ntrials', 3, 'noTrainingPoints', 5000, 'updateInterval', 200, 'ntests', 10);
 ```
-for more parameters, refer to 'get_opts.m'
+for more parameters, refer to `get_opts.m`
 
 
 ## intermediate results
 
-Results are cached by default to: /research/object_detection/cachedir/online-hashing.
+Results are cached by default to: `/research/object_detection/cachedir/online-hashing`
 
 If really necessary, change it by setting opts.localdir
