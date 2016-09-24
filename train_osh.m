@@ -70,21 +70,21 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		% use reservoir sampling regularizer
 		reservoir_size = opts.reservoirSize;
 		if ~debug
-    		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-        	Ysample        = zeros(reservoir_size, 1);
+		Xsample        = zeros(reservoir_size, size(Xtrain, 2));
+		Ysample        = zeros(reservoir_size, 1);
 		end
 		priority_queue = zeros(1, reservoir_size);
 		Hres           = [];  % mapped binary codes for the reservoir
-        
+
 		% for adaptive threshold
 		if opts.adaptive > 0
 			persistent adaptive_thr;
 			adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
 				1:maxLabelSize);
 		end
-    else 
-        Xsample = []; Ysample = [];Hres = [];Hres_new = [];
-    end
+	else 
+		Xsample = []; Ysample = []; Hres = []; Hres_new = [];
+	end
 
 	% SGD iterations
 	i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
@@ -175,19 +175,19 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		if opts.reg_rs > 0
 			[Xsample, Ysample, priority_queue, ind] = update_reservoir(...  
 				Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
-			
+
 			% compute new reservoir hash table (do not update yet)
 			% NOTE: we always use smooth mapping for reservoir samples 
 			Hres_new = (W' * Xsample' > 0)';
 
 			% NOTE: the old reservoir hash table needs updating too
 			%       since Xsample has possibly changed.
-            if isempty(Hres)
-                Hres = (W_lastupdate' * Xsample' > 0)';
-            elseif (ind > 0)
-                Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
-            end
-        end
+			if isempty(Hres)
+				Hres = (W_lastupdate' * Xsample' > 0)';
+			elseif (ind > 0)
+				Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+			end
+		end
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% hash index update
 		%
@@ -199,19 +199,19 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		else
 			[update_table, ret_val, h_ind] = trigger_update(i, opts, ...
 				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
-            if numel(h_ind) ~= opts.nbits && opts.reg_rs > 0 
-                %assert(isequal((W_lastupdate' * Xsample' > 0)', Hres));
-                H_temp = Hres_new;
-                Hres_new = Hres;
-                Hres_new(:, h_ind) = H_temp(:,h_ind);
-                %assert(isequal(size(Hres_new,2), opts.nbits));
-                %assert(isequal(size(Hres,2), opts.nbits));
-            end
+			if numel(h_ind) ~= opts.nbits && opts.reg_rs > 0 
+				%assert(isequal((W_lastupdate' * Xsample' > 0)', Hres));
+				H_temp = Hres_new;
+				Hres_new = Hres;
+				Hres_new(:, h_ind) = H_temp(:,h_ind);
+				%assert(isequal(size(Hres_new,2), opts.nbits));
+				%assert(isequal(size(Hres,2), opts.nbits));
+			end
 		end
 
 		if update_table            
-            W_lastupdate(:, h_ind) = W(:,h_ind);  % W_lastupdate: last W used to update hash table
-            W = W_lastupdate;
+			W_lastupdate(:, h_ind) = W(:,h_ind);  % W_lastupdate: last W used to update hash table
+			W = W_lastupdate;
 			update_iters = [update_iters, i];
 			% update reservoir hash table
 			if opts.reg_rs > 0
@@ -255,7 +255,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
 		'update_iters','seenLabels');
 	if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
-    myLogInfo('# of Hash Table Updates=%g', length(update_iters));
+	myLogInfo('# of Hash Table Updates=%g', length(update_iters));
 	myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 

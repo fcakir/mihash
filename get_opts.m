@@ -44,8 +44,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 	ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
-    ip.addParamValue('miThresh', 0, @isscalar);       % threshold for the mutual info
-    ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
+	ip.addParamValue('miThresh', 0, @isscalar);       % threshold for the mutual info
+	ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
     
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
@@ -86,7 +86,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 
 	assert(opts.nworkers>=0 && opts.nworkers<=12);
 	assert(ismember(opts.tstScenario,[1,2]));
-    assert(opts.fracHash > 0 && opts.fracHash <= 1);
+	assert(opts.fracHash > 0 && opts.fracHash <= 1);
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
 	% are we on window$?
@@ -156,8 +156,8 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 			if opts.adaptive > 0
 				idr = [idr, 'Ada'];
 			end
-        else
-            idr = sprintf('%s-MI%gTHR%g', idr, opts.miThresh, opts.fracHash);
+		else
+			idr = sprintf('%s-MI%gTHR%g', idr, opts.miThresh, opts.fracHash);
 		end
 	else
 		% no reservoir (baseline): must use updateInterval
@@ -200,23 +200,28 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	elseif ~isempty(strfind(opts.metric, 'prec_n'))
 		% eg. prec_n3 is precision at n=3
 		opts.prec_n = sscanf(opts.metric(7:end), '%d');
+	elseif ~isempty(strfind(opts.metric, 'mAP_'))
+		% eg. mAP_1000 is mAP @ top 1000 retrievals
+		opts.mAP = sscanf(opts.metric(5:end), '%d')
 	else 
-		assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
-    end
-    
-    % hold a diary -save it to opts.expdir
-    if opts.override
-        unix(['rm -f ' opts.expdir '/diary*']);
-    end
-    diary_index = 1;
-    opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);    
-    while exist(opts.diary_name,'file') && ~opts.override
-        diary_index = diary_index + 1;
-        opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
-    end
-    
-    diary(opts.diary_name);
-    diary('on');
+		% default: mAP
+		assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
+	end
+
+	% hold a diary -save it to opts.expdir
+	if opts.override
+		unix(['rm -f ' opts.expdir '/diary*']);
+	end
+	diary_index = 1;
+	opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);    
+	while exist(opts.diary_name,'file') && ~opts.override
+		diary_index = diary_index + 1;
+		opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
+	end
+
+	diary(opts.diary_name);
+	diary('on');
+
 	% FINISHED
 	disp(opts);
 end

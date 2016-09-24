@@ -29,6 +29,20 @@ function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 		res = mean(AP);
 		myLogInfo(['mAP = ' num2str(res)]);
 
+	elseif ~isempty(strfind(opts.metric, 'mAP_'))
+		% eval mAP on top N retrieved results
+		assert(isfield(opts, 'mAP') & opts.mAP > 0);
+		assert(opts.mAP < trainsize);
+		N   = opts.mAP;
+		sim = single(2*Htrain-1)'*single(2*Htest-1);
+		AP  = zeros(1, testsize);
+		parfor j = 1:testsize
+			[val, idx] = sort(sim, 'descend');
+			labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
+			[~, ~, info] = vl_pr(labels, double(sim(idx(1:N), j)));
+			AP(j) = info.ap;
+		end
+		myLogInfo('mAP@(N=%d) = %g', N, res);
 
 	elseif ~isempty(strfind(opts.metric, 'prec_k'))
 		% intended for PLACES, large scale
