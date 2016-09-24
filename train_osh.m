@@ -197,12 +197,21 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			[update_table, ret_val] = trigger_update(i, opts, ...
 				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
 		else
-			[update_table, ret_val] = trigger_update(i, opts, ...
+			[update_table, ret_val, h_ind] = trigger_update(i, opts, ...
 				W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+            if numel(h_ind) ~= opts.nbits && opts.reg_rs > 0 
+                %assert(isequal((W_lastupdate' * Xsample' > 0)', Hres));
+                H_temp = Hres_new;
+                Hres_new = Hres;
+                Hres_new(:, h_ind) = H_temp(:,h_ind);
+                %assert(isequal(size(Hres_new,2), opts.nbits));
+                %assert(isequal(size(Hres,2), opts.nbits));
+            end
 		end
 
-		if update_table
-			W_lastupdate = W;  % W_lastupdate: last W used to update hash table
+		if update_table            
+            W_lastupdate(:, h_ind) = W(:,h_ind);  % W_lastupdate: last W used to update hash table
+            W = W_lastupdate;
 			update_iters = [update_iters, i];
 			% update reservoir hash table
 			if opts.reg_rs > 0
@@ -214,7 +223,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			% update actual hash table
 			t_ = tic;
 			[H, bf_all] = update_hash_table(H, W, Xtrain, Ytrain, ...
-				multi_labeled, seenLabels, M_ecoc, opts, update_iters);
+				multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind); 
 
 			bitflips = bitflips + bf_all;
 			update_time = update_time + toc(t_);
@@ -292,17 +301,17 @@ end
 % -----------------------------------------------------------
 % do actual hash table update
 function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
-		multi_labeled, seenLabels, M_ecoc, opts, update_iters)
+		multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind)
 
 	% recover true labels for single-label case
 	if ~multi_labeled, Ytrain = floor(Ytrain/10); end
 
 	% build new table
 	if opts.tstScenario == 1
-		Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts);
+		Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts, H, h_ind);
 	else
 		i = update_iters(end);
-		Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts);
+		Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts, H, h_ind);
 	end
 
 	% compute bitflips
