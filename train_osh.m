@@ -47,6 +47,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 	%       W_lastupdate is NOT the W from last iteration
 	W_lastupdate = W;  
 
+    % Gradient Matrix for MI criteria
+    mi_gradW = zeros(size(W));
+    
 	ntrain_all    = size(Xtrain, 1);
 	bitflips      = 0;   bitflips_res = 0;
 	train_time    = 0;   update_time  = 0;
@@ -99,6 +102,7 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 		train_ind = 1:opts.noTrainingPoints;
 	end
 	ret_val = 0;
+    grad_flag = 0;
 
 	% STREAMING BEGINS...
 	for i = 1:opts.noTrainingPoints
@@ -165,9 +169,14 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 			W = reg_smooth(W, ...
 				[spoint; Xsample(ind(1:opts.rs_sm_neigh_size),:)], ...
 				opts.reg_smooth);
-		end
+        end
+        
 		train_time = train_time + toc(t_);
-
+        
+        if opts.reg_rs > 0 && strcmpi(opts.trigger,'mi') && opts.miGrad > 0 
+            W = W - mi_gradW;
+            mi_gradW = zeros(size(W));
+        end
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% reservoir update & compute new reservoir hash table
@@ -204,6 +213,10 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
                 H_temp = Hres_new;
                 Hres_new = Hres;
                 Hres_new(:, h_ind) = H_temp(:,h_ind);
+                if opts.miGrad > 0 && update_table
+                    inv_h_ind = ~ismember(1:opts.nbits, h_ind);
+                    mi_gradW(:,inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
+                end
                 %assert(isequal(size(Hres_new,2), opts.nbits));
                 %assert(isequal(size(Hres,2), opts.nbits));
             end
@@ -211,6 +224,9 @@ function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
 
 		if update_table            
             W_lastupdate(:, h_ind) = W(:,h_ind);  % W_lastupdate: last W used to update hash table
+            if opts.miGrad > 0
+                assert(isequal(W_lastupdate - mi_gradW, W) || sum(sum(abs((W_lastupdate - mi_gradW) - W))) < 1e-10);
+            end
             W = W_lastupdate;
 			update_iters = [update_iters, i];
 			% update reservoir hash table

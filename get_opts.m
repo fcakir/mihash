@@ -46,6 +46,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 	ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
     ip.addParamValue('miThresh', 0, @isscalar);       % threshold for the mutual info
     ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
+    ip.addParamValue('miGrad', 0 ,@isscalar);         % accumulate gradients
     
 	% Hack for Places
 	ip.addParamValue('labelspercls', 0, @isscalar);
@@ -157,7 +158,7 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 				idr = [idr, 'Ada'];
 			end
         else
-            idr = sprintf('%s-MI%gTHR%g', idr, opts.miThresh, opts.fracHash);
+            idr = sprintf('%s-MI%gTHR%gGr%d', idr, opts.miThresh, opts.fracHash, opts.miGrad);
 		end
 	else
 		% no reservoir (baseline): must use updateInterval

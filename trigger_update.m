@@ -75,7 +75,7 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 		case 'mi'
             if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
                 [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits, opts.fracHash);
-                %myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
+                myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
                 update_table = mi_impr > opts.miThresh;
                 ret_val = mi_impr;
             end
@@ -120,7 +120,7 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
         prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
         prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
         prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
-        prob_Cn   = 1 - prob_Cp; % P(-)
+        prob_Cn   = 1 - prob_Cp; % P(-) 
         
         % estimate H(Q) entropy
         for q = 1:length(prob_Q)
@@ -175,7 +175,7 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
         for q=1:length(prob_Q_Cn)
             if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
             n = n - prob_Q_Cn(q) * lg;
-        end
+        end  
         condentn(j) = p * prob_Cp + n * prob_Cn;    
     end
     
@@ -197,6 +197,5 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
     %legend(sprintf('Max MI :%g, MI difference: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
     %saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
     %close(gcf);
-
 end
 
