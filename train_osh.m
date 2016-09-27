@@ -72,11 +72,10 @@ end
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
 if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
-
+reservoir_size = opts.reservoirSize;
 % deal with regularizers
 if opts.reservoirSize > 0
     % use reservoir sampling regularizer
-    reservoir_size = opts.reservoirSize;
     if ~debug
         Xsample        = zeros(reservoir_size, size(Xtrain, 2));
         Ysample        = zeros(reservoir_size, 1);
