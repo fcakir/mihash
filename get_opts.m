@@ -210,8 +210,12 @@ if ~isempty(strfind(opts.metric, 'prec_k'))
 elseif ~isempty(strfind(opts.metric, 'prec_n'))
     % eg. prec_n3 is precision at n=3
     opts.prec_n = sscanf(opts.metric(7:end), '%d');
-else
-    assert(strcmp(opts.metric, 'mAP'), 'unknown opts.metric');
+elseif ~isempty(strfind(opts.metric, 'mAP_'))
+    % eg. mAP_1000 is mAP @ top 1000 retrievals
+    opts.mAP = sscanf(opts.metric(5:end), '%d')
+else 
+    % default: mAP
+    assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
 end
 
 % hold a diary -save it to opts.expdir
