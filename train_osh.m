@@ -4,7 +4,9 @@ function train_osh(run_trial, opts)
 global Xtrain Ytrain
 train_time  = zeros(1, opts.ntrials);
 update_time = zeros(1, opts.ntrials);
+ht_updates  = zeros(1, opts.ntrials);
 bit_flips   = zeros(1, opts.ntrials);
+bit_recomp  = zeros(1, opts.ntrials);
 for t = 1:opts.ntrials
     if run_trial(t) == 0
         myLogInfo('Trial %02d not required, skipped', t);
@@ -24,19 +26,22 @@ for t = 1:opts.ntrials
     prefix = sprintf('%s/trial%d', opts.expdir, t);
     
     % do SGD optimization
-    [train_time(t), update_time(t), bit_flips(t)] = sgd_optim(Xtrain, Ytrain, ...
+    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] = sgd_optim(Xtrain, Ytrain, ...
         prefix, test_iters, t, opts);
 end
 
 myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 if strcmp(opts.mapping, 'smooth')
+    %TODO
+    myLogInfo('      Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+    myLogInfo('      Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
     myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end
 end
 
 
 % -------------------------------------------------------------
-function [train_time, update_time, bitflips] = sgd_optim(Xtrain, Ytrain, ...
+function [train_time, update_time, ht_updates, bits_computed_all, bitflips ] = sgd_optim(Xtrain, Ytrain, ...
     prefix, test_iters, trialNo, opts)
 % optimization via SGD
 
@@ -275,7 +280,8 @@ for i = 1:opts.noTrainingPoints
             train_time, update_time, numel(update_iters), ...
             bits_computed_all, num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
     end
-end % end for
+end % end fori
+ht_updates = numel(update_iters);
 % save final model, etc
 F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', 'test_iters', ...

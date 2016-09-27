@@ -24,7 +24,7 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 
 	% ----------------------------------------------
 	% no reservoir -- use updateInterval
-	if opts.reg_rs <= 0
+	if opts.reservoirSize <= 0
 		update_table = ~mod(iter, opts.updateInterval);
 		return;
 	end
@@ -96,7 +96,6 @@ function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hne
     no_bits = size(Hres,2);
     
     % assertions
-    assert(ceil(nbits*fracHash) > 0);
     assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
     assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
     
