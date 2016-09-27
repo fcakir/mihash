@@ -51,7 +51,7 @@ W_lastupdate = W;
 stepW = zeros(size(W));
 
 ntrain_all    = size(Xtrain, 1);
-bitflips      = 0;   bitflips_res = 0;
+bitflips      = 0;   bitflips_res = 0; bits_computed_all = 0;
 train_time    = 0;   update_time  = 0;
 maxLabelSize  = 205; % Sun
 numLabels     = numel(unique(Ytrain));
@@ -69,7 +69,7 @@ multi_labeled = (size(Ytrain, 2) > 1);
 if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
 
 % deal with regularizers
-if opts.reg_rs > 0
+if opts.reservoirSize > 0
     % use reservoir sampling regularizer
     reservoir_size = opts.reservoirSize;
     if ~debug
@@ -101,7 +101,7 @@ if opts.pObserve > 0
 else
     train_ind = 1:opts.noTrainingPoints;
 end
-ret_val = 0;
+trigger_val = 0;
 grad_flag = 0;
 
 % debug
@@ -130,7 +130,7 @@ for i = 1:opts.noTrainingPoints
         
         % if using smoothness regularizer:
         % When a labelled items comes find its neighors from the reservoir
-        if opts.reg_smooth > 0 && opts.reg_rs > 0
+        if opts.reg_smooth > 0 && reservoir_size > 0
             % hack: for the reservoir, smooth mapping is assumed
             if i > reservoir_size
                 resY = 2*single(W'*Xsample' > 0)-1;
@@ -175,7 +175,7 @@ for i = 1:opts.noTrainingPoints
     
     train_time = train_time + toc(t_);
     
-    if opts.reg_rs > 0 && opts.accuHash > 0
+    if reservoir_size > 0 && opts.accuHash > 0
         W = W - stepW;
         stepW = zeros(size(W));
     end
@@ -183,7 +183,7 @@ for i = 1:opts.noTrainingPoints
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % reservoir update & compute new reservoir hash table
     %
-    if opts.reg_rs > 0
+    if reservoir_size > 0
         [Xsample, Ysample, priority_queue, ind] = update_reservoir(...
             Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
         
@@ -205,12 +205,12 @@ for i = 1:opts.noTrainingPoints
     % determine whether to update or not, based on bitflip threshold
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
-        [update_table, ret_val] = trigger_update(i, opts, ...
+        [update_table, trigger_val] = trigger_update(i, opts, ...
             W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
     else
-        [update_table, ret_val, h_ind] = trigger_update(i, opts, ...
+        [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
             W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
-        if numel(h_ind) ~= opts.nbits && opts.reg_rs > 0
+        if numel(h_ind) ~= opts.nbits && reservoir_size > 0
             if opts.randomHash
 		%keyboard
                 h_ind_ = randperm(opts.nbits);
@@ -241,22 +241,22 @@ for i = 1:opts.noTrainingPoints
         W = W_lastupdate;
         update_iters = [update_iters, i];
         % update reservoir hash table
-        if opts.reg_rs > 0
+        if reservoir_size > 0
             Hres = Hres_new;
             if strcmpi(opts.trigger,'bf')
-                bitflips_res = bitflips_res + ret_val;
+                bitflips_res = bitflips_res + trigger_val;
             end
         end
         % update actual hash table
         t_ = tic;
-        [H, bf_all] = update_hash_table(H, W, Xtrain, Ytrain, ...
+        [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
             multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind);
-        
-        bitflips = bitflips + bf_all;
+        bits_computed_all = bits_computed_all + bits_computed;
+	bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
         
-        myLogInfo('[T%02d] HT Update#%d @%d, bf_all=%g, ret_val=%g(%s)', ...
-            trialNo, numel(update_iters), i, bf_all, ret_val, opts.trigger);
+        myLogInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
+            trialNo, numel(update_iters), i, bits_computed_all , bf_all, trigger_val, opts.trigger);
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -264,21 +264,21 @@ for i = 1:opts.noTrainingPoints
     %
     if ismember(i, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, i);
-        save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', ...
+        save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', ...
             'seenLabels', 'update_iters');
         if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
         
         myLogInfo(['[T%02d] %s\n' ...
             '            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
-            '            L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
+            '            #BRs=%g, L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
             trialNo, opts.identifier, i, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), ...
-            num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
+            bits_computed_all, num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
     end
 end % end for
 % save final model, etc
 F = [prefix '.mat'];
-save(F, 'W', 'H', 'bitflips', 'train_time', 'update_time', 'test_iters', ...
+save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', 'test_iters', ...
     'update_iters','seenLabels','h_ind_array');
 if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
 myLogInfo('# of Hash Table Updates=%g', length(update_iters));
@@ -326,7 +326,7 @@ end
 
 % -----------------------------------------------------------
 % do actual hash table update
-function [Hnew, bitflips] = update_hash_table(H, W, Xtrain, Ytrain, ...
+function [Hnew, bitflips, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
     multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind)
 
 % recover true labels for single-label case
@@ -343,13 +343,21 @@ end
 % compute bitflips
 if isempty(H)
     bitflips = 0;
+    if opts.tstScenario == 1
+	bits_computed = length(h_ind) * size(Hnew, 2); % if H is empty, length(h_ind) should be nbits
+    else
+	bits_computed = length(h_ind) * update_iters(end-1);
+    end
 else
     if opts.tstScenario == 2
         bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
+        bitflips = sum(bitdiff(:))/update_iters(end-1);
+	bits_computed = length(h_ind)*update_iters(end-1);
     else
         bitdiff = xor(H, Hnew);
+        bitflips = sum(bitdiff(:))/size(Xtrain, 1);
+	bits_computed = length(h_ind)*size(Hnew, 2);
     end
-    bitflips = sum(bitdiff(:))/size(Xtrain, 1);
 end
 end
 

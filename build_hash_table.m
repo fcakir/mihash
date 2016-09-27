@@ -1,7 +1,7 @@
 function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts, H_old, h_ind)
 	if strcmp(opts.mapping,'smooth')
-        Y = 2*single(H_old) - 1;
-		Y(h_ind,:) = 2*single(W(:,h_ind)'*traingist' > 0)-1;
+            Y = 2*single(H_old) - 1;
+	    Y(h_ind,:) = 2*single(W(:,h_ind)'*traingist' > 0)-1;
 
 	elseif strcmp(opts.mapping,'bucket')
         % For bucket mapping have to deal with the fact that

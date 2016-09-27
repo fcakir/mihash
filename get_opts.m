@@ -39,8 +39,8 @@ ip.addParamValue('flipThresh', -1, @isscalar);      % use with reservoir
 ip.addParamValue('adaptive', -1, @isscalar);        % use with reservoir
 ip.addParamValue('trigger', 'bf', @isstr);          % HT update trigger
 
-ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size
-ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight
+ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size, set to 0 if reservoir is not used
+ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight, only for regularization 
 ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
@@ -142,10 +142,12 @@ opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
 idr = opts.identifier;
 
 % handle reservoir
-if opts.reg_rs > 0
-    % using reservoir
-    idr = sprintf('%s-RS%dL%g', idr, opts.reservoirSize, opts.reg_rs);
-    
+if opts.reservoirSize > 0
+    idr = sprintf('%s-RS%d', idr, opts.reservoirSize);
+    if opts.reg_rs > 0
+    	% using reservoir
+    	idr = sprintf('%sL%g', idr, opts.reg_rs);
+    end
     % in this order: U, (F, Ada) or (MI)
     % only possible combinations:  U, U+Ada, F, Ada
     if opts.updateInterval > 0
