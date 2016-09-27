@@ -90,7 +90,7 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 
 	% save all trials in a single file (for backward compatibility)
 	% it may overwrite existing file, but whatever
-	save(resfn, 'res', 'bitflips', 'train_iter', 'train_time');
+	save(resfn, 'res', 'bitflips', 'train_iter', 'train_time','bits_computed_all');
 
 	% visualize
 	if opts.showplots
