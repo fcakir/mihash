@@ -6,7 +6,7 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 	%
 	update_table = false;
 	ret_val = -1;
-    h_ind = 1:opts.nbits;
+	h_ind = 1:opts.nbits;
 
 	% ----------------------------------------------
 	% update on first & last iteration no matter what
@@ -24,7 +24,7 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 
 	% ----------------------------------------------
 	% no reservoir -- use updateInterval
-	if opts.reg_rs <= 0
+	if opts.reservoirSize <= 0
 		update_table = ~mod(iter, opts.updateInterval);
 		return;
 	end
@@ -74,25 +74,28 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 			ret_val = bitflips;
 		case 'mi'
             if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
-                [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits, opts.fracHash);
-                %myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
+                [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+                myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
                 update_table = mi_impr > opts.miThresh;
                 ret_val = mi_impr;
             end
 		otherwise
 			error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
 	end
-
+	
+	% regardless of trigger type, do selective hash function update
+	if opts.fracHash < 1
+		h_ind = selective_update(iter, Hres_old, Hres_new, opts.reservoirSize, opts.nbits, opts.fracHash, opts.verifyInv);
+	end
 end
 
 
-function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits, fracHash)
+function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
     
 
     no_bits = size(Hres,2);
     
     % assertions
-    assert(ceil(nbits*fracHash) > 0);
     assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
     assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
     
@@ -120,7 +123,7 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
         prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
         prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
         prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
-        prob_Cn   = 1 - prob_Cp; % P(-)
+        prob_Cn   = 1 - prob_Cp; % P(-) 
         
         % estimate H(Q) entropy
         for q = 1:length(prob_Q)
@@ -175,7 +178,7 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
         for q=1:length(prob_Q_Cn)
             if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
             n = n - prob_Q_Cn(q) * lg;
-        end
+        end  
         condentn(j) = p * prob_Cp + n * prob_Cn;    
     end
     
@@ -183,12 +186,6 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
     mi_impr = mean(Qentn - condentn) - mean(Qent - condent);
     max_mi = mean(Qentn);
     
-    % which hash functions causes the most bitflips in the reservoir
-    [c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
-    %h_ind = sorted_h(1:ceil(fracHash*nbits));
-    %h_ind = 1:nbits;
-    c_h = c_h./ norm(c_h,1);
-    h_ind = sorted_h(cumsum(c_h) <= fracHash);
     % 
     %figure('Visible','off');
     %bar(c_h);
@@ -197,6 +194,33 @@ function [mi_impr, max_mi, h_ind] = trigger_mutualinfo(iter, W, W_last, X, Y, Hr
     %legend(sprintf('Max MI :%g, MI difference: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
     %saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
     %close(gcf);
-
 end
 
+function h_ind = selective_update(iter, Hres, Hnew, reservoir_size, nbits, fracHash, inverse)
+
+    no_bits = size(Hres,2);
+    
+    % assertions
+    assert(ceil(nbits*fracHash) > 0);
+    assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
+    assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
+    
+    % take actual reservoir size into account
+    reservoir_size = min(iter, reservoir_size);
+    Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
+
+    % which hash functions causes the most bitflips in the reservoir
+    [c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
+    %h_ind = sorted_h(1:ceil(fracHash*nbits));
+    %h_ind = 1:nbits;
+    c_h = c_h./ norm(c_h,1);
+    h_ind = sorted_h(cumsum(c_h) <= fracHash);
+    if isempty(h_ind), h_ind = sorted_h(1); end;
+    if inverse
+	    inv_sorted_h = fliplr(sorted_h);
+	    h_ind = inv_sorted_h(1:length(h_ind));
+    end
+    if ~isvector(h_ind) || any(isnan(h_ind))
+	error(['Something is wrong with h_ind']);
+    end
+end

@@ -31,7 +31,7 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 			myLogInfo('Trial %d: results exist', t);
 			load(res_trial_fn{t});
 		else
-			clear t_res t_bitflips t_train_iter t_train_time
+			clear t_res t_bits_computed_all  t_bitflips t_train_iter t_train_time
 			Tprefix = sprintf('%s/trial%d', opts.expdir, t);
 			trial_model = load(sprintf('%s.mat', Tprefix));
 			for i = 1:length(trial_model.test_iters)  % may NOT be 1:opts.ntests!
@@ -71,15 +71,17 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 		%		end
 				t_res(i) = get_results(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
 		%		opts.prec_k = ok;
+				t_bits_computed_all(i) = d.bits_computed_all;
 				t_bitflips(i) = d.bitflips;
 				t_train_iter(i) = iter;
 				t_train_time(i) = d.train_time;
 			end
 			clear Htrain Htest Ltest
-			save(res_trial_fn{t}, 't_res', 't_bitflips', 't_train_iter', 't_train_time');
+			save(res_trial_fn{t}, 't_res', 't_bitflips', 't_train_iter', 't_train_time','t_bits_computed_all');
 		end
 		res(t, :) = t_res;
 		bitflips(t, :) = t_bitflips;
+		bits_computed_all(t, :) = t_bits_computed_all;
 		train_iter(t, :) = t_train_iter;
 		train_time(t, :) = t_train_time;
 	end
@@ -88,7 +90,7 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 
 	% save all trials in a single file (for backward compatibility)
 	% it may overwrite existing file, but whatever
-	save(resfn, 'res', 'bitflips', 'train_iter', 'train_time');
+	save(resfn, 'res', 'bitflips', 'train_iter', 'train_time','bits_computed_all');
 
 	% visualize
 	if opts.showplots
