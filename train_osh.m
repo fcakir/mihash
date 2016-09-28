@@ -277,7 +277,8 @@ for i = 1:opts.noTrainingPoints
         F = sprintf('%s_iter%d.mat', prefix, i);
         save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', ...
             'seenLabels', 'update_iters');
-        if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
+				% fix permission
+        if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
         
         myLogInfo(['[T%02d] %s\n' ...
             '            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
@@ -292,7 +293,8 @@ ht_updates = numel(update_iters);
 F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', 'test_iters', ...
     'update_iters','seenLabels','h_ind_array');
-if ~opts.windows, unix(['chmod o-w ' F]); end % matlab permission bug
+% fix permission
+if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 myLogInfo('# of Hash Table Updates=%g', length(update_iters));
 myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
