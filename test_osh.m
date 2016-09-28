@@ -26,7 +26,6 @@ function test_osh(resfn, res_trial_fn, res_exist, opts)
 	end
 
 	clear res bitflips train_iter train_time
-%	res = []; bitflips = []; train_iter = []; train_time = [];
 	for t = 1:opts.ntrials
 		if res_exist(t)
 			myLogInfo('Trial %d: results exist', t);

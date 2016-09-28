@@ -14,6 +14,11 @@ for t = 1:opts.ntrials
     end
     myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
     
+    % shuffle training data for each trial
+    ind    = randperm(length(Ytrain));
+    Ytrain_ = Ytrain(ind);
+    Xtrain_ = Xtrain(ind, :);
+
     % randomly set test checkpoints (to better mimic real scenarios)
     test_iters      = zeros(1, opts.ntests);
     test_iters(1)   = 1;
@@ -26,7 +31,7 @@ for t = 1:opts.ntrials
     prefix = sprintf('%s/trial%d', opts.expdir, t);
     
     % do SGD optimization
-    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] = sgd_optim(Xtrain, Ytrain, ...
+    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] = sgd_optim(Xtrain_, Ytrain_, ...
         prefix, test_iters, t, opts);
 end
 
