@@ -108,7 +108,9 @@ num_unlabeled = 0;
 if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-    train_ind = 1:opts.noTrainingPoints;
+% randomly shuffle training points before taking first noTrainingPoints
+% this fixes issue #25
+    train_ind = randperm(ntrain_all, opts.noTrainingPoints);
 end
 trigger_val = 0;
 grad_flag = 0;
