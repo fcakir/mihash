@@ -113,7 +113,7 @@ if ~exist(opts.localdir, 'dir'),
 end
 
 % set randseed -- don't change the randseed if don't have to!
-rng(opts.randseed);
+rng(opts.randseed, 'twister');
 
 % FC: if mapping is not smooth, set updateInterval to noTrainingPoints
 if ~strcmp(opts.mapping, 'smooth') && opts.updateInterval > 0 && ...
