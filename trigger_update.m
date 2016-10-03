@@ -81,23 +81,25 @@ switch lower(opts.trigger)
         end
     otherwise
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
-    end
+end
 
-    % regardless of trigger type, do selective hash function update
-    if opts.fracHash < 1
-        h_ind = selective_update(iter, Hres_old, Hres_new, opts.reservoirSize, opts.nbits, opts.fracHash, opts.verifyInv);
+% regardless of trigger type, do selective hash function update
+if opts.fracHash < 1
+    h_ind = selective_update(iter, Hres_old, Hres_new, opts.reservoirSize, ...
+        opts.nbits, opts.fracHash, opts.verifyInv);
+    if opts.randomHash
+        h_ind = randperm(opts.nbits, length(h_ind));
     end
+end
 end
 
 
-function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres, Hnew, reservoir_size, nbits)
-
-
-no_bits = size(Hres,2);
+function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
+    Hres, Hnew, reservoir_size, nbits)
 
 % assertions
-assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
-assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % take actual reservoir size into account
 reservoir_size = min(iter, reservoir_size);
@@ -109,7 +111,7 @@ assert(isequal((W_last'*X' > 0)', Hres));
 
 % distance
 hdist = (2*Hres - 1)*(2*Hres - 1)';
-hdist = (-hdist + no_bits)./2;   
+hdist = (-hdist + nbits)./2;   
 
 % if Q is the (hamming) distance - x axis
 % estimate P(Q|+), P(Q|-) & P(Q)
@@ -150,7 +152,7 @@ assert(isequal((W'*X' > 0)', Hnew));
 
 % estimate P(Q)
 hdistn = (2*Hnew - 1)* (2*Hnew - 1)';
-hdistn = (-hdistn + no_bits)./2;   
+hdistn = (-hdistn + nbits)./2;   
 condentn = zeros(1,reservoir_size);
 Qentn = zeros(1, reservoir_size);
 % make this faster
@@ -196,14 +198,17 @@ max_mi = mean(Qentn);
 %close(gcf);
 end
 
-function h_ind = selective_update(iter, Hres, Hnew, reservoir_size, nbits, fracHash, inverse)
 
-no_bits = size(Hres,2);
+function h_ind = selective_update(iter, Hres, Hnew, reservoir_size, nbits, ...
+    fracHash, inverse)
+% selectively update hash bits, criterion: #bitflip
+% output
+%   h_ind: indices of hash bits to update
 
 % assertions
 assert(ceil(nbits*fracHash) > 0);
-assert(isequal(no_bits, size(Hnew,2), size(Hres,2)));
-assert(isequal(reservoir_size,size(Hres,1), size(Hnew,1)));
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % take actual reservoir size into account
 reservoir_size = min(iter, reservoir_size);

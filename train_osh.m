@@ -77,16 +77,17 @@ end
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
 if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
-reservoir_size = opts.reservoirSize;
+
 % deal with regularizers
-if opts.reservoirSize > 0
+reservoir_size = opts.reservoirSize;
+if reservoir_size > 0
     % use reservoir sampling regularizer
     if ~debug
-        Xsample        = zeros(reservoir_size, size(Xtrain, 2));
-        Ysample        = zeros(reservoir_size, 1);
+        Xsample = zeros(reservoir_size, size(Xtrain, 2));
+        Ysample = zeros(reservoir_size, 1);
     end
     priority_queue = zeros(1, reservoir_size);
-    Hres           = [];  % mapped binary codes for the reservoir
+    Hres = [];  % mapped binary codes for the reservoir
     
     % for adaptive threshold
     if opts.adaptive > 0
@@ -95,29 +96,29 @@ if opts.reservoirSize > 0
             1:maxLabelSize);
     end
 else
-    Xsample = []; Ysample = [];Hres = [];Hres_new = [];
+    Xsample = []; Ysample = []; Hres = []; Hres_new = [];
 end
 
-% SGD iterations
-i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
-update_iters = []; % keep track of when the hash table updates happen
-num_labeled = 0;
-num_unlabeled = 0;
-
-% [OPTIONAL] order training points according to label arrival strategy
+% order training examples
 if opts.pObserve > 0
+    % [OPTIONAL] order training points according to label arrival strategy
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     % randomly shuffle training points before taking first noTrainingPoints
     % this fixes issue #25
     train_ind = randperm(ntrain_all, opts.noTrainingPoints);
 end
+
+% params
+i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
+update_iters = []; % keep track of when the hash table updates happen
+num_labeled = 0; num_unlabeled = 0;
 trigger_val = 0;
 grad_flag = 0;
+h_ind_array = []; % debug
 
-% debug
-h_ind_array = []; 
-% STREAMING BEGINS...
+
+%%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS... %%%%%%%%%%%%%%%%%%%%%%%
 for i = 1:opts.noTrainingPoints
     t_ = tic;
     % new training point
@@ -169,27 +170,25 @@ for i = 1:opts.noTrainingPoints
     
     % SGD-2. update W wrt. reservoir regularizer (if specified)
     % TODO when to use rs.reg.?
-    if isLabeled && opts.reg_rs > 0  &&  i > reservoir_size
-        
-        stepsizes = ones(reservoir_size,1)*opts.reg_rs*opts.stepsize/reservoir_size;
-        ind = randperm(size(Xsample,1));
-        W = sgd_update(W, Xsample(ind(1:opts.sampleResSize),:), Hres(ind(1:opts.sampleResSize),:), ...
-            stepsizes(ind(1:opts.sampleResSize)), opts.SGDBoost);
+    if (isLabeled) && (opts.reg_rs>0) && (i>reservoir_size)
+        stepsizes = ones(reservoir_size,1) / reservoir_size;
+        stepsizes = stepsizes * opts.stepsize * opts.reg_rs;
+        ind = randperm(size(Xsample, 1), opts.sampleResSize);
+        W = sgd_update(W, Xsample(ind,:), Hres(ind,:), stepsizes(ind), opts.SGDBoost);
     end
     
     % SGD-3. update W wrt. unsupervised regularizer (if specified)
     if opts.reg_smooth > 0 && i > reservoir_size && isLabeled
-        W = reg_smooth(W, ...
-            [spoint; Xsample(ind(1:opts.rs_sm_neigh_size),:)], ...
-            opts.reg_smooth);
+        ind = randperm(size(Xsample, 1), opts.rs_sm_neigh_size);
+        W = reg_smooth(W, [spoint; Xsample(ind,:)], opts.reg_smooth);
     end
     
-    train_time = train_time + toc(t_);
-    
+    % SGD-4. apply accumulated gradients (if applicable)
     if reservoir_size > 0 && opts.accuHash > 0
         W = W - stepW;
         stepW = zeros(size(W));
     end
+    train_time = train_time + toc(t_);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % reservoir update & compute new reservoir hash table
@@ -210,10 +209,10 @@ for i = 1:opts.noTrainingPoints
             Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
         end
     end
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % hash index update
+    % determine whether to update or not
     %
-    % determine whether to update or not, based on bitflip threshold
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
         [update_table, trigger_val] = trigger_update(i, opts, ...
@@ -222,10 +221,6 @@ for i = 1:opts.noTrainingPoints
         [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
             W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
         if numel(h_ind) ~= opts.nbits && reservoir_size > 0
-            if opts.randomHash
-                h_ind_ = randperm(opts.nbits);
-                h_ind = h_ind_(1:length(h_ind));
-            end
             assert(opts.fracHash < 1);
             %assert(isequal((W_lastupdate' * Xsample' > 0)', Hres));
             H_temp = Hres_new;
@@ -240,6 +235,9 @@ for i = 1:opts.noTrainingPoints
         end
     end
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % hash table update
+    %
     if update_table
 	% debug
 	h_ind_array = [h_ind_array ; single(ismember(1:opts.nbits, h_ind))];
@@ -276,7 +274,7 @@ for i = 1:opts.noTrainingPoints
         F = sprintf('%s_iter%d.mat', prefix, i);
         save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', ...
             'seenLabels', 'update_iters');
-				% fix permission
+        % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
         
         myLogInfo(['[T%02d] %s\n' ...
@@ -290,8 +288,9 @@ end % end fori
 ht_updates = numel(update_iters);
 % save final model, etc
 F = [prefix '.mat'];
-save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', 'test_iters', ...
-    'update_iters','seenLabels','h_ind_array');
+save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
+    'train_time', 'update_time', 'test_iters', 'update_iters', ...
+    'seenLabels', 'h_ind_array');
 % fix permission
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 myLogInfo('# of Hash Table Updates=%g', length(update_iters));
@@ -365,11 +364,11 @@ else
     if opts.tstScenario == 2
         bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
         bitflips = sum(bitdiff(:))/update_iters(end-1);
-	bits_computed = length(h_ind)*update_iters(end-1);
+        bits_computed = length(h_ind)*update_iters(end-1);
     else
         bitdiff = xor(H, Hnew);
         bitflips = sum(bitdiff(:))/size(Xtrain, 1);
-	bits_computed = length(h_ind)*size(Hnew, 2);
+        bits_computed = length(h_ind)*size(Hnew, 2);
     end
 end
 end

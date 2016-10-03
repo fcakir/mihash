@@ -36,11 +36,11 @@ end
 
 % ---------------------------------------------------------
 function [train_time, update_time, bitflips] = AdaptHash(...
-    traingist, trainlabels, prefix, test_iters, trialNo, opts)
-% traingist (float) n x d matrix where n is number of points 
+    Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+% Xtrain (float) n x d matrix where n is number of points 
 %                   and d is the dimensionality 
 %
-% trainlabels (int) is n x 1 matrix containing labels 
+% Ytrain (int) is n x 1 matrix containing labels 
 %
 % W is d x b where d is the dimensionality 
 %            and b is the bit length / # hash functions
@@ -49,7 +49,7 @@ function [train_time, update_time, bitflips] = AdaptHash(...
 % data arrives in pairs
 
 
-[n,d]       = size(traingist);
+[n,d]       = size(Xtrain);
 tu          = randperm(n);
 
 % alphaa is the alpha in Eq. 5 in the ICCV paper
@@ -71,18 +71,27 @@ bitflips = 0;
 train_time = 0;
 update_time = 0;
 update_iters = [];
+% order training examples
+if opts.pObserve > 0
+    % [OPTIONAL] order training points according to label arrival strategy
+    train_ind = get_ordering(trialNo, Ytrain, opts);
+else
+    % randomly shuffle training points before taking first noTrainingPoints
+    % this fixes issue #25
+    train_ind = randperm(ntrain_all, opts.noTrainingPoints);
+end
 % KH
 
 for i=1:number_iterations
 
     t_ = tic;
 
-    u(1) = tu(2*i-1);
-    u(2) = tu(2*i);
+    u(1) = train_ind(2*i-1);
+    u(2) = train_ind(2*i);
 
-    sample_point1 = traingist(u(1),:);
-    sample_point2 = traingist(u(2),:);
-    s = 2*isequal(trainlabels(u(1)), trainlabels(u(2)))-1;
+    sample_point1 = Xtrain(u(1),:);
+    sample_point2 = Xtrain(u(2),:);
+    s = 2*isequal(Ytrain(u(1)), Ytrain(u(2)))-1;
 
     k_sample_data = [sample_point1;sample_point2];
 
@@ -141,7 +150,10 @@ for i=1:number_iterations
 
     train_time = train_time + toc(t_);
 
-    % KH: update table
+    % determine whether to update or not
+    [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
+        W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+
     update_table = false;
     if i == 1 || i == number_iterations
         update_table = true;
@@ -156,13 +168,14 @@ for i=1:number_iterations
         update_table = false;
     end
 
+    % update hash table
     if update_table
         W_last = W;
         update_iters = [update_iters, i];
         t_ = tic;
 
         % NOTE assuming smooth mapping
-        Hnew = (traingist * W > 0)';
+        Hnew = (Xtrain * W > 0)';
         if ~isempty(H)
             bitdiff = xor(H, Hnew);
             bitdiff = sum(bitdiff(:))/n;
