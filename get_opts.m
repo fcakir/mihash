@@ -145,8 +145,8 @@ idr = opts.identifier;
 if opts.reservoirSize > 0
     idr = sprintf('%s-RS%d', idr, opts.reservoirSize);
     if opts.reg_rs > 0
-    	% using reservoir
-    	idr = sprintf('%sL%g', idr, opts.reg_rs);
+        % using reservoir
+        idr = sprintf('%sL%g', idr, opts.reg_rs);
     end
     % in this order: U, (F, Ada) or (MI)
     % only possible combinations:  U, U+Ada, F, Ada
@@ -164,10 +164,10 @@ if opts.reservoirSize > 0
         idr = sprintf('%s-MI%g', idr, opts.miThresh);
     end
     if opts.fracHash < 1
-	idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, opts.fracHash, opts.randomHash, opts.accuHash);
+        idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, opts.fracHash, opts.randomHash, opts.accuHash);
     end
     if opts.verifyInv > 0
-    	idr = sprintf('%s-inverse', idr);
+        idr = sprintf('%s-inverse', idr);
     end
 else
     % no reservoir (baseline): must use updateInterval

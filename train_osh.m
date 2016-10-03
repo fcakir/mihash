@@ -108,8 +108,8 @@ num_unlabeled = 0;
 if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-% randomly shuffle training points before taking first noTrainingPoints
-% this fixes issue #25
+    % randomly shuffle training points before taking first noTrainingPoints
+    % this fixes issue #25
     train_ind = randperm(ntrain_all, opts.noTrainingPoints);
 end
 trigger_val = 0;
@@ -223,7 +223,6 @@ for i = 1:opts.noTrainingPoints
             W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
         if numel(h_ind) ~= opts.nbits && reservoir_size > 0
             if opts.randomHash
-		%keyboard
                 h_ind_ = randperm(opts.nbits);
                 h_ind = h_ind_(1:length(h_ind));
             end
