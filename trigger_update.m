@@ -1,5 +1,5 @@
 function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
-    W_last, W, X, Y, Hres_old, Hres_new, bf_thr)
+    W_last, W, reservoir, Hres_new, bf_thr)
 
 % Do we need to update the hash table?
 % Note: The hash mapping has been updated first, so is the reservoir hash table
@@ -38,11 +38,11 @@ end
 
 switch lower(opts.trigger)
     case 'bf'
-        assert(~isempty(Hres_old));
+        assert(~isempty(reservoir.H));
         assert(~isempty(Hres_new));
 
         % get bitflips
-        bitdiff  = xor(Hres_old, Hres_new);
+        bitdiff  = xor(reservoir.H, Hres_new);
         bitflips = sum(bitdiff(:))/min(iter, opts.reservoirSize);
 
         % signal update of actual hash table, when:
@@ -74,7 +74,9 @@ switch lower(opts.trigger)
         ret_val = bitflips;
     case 'mi'
         if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
-            [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, Hres_old, Hres_new, opts.reservoirSize, opts.nbits);
+            [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
+                reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
+                opts.reservoirSize, opts.nbits);
             myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
             update_table = mi_impr > opts.miThresh;
             ret_val = mi_impr;
@@ -85,7 +87,7 @@ end
 
 % regardless of trigger type, do selective hash function update
 if opts.fracHash < 1
-    h_ind = selective_update(iter, Hres_old, Hres_new, opts.reservoirSize, ...
+    h_ind = selective_update(iter, reservoir.H, Hres_new, opts.reservoirSize, ...
         opts.nbits, opts.fracHash, opts.verifyInv);
     if opts.randomHash
         h_ind = randperm(opts.nbits, length(h_ind));
@@ -94,6 +96,7 @@ end
 end
 
 
+% -------------------------------------------------------------------------
 function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
     Hres, Hnew, reservoir_size, nbits)
 

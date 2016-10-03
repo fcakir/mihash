@@ -31,8 +31,8 @@ for t = 1:opts.ntrials
     prefix = sprintf('%s/trial%d', opts.expdir, t);
     
     % do SGD optimization
-    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] = sgd_optim(Xtrain, Ytrain, ...
-        prefix, test_iters, t, opts);
+    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
+        = OSH(Xtrain, Ytrain, prefix, test_iters, t, opts);
 end
 
 myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
@@ -46,57 +46,39 @@ end
 
 
 % -------------------------------------------------------------
-function [train_time, update_time, ht_updates, bits_computed_all, bitflips ] = sgd_optim(Xtrain, Ytrain, ...
-    prefix, test_iters, trialNo, opts)
+function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
+    OSH(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 % optimization via SGD
 
-% init
+%%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [W, H, ECOCs] = init_osh(Xtrain, opts);
-
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
-
-% Gradient Matrix for MI criteria
-stepW = zeros(size(W));
-
-ntrain_all    = size(Xtrain, 1);
-bitflips      = 0;   bitflips_res = 0; bits_computed_all = 0;
-train_time    = 0;   update_time  = 0;
-maxLabelSize  = 205; % Sun
-numLabels     = numel(unique(Ytrain));
-
-debug = 0;
-if debug  % DEBUG: keep reservoir fixed
-    ind = randperm(ntrain_all);
-    Xsample = Xtrain(ind(1:opts.reservoirSize),:);
-    Ysample = Ytrain(ind(1:opts.reservoirSize));
-    clear ind;
-end
+stepW = zeros(size(W));  % Gradient accumulation matrix
 
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
 if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
 
-% deal with regularizers
+% set up reservoir
+reservoir = [];
 reservoir_size = opts.reservoirSize;
 if reservoir_size > 0
-    % use reservoir sampling regularizer
-    if ~debug
-        Xsample = zeros(reservoir_size, size(Xtrain, 2));
-        Ysample = zeros(reservoir_size, 1);
-    end
-    priority_queue = zeros(1, reservoir_size);
-    Hres = [];  % mapped binary codes for the reservoir
+    reservoir.size = 0;
+    reservoir.X    = zeros(0, size(Xtrain, 2));
+    reservoir.Y    = zeros(0, size(Ytrain, 2));
+    reserovir.PQ   = [];
+    reservoir.H    = [];  % mapped binary codes for the reservoir
+    reservoir.Hnew = [];  % mapped binary codes for the reservoir
     
     % for adaptive threshold
     if opts.adaptive > 0
+        maxLabelSize = 205; % Sun
         persistent adaptive_thr;
         adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
             1:maxLabelSize);
     end
-else
-    Xsample = []; Ysample = []; Hres = []; Hres_new = [];
 end
 
 % order training examples
@@ -106,19 +88,37 @@ if opts.pObserve > 0
 else
     % randomly shuffle training points before taking first noTrainingPoints
     % this fixes issue #25
-    train_ind = randperm(ntrain_all, opts.noTrainingPoints);
+    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
-
-% params
-i_ecoc = 1;  M_ecoc = [];  seenLabels = [];
-update_iters = []; % keep track of when the hash table updates happen
-num_labeled = 0; num_unlabeled = 0;
-trigger_val = 0;
-grad_flag = 0;
-h_ind_array = []; % debug
+%%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 
-%%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS... %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% SET UP OSH %%%%%%%%%%%%%%%%%%%%%%%
+% for ECOC
+i_ecoc     = 1;  
+M_ecoc     = [];  
+seenLabels = [];
+
+% bit flips & bits computed
+bitflips          = 0;
+bitflips_res      = 0;
+bits_computed_all = 0;
+
+% HT updates
+update_iters = [];
+h_ind_array  = [];
+
+% for recording time
+train_time  = 0;  
+update_time = 0;
+
+% for display
+num_labeled   = 0; 
+num_unlabeled = 0;
+%%%%%%%%%%%%%%%%%%%%%%% SET UP OSH %%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 for i = 1:opts.noTrainingPoints
     t_ = tic;
     % new training point
@@ -126,9 +126,7 @@ for i = 1:opts.noTrainingPoints
     spoint = Xtrain(ind, :);
     slabel = Ytrain(ind, :);
     
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Assign ECOC, etc
-    %
+    % ---- Assign ECOC, etc ----
     if (~multi_labeled && mod(slabel, 10) == 0) || ...
             (multi_labeled && sum(slabel) > 0)
         % labeled (single- or multi-label): assign target code(s)
@@ -145,7 +143,7 @@ for i = 1:opts.noTrainingPoints
         if opts.reg_smooth > 0 && reservoir_size > 0
             % hack: for the reservoir, smooth mapping is assumed
             if i > reservoir_size
-                resY = 2*single(W'*Xsample' > 0)-1;
+                resY = 2*single(W'*reservoir.X' > 0)-1;
                 qY = 2* single(W'*spoint' > 0)-1;
                 [~, ind] = sort(resY' * qY,'descend');
             end
@@ -157,9 +155,7 @@ for i = 1:opts.noTrainingPoints
         num_unlabeled = num_unlabeled + 1;
     end
     
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % hash function update
-    %
+    % ---- hash function update ----
     % SGD-1. update W wrt. loss term(s)
     if isLabeled
         for c = 1:size(target_codes, 1)
@@ -173,14 +169,15 @@ for i = 1:opts.noTrainingPoints
     if (isLabeled) && (opts.reg_rs>0) && (i>reservoir_size)
         stepsizes = ones(reservoir_size,1) / reservoir_size;
         stepsizes = stepsizes * opts.stepsize * opts.reg_rs;
-        ind = randperm(size(Xsample, 1), opts.sampleResSize);
-        W = sgd_update(W, Xsample(ind,:), Hres(ind,:), stepsizes(ind), opts.SGDBoost);
+        ind = randperm(reservoir.size, opts.sampleResSize);
+        W = sgd_update(W, reservoir.X(ind,:), reservoir.H(ind,:), ...
+            stepsizes(ind), opts.SGDBoost);
     end
     
     % SGD-3. update W wrt. unsupervised regularizer (if specified)
     if opts.reg_smooth > 0 && i > reservoir_size && isLabeled
-        ind = randperm(size(Xsample, 1), opts.rs_sm_neigh_size);
-        W = reg_smooth(W, [spoint; Xsample(ind,:)], opts.reg_smooth);
+        ind = randperm(reservoir.size, opts.rs_sm_neigh_size);
+        W = reg_smooth(W, [spoint; reservoir.X(ind,:)], opts.reg_smooth);
     end
     
     % SGD-4. apply accumulated gradients (if applicable)
@@ -190,54 +187,47 @@ for i = 1:opts.noTrainingPoints
     end
     train_time = train_time + toc(t_);
     
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % reservoir update & compute new reservoir hash table
-    %
+    % ---- reservoir update & compute new reservoir hash table ----
     if reservoir_size > 0
-        [Xsample, Ysample, priority_queue, ind] = update_reservoir(...
-            Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size);
+        [reservoir, update_ind] = update_reservoir(reservoir, ...
+            spoint, slabel, reservoir_size);
         
         % compute new reservoir hash table (do not update yet)
         % NOTE: we always use smooth mapping for reservoir samples
-        Hres_new = (W' * Xsample' > 0)';
+        Hres_new = (W' * reservoir.X' > 0)';
         
         % NOTE: the old reservoir hash table needs updating too
-        %       since Xsample has possibly changed.
-        if isempty(Hres)
-            Hres = (W_lastupdate' * Xsample' > 0)';
-        elseif (ind > 0)
-            Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
+        %       since reservoir.X has possibly changed.
+        if isempty(reservoir.H)
+            reservoir.H = (W_lastupdate' * reservoir.X' > 0)';
+        elseif ~isempty(update_ind)
+            reservoir.H(ind, :) = (W_lastupdate' * reservoir.X(ind,:)' > 0)';
         end
     end
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % determine whether to update or not
-    %
+    % ---- determine whether to update or not ----
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
         [update_table, trigger_val] = trigger_update(i, opts, ...
-            W_lastupdate, W, Xsample, Ysample, Hres, Hres_new, bf_thr);
+            W_lastupdate, W, reservoir, Hres_new, bf_thr);
     else
         [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-            W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+            W_lastupdate, W, reservoir, Hres_new);
         if numel(h_ind) ~= opts.nbits && reservoir_size > 0
             assert(opts.fracHash < 1);
-            %assert(isequal((W_lastupdate' * Xsample' > 0)', Hres));
             H_temp = Hres_new;
-            Hres_new = Hres;
+            Hres_new = reservoir.H;
             Hres_new(:, h_ind) = H_temp(:,h_ind);
             if opts.accuHash > 0 && update_table
                 inv_h_ind = ~ismember(1:opts.nbits, h_ind);
                 stepW(:,inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
             end
             %assert(isequal(size(Hres_new,2), opts.nbits));
-            %assert(isequal(size(Hres,2), opts.nbits));
+            %assert(isequal(size(reservoir.H,2), opts.nbits));
         end
     end
     
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % hash table update
-    %
+    % ---- hash table update ----
     if update_table
 	% debug
 	h_ind_array = [h_ind_array ; single(ismember(1:opts.nbits, h_ind))];
@@ -250,7 +240,7 @@ for i = 1:opts.noTrainingPoints
         update_iters = [update_iters, i];
         % update reservoir hash table
         if reservoir_size > 0
-            Hres = Hres_new;
+            reservoir.H = Hres_new;
             if strcmpi(opts.trigger,'bf')
                 bitflips_res = bitflips_res + trigger_val;
             end
@@ -267,8 +257,7 @@ for i = 1:opts.noTrainingPoints
             trialNo, numel(update_iters), i, bits_computed_all , bf_all, trigger_val, opts.trigger);
     end
     
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % cache intermediate model to disk
+    % ---- cache intermediate model to disk ----
     %
     if ismember(i, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, i);
@@ -276,7 +265,7 @@ for i = 1:opts.noTrainingPoints
             'seenLabels', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
-        
+
         myLogInfo(['[T%02d] %s\n' ...
             '            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
             '            #BRs=%g, L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
@@ -284,8 +273,9 @@ for i = 1:opts.noTrainingPoints
             train_time, update_time, numel(update_iters), ...
             bits_computed_all, num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
     end
-end % end fori
-ht_updates = numel(update_iters);
+end % end for i
+%%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
+
 % save final model, etc
 F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
@@ -293,7 +283,9 @@ save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'seenLabels', 'h_ind_array');
 % fix permission
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
-myLogInfo('# of Hash Table Updates=%g', length(update_iters));
+
+ht_updates = numel(update_iters);
+myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
 myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 
@@ -439,38 +431,9 @@ target_codes = M_ecoc(ind, :);
 end
 
 % -----------------------------------------------------------
-% reservoir sampling, update step, based on random sort
-function [Xsample, Ysample, priority_queue, ind] = update_reservoir(...
-    Xsample, Ysample, priority_queue, spoint, slabel, i, reservoir_size)
-% outputs:
-%   Xsample, Ysample, priority_queue: updated
-%   ind: updated index (0 for no update)
-if i <= reservoir_size
-    Xsample(i, :)     = spoint;
-    Ysample(i)        = slabel;
-    priority_queue(i) = rand;
-    ind = i;
-else
-    % pop max from priority queue
-    [maxval, maxind] = max(priority_queue);
-    r = rand;
-    if maxval > r
-        % push into priority queue
-        priority_queue(maxind) = r;
-        Xsample(maxind, :)     = spoint;
-        Ysample(maxind)        = slabel;
-        ind = maxind;
-    else
-        ind = 0;  % no update
-    end
-end
-end
-
-% -----------------------------------------------------------
 % smoothness regularizer
 function W = reg_smooth(W, points, reg_smooth)
 reg_smooth = reg_smooth/size(points,1);
-% try
 for i = 1:size(W,2)
     gradWi = zeros(size(W,1),1);
     for j = 2:size(points,1)
@@ -479,8 +442,4 @@ for i = 1:size(W,2)
     end
     W(:,i) = W(:,i) - reg_smooth * gradWi;
 end
-%catch e
-%    disp(e.message);
-%    keyboard
-%end
 end
