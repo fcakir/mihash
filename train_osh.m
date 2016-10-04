@@ -68,7 +68,7 @@ if reservoir_size > 0
     reservoir.size = 0;
     reservoir.X    = zeros(0, size(Xtrain, 2));
     reservoir.Y    = zeros(0, size(Ytrain, 2));
-    reserovir.PQ   = [];
+    reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
     
     % for adaptive threshold
@@ -190,7 +190,7 @@ for i = 1:opts.noTrainingPoints
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             spoint, slabel, reservoir_size, W_lastupdate);
         % compute new reservoir hash table (do not update yet)
-        Hres_new = (W' * reservoir.X' > 0)';
+        Hres_new = (reservoir.X * W > 0);
     end
 
     % ---- determine whether to update or not ----
@@ -233,7 +233,8 @@ for i = 1:opts.noTrainingPoints
         % update actual hash table
         t_ = tic;
         [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
-            multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind);
+            h_ind, update_iters, opts, ...
+            multi_labeled, seenLabels, M_ecoc);
         bits_computed_all = bits_computed_all + bits_computed;
 	bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);

@@ -69,6 +69,10 @@ H = [];
 W_lastupdate = W;
 stepW = zeros(size(W));  % Gradient accumulation matrix
 
+% are we handling a mult-labeled dataset?
+multi_labeled = (size(Ytrain, 2) > 1);
+if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+
 % set up reservoir
 reservoir = [];
 reservoir_size = opts.reservoirSize;
@@ -76,7 +80,7 @@ if reservoir_size > 0
     reservoir.size = 0;
     reservoir.X    = zeros(0, size(Xtrain, 2));
     reservoir.Y    = zeros(0, size(Ytrain, 2));
-    reserovir.PQ   = [];
+    reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
 end
 
@@ -87,7 +91,7 @@ if opts.pObserve > 0
 else
     % randomly shuffle training points before taking first noTrainingPoints
     % this fixes issue #25
-    train_ind = randperm(ntrain_all, opts.noTrainingPoints);
+    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -224,7 +228,7 @@ for i=1:number_iterations
         % actual hash table update (record time)
         t_ = tic;
         [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
-            multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind);
+            h_ind, update_iters, opts);
         bits_computed_all = bits_computed_all + bits_computed;
         bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
@@ -234,7 +238,7 @@ for i=1:number_iterations
     if ismember(i, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, i);
         save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
-            'train_time', 'update_time', 'seenLabels', 'update_iters');
+            'train_time', 'update_time', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
@@ -248,7 +252,7 @@ end
 F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'train_time', 'update_time', 'test_iters', 'update_iters', ...
-    'seenLabels', 'h_ind_array');
+    'h_ind_array');
 % fix permission
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 

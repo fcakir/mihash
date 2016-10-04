@@ -27,7 +27,7 @@ ip.addParamValue('showplots', 1, @isscalar);
 
 ip.addParamValue('nworkers', 6, @isscalar);
 ip.addParamValue('ntrials', 5, @isscalar);
-ip.addParamValue('ntests', 10, @isscalar);
+ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
@@ -35,16 +35,16 @@ ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 % default: save every opts.updateInterval iterations
 % IF use reservoir AND opts.flipThresh > 0, THEN use opts.flipThresh
 ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
-ip.addParamValue('flipThresh', -1, @isscalar);      % use with reservoir
 ip.addParamValue('adaptive', -1, @isscalar);        % use with reservoir
-ip.addParamValue('trigger', 'bf', @isstr);          % HT update trigger
+ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
+ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
+ip.addParamValue('flipThresh', -1, @isscalar);      % for trigger=bf
 
 ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size, set to 0 if reservoir is not used
 ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight, only for regularization 
 ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
 ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
-ip.addParamValue('miThresh', 0, @isscalar);       % threshold for the mutual info
 ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
 ip.addParamValue('accuHash', 1 ,@isscalar);       % accumulation strategy {0, 1}
 ip.addParamValue('randomHash',0, @isscalar);      % randomize selected hash functions to be updated {0, 1}

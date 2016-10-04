@@ -43,7 +43,7 @@ switch lower(opts.trigger)
 
         % get bitflips
         bitdiff  = xor(reservoir.H, Hres_new);
-        bitflips = sum(bitdiff(:))/min(iter, opts.reservoirSize);
+        bitflips = sum(bitdiff(:)) / reservoir.size;
 
         % signal update of actual hash table, when:
         %
@@ -76,7 +76,7 @@ switch lower(opts.trigger)
         if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                opts.reservoirSize, opts.nbits);
+                reservoir.size, opts.nbits);
             myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
             update_table = mi_impr > opts.miThresh;
             ret_val = mi_impr;
@@ -87,7 +87,7 @@ end
 
 % regardless of trigger type, do selective hash function update
 if opts.fracHash < 1
-    h_ind = selective_update(iter, reservoir.H, Hres_new, opts.reservoirSize, ...
+    h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
         opts.nbits, opts.fracHash, opts.verifyInv);
     if opts.randomHash
         h_ind = randperm(opts.nbits, length(h_ind));
@@ -105,10 +105,10 @@ assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % take actual reservoir size into account
-reservoir_size = min(iter, reservoir_size);
-X = X(1:reservoir_size,:); Y = Y(1:reservoir_size);    
+%reservoir_size = min(iter, reservoir_size);
+%X = X(1:reservoir_size,:); Y = Y(1:reservoir_size);    
+%Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
 
-Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
 cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
 assert(isequal((W_last'*X' > 0)', Hres));
 
@@ -202,7 +202,7 @@ max_mi = mean(Qentn);
 end
 
 
-function h_ind = selective_update(iter, Hres, Hnew, reservoir_size, nbits, ...
+function h_ind = selective_update(Hres, Hnew, reservoir_size, nbits, ...
     fracHash, inverse)
 % selectively update hash bits, criterion: #bitflip
 % output
@@ -214,8 +214,8 @@ assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % take actual reservoir size into account
-reservoir_size = min(iter, reservoir_size);
-Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
+%reservoir_size = min(iter, reservoir_size);
+%Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
 
 % which hash functions causes the most bitflips in the reservoir
 [c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');

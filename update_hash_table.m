@@ -1,16 +1,12 @@
 function [Hnew, bitflips, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
-    multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind)
-% do actual hash table update
-
-% recover true labels for single-label case
-if ~multi_labeled, Ytrain = floor(Ytrain/10); end
+    h_ind, update_iters, opts, varargin)
 
 % build new table
 if opts.tstScenario == 1
-    Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts, H, h_ind);
+    Hnew = build_hash_table(H, W, Xtrain, Ytrain, h_ind, opts, varargin{:});
 else
     i = update_iters(end);
-    Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts, H, h_ind);
+    Hnew = build_hash_table(H, W, Xtrain(1:i,:), Ytrain(1:i,:), h_ind, opts, varargin{:});
 end
 
 % compute bitflips
@@ -36,44 +32,54 @@ end
 
 
 
-function Y = build_hash_table(W, traingist, trainlabels, classLabels, M, opts, H_old, h_ind)
+function H = build_hash_table(H_old, W, X, Y, h_ind, opts, varargin)
+if ~isempty(varargin)
+    assert(length(varargin) == 3);
+    multiL = varargin{1};
+    classLabels = varargin{2};
+    M = varargin{3};
+end
+
 if strcmp(opts.mapping,'smooth')
-    Y = 2*single(H_old) - 1;
-    Y(h_ind,:) = 2*single(W(:,h_ind)'*traingist' > 0)-1;
+    H = 2*single(H_old) - 1;
+    H(h_ind,:) = 2*single(W(:,h_ind)'*X' > 0)-1;
 
 elseif strcmp(opts.mapping,'bucket')
     % For bucket mapping have to deal with the fact that
     % we may have not seen all labels, which code should we
     % use to index then? Simple solution: Use smooth mapping
-    if length(classLabels) == length(unique(trainlabels))
-        Y = zeros(opts.nbits, size(traingist,1), 'single');
+    %
+    % recover true labels for single-label case
+    if ~multiL, Y = floor(Y/10); end
+    if length(classLabels) == length(unique(Y))
+        H = zeros(opts.nbits, size(X,1), 'single');
         for i = 1:length(classLabels)
-            ind = find(classLabels(i) == trainlabels);
-            Y(:,ind) = repmat(M(i,:)',1,length(ind));
+            ind = find(classLabels(i) == Y);
+            H(:,ind) = repmat(M(i,:)',1,length(ind));
         end
     else
-        Y = 2*single(W'*traingist' > 0)-1;
+        H = 2*single(W'*X' > 0)-1;
     end
 
 elseif strcmp(opts.mapping,'bucket2')
-    Y = 2*single(W'*traingist' > 0)-1;
-    sim = M * Y;
-    Y = zeros(opts.nbits, size(traingist,1), 'single');
+    H = 2*single(W'*X' > 0)-1;
+    sim = M * H;
+    H = zeros(opts.nbits, size(X,1), 'single');
     [~, maxInd] = max(sim);
-    Y = M(maxInd,:)';
+    H = M(maxInd,:)';
 
 elseif strcmp(opts.mapping, 'coord')
     % KH: do extra coordinate descent step on codewords
-    Y = 2*single(W'*traingist' > 0)-1;
-    if length(classLabels) == length(unique(trainlabels))
+    H = 2*single(W'*X' > 0)-1;
+    if length(classLabels) == length(unique(Y))
         for i = 1:length(classLabels)
-            ind = find(classLabels(i) == trainlabels);
+            ind = find(classLabels(i) == Y);
             % find codeword that minimizes J
-            cw = 2*single(mean(Y(:, ind), 2) > 0)-1;
-            Y(:,ind) = repmat(cw, 1,length(ind));
+            cw = 2*single(mean(H(:, ind), 2) > 0)-1;
+            H(:,ind) = repmat(cw, 1,length(ind));
         end
     end
 end
 % convert to logical
-Y = (Y > 0);
+H = (H > 0);
 end

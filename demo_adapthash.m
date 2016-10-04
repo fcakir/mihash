@@ -105,16 +105,38 @@ ip.addParamValue('ntrials', 5, @isscalar);
 ip.addParamValue('noTrainingPoints', 2000, @isscalar);
 ip.addParamValue('mapping', 'smooth', @isstr);
 
-ip.addParamValue('ntests', 20, @isscalar);
+ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('showplots', 1, @isscalar);
 
 % controling when to update hash table
-ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
+ip.addParamValue('reservoirSize', 50, @isscalar);   % reservoir size, set to 0 if reservoir is not used
+ip.addParamValue('updateInterval', -1, @isscalar);  % update interval
+ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
+ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
+ip.addParamValue('flipThresh', -1, @isscalar);      % for trigger=bf
+
+% updating hash bits
+ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
+ip.addParamValue('accuHash', 1 ,@isscalar);       % accumulation strategy {0, 1}
+ip.addParamValue('randomHash',0, @isscalar);      % randomize selected hash functions to be updated {0, 1}
+ip.addParamValue('verifyInv',0,@isscalar);        % {0, 1} 
 
 % Hack for Places
 ip.addParamValue('labelspercls', 0, @isscalar);
+
+% Testing scenario
+% TODO explain
+ip.addParamValue('tstScenario',1,@isscalar);
+
+% for label arrival strategy: prob. of observing a new label
+% NOTE: if pObserve is too small then it may exhaust examples in some class
+%       before getting a new label
+% - For CIFAR  0.002 seems good (observe all labels @~5k)
+% - For PLACES 0.025 (observe all labels @~9k)
+%              0.05  (observe all labels @~5k)
+ip.addParamValue('pObserve', 0, @isscalar);
 
 % AdaptHash-specific
 ip.addParamValue('localdir', ...
@@ -149,10 +171,10 @@ if opts.windows
 end
 
 % matlabpool handling
-if matlabpool('size') == 0
+if isempty(gcp('nocreate')) && opts.nworkers > 0
     myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
-    matlabpool close force local  % clear up zombies
-    matlabpool(opts.nworkers);
+    delete(gcp('nocreate'))  % clear up zombies
+    p = parpool(opts.nworkers);
 end
 
 % make localdir
