@@ -70,7 +70,6 @@ if reservoir_size > 0
     reservoir.Y    = zeros(0, size(Ytrain, 2));
     reserovir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
-    reservoir.Hnew = [];  % mapped binary codes for the reservoir
     
     % for adaptive threshold
     if opts.adaptive > 0
@@ -165,7 +164,6 @@ for i = 1:opts.noTrainingPoints
     end
     
     % SGD-2. update W wrt. reservoir regularizer (if specified)
-    % TODO when to use rs.reg.?
     if (isLabeled) && (opts.reg_rs>0) && (i>reservoir_size)
         stepsizes = ones(reservoir_size,1) / reservoir_size;
         stepsizes = stepsizes * opts.stepsize * opts.reg_rs;
@@ -190,19 +188,9 @@ for i = 1:opts.noTrainingPoints
     % ---- reservoir update & compute new reservoir hash table ----
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, ...
-            spoint, slabel, reservoir_size);
-        
+            spoint, slabel, reservoir_size, W_lastupdate);
         % compute new reservoir hash table (do not update yet)
-        % NOTE: we always use smooth mapping for reservoir samples
         Hres_new = (W' * reservoir.X' > 0)';
-        
-        % NOTE: the old reservoir hash table needs updating too
-        %       since reservoir.X has possibly changed.
-        if isempty(reservoir.H)
-            reservoir.H = (W_lastupdate' * reservoir.X' > 0)';
-        elseif ~isempty(update_ind)
-            reservoir.H(ind, :) = (W_lastupdate' * reservoir.X(ind,:)' > 0)';
-        end
     end
 
     % ---- determine whether to update or not ----
@@ -210,34 +198,30 @@ for i = 1:opts.noTrainingPoints
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
         [update_table, trigger_val] = trigger_update(i, opts, ...
             W_lastupdate, W, reservoir, Hres_new, bf_thr);
+        h_ind = 1:opts.nbits;
+        inv_h_ind = [];
     else
         [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
             W_lastupdate, W, reservoir, Hres_new);
-        if numel(h_ind) ~= opts.nbits && reservoir_size > 0
+        inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
+        if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
             assert(opts.fracHash < 1);
-            H_temp = Hres_new;
-            Hres_new = reservoir.H;
-            Hres_new(:, h_ind) = H_temp(:,h_ind);
-            if opts.accuHash > 0 && update_table
-                inv_h_ind = ~ismember(1:opts.nbits, h_ind);
-                stepW(:,inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
-            end
-            %assert(isequal(size(Hres_new,2), opts.nbits));
-            %assert(isequal(size(reservoir.H,2), opts.nbits));
+            Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
         end
     end
     
-    % ---- hash table update ----
+    % ---- hash table update, etc ----
     if update_table
-	% debug
 	h_ind_array = [h_ind_array ; single(ismember(1:opts.nbits, h_ind))];
-        %
-	W_lastupdate(:, h_ind) = W(:,h_ind);  % W_lastupdate: last W used to update hash table
-        if opts.accuHash > 0
+
+	W_lastupdate(:, h_ind) = W(:, h_ind);  % W_lastupdate: last W used to update hash table
+        if opts.accuHash > 0 && ~isempty(inv_h_ind)
             assert(sum(sum(abs((W_lastupdate - stepW) - W))) < 1e-10);
+            stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
         update_iters = [update_iters, i];
+
         % update reservoir hash table
         if reservoir_size > 0
             reservoir.H = Hres_new;
@@ -245,6 +229,7 @@ for i = 1:opts.noTrainingPoints
                 bitflips_res = bitflips_res + trigger_val;
             end
         end
+
         % update actual hash table
         t_ = tic;
         [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
@@ -328,42 +313,6 @@ else
 end
 end
 
-% -----------------------------------------------------------
-% do actual hash table update
-function [Hnew, bitflips, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
-    multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind)
-
-% recover true labels for single-label case
-if ~multi_labeled, Ytrain = floor(Ytrain/10); end
-
-% build new table
-if opts.tstScenario == 1
-    Hnew = build_hash_table(W, Xtrain, Ytrain, seenLabels, M_ecoc, opts, H, h_ind);
-else
-    i = update_iters(end);
-    Hnew = build_hash_table(W, Xtrain(1:i,:), Ytrain(1:i,:), seenLabels, M_ecoc, opts, H, h_ind);
-end
-
-% compute bitflips
-if isempty(H)
-    bitflips = 0;
-    if opts.tstScenario == 1
-	bits_computed = length(h_ind) * size(Hnew, 2); % if H is empty, length(h_ind) should be nbits
-    else
-	bits_computed = length(h_ind) * update_iters(end-1);
-    end
-else
-    if opts.tstScenario == 2
-        bitdiff = xor(H, Hnew(:, 1:update_iters(end-1)));
-        bitflips = sum(bitdiff(:))/update_iters(end-1);
-        bits_computed = length(h_ind)*update_iters(end-1);
-    else
-        bitdiff = xor(H, Hnew);
-        bitflips = sum(bitdiff(:))/size(Xtrain, 1);
-        bits_computed = length(h_ind)*size(Hnew, 2);
-    end
-end
-end
 
 % -----------------------------------------------------------
 % initialize online hashing

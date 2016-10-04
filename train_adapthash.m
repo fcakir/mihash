@@ -70,15 +70,14 @@ W_lastupdate = W;
 stepW = zeros(size(W));  % Gradient accumulation matrix
 
 % set up reservoir
+reservoir = [];
 reservoir_size = opts.reservoirSize;
 if reservoir_size > 0
-    % (Xsample, Ysample): reservoir
-    Xsample = zeros(reservoir_size, size(Xtrain, 2));
-    Ysample = zeros(reservoir_size, 1);
-    priority_queue = zeros(1, reservoir_size);
-    Hres = [];  % mapped binary codes for the reservoir
-else
-    Xsample = []; Ysample = []; Hres = []; Hres_new = [];
+    reservoir.size = 0;
+    reservoir.X    = zeros(0, size(Xtrain, 2));
+    reservoir.Y    = zeros(0, size(Ytrain, 2));
+    reserovir.PQ   = [];
+    reservoir.H    = [];  % mapped binary codes for the reservoir
 end
 
 % order training examples
@@ -186,66 +185,49 @@ for i=1:number_iterations
 
     % ---- reservoir update & compute new reservoir hash table ----
     if reservoir_size > 0
-        % update reservoir twice since we have a pair
-        [Xsample, Ysample, priority_queue, ind] = update_reservoir(Xsample, Ysample, ...
-            priority_queue, sample_point1, sample_label1, i, reservoir_size);
-        [Xsample, Ysample, priority_queue, ind] = update_reservoir(Xsample, Ysample, ...
-            priority_queue, sample_point2, sample_label2, i, reservoir_size);
-        
+        [reservoir, update_ind] = update_reservoir(reservoir, k_sample_data, ...
+            [sample_label1; sample_label2], reservoir_size, W_lastupdate);
         % compute new reservoir hash table (do not update yet)
-        % NOTE: we always use smooth mapping for reservoir samples
-        Hres_new = (W' * Xsample' > 0)';
-        
-        % NOTE: the old reservoir hash table needs updating too
-        %       since Xsample has possibly changed.
-        if isempty(Hres)
-            Hres = (W_lastupdate' * Xsample' > 0)';
-        elseif (ind > 0)
-            Hres(ind, :) = (W_lastupdate' * Xsample(ind,:)' > 0)';
-        end
+        Hres_new = (W' * reservoir.X' > 0)';
     end
 
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-        W_lastupdate, W, Xsample, Ysample, Hres, Hres_new);
+        W_lastupdate, W, reservoir, Hres_new);
+    inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
+    if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
+        assert(opts.fracHash < 1);
+        Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
+    end
 
-    % ---- update hash table ----
+    % ---- hash table update, etc ----
     if update_table
+	h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
+
+        % update W
         W_lastupdate(:, h_ind) = W(:, h_ind);
-        if opts.accuHash > 0
+        if opts.accuHash > 0 && ~isempty(inv_h_ind) % gradient accumulation
             assert(sum(sum(abs((W_lastupdate - stepW) - W))) < 1e-10);
+            stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
         update_iters = [update_iters, i];
 
         % update reservoir hash table
         if reservoir_size > 0
-            Hres = Hres_new;
+            reservoir.H = Hres_new;
             if strcmpi(opts.trigger, 'bf')
                 bitflips_res = bitflips_res + trigger_val;
             end
         end
 
+        % actual hash table update (record time)
         t_ = tic;
         [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
             multi_labeled, seenLabels, M_ecoc, opts, update_iters, h_ind);
         bits_computed_all = bits_computed_all + bits_computed;
         bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
-
-        %{
-        Hnew = (Xtrain * W > 0)';
-        if ~isempty(H)
-            bitdiff = xor(H, Hnew);
-            bitdiff = sum(bitdiff(:))/n;
-            bitflips = bitflips + bitdiff;
-            myLogInfo('[T%02d] HT update#%d @%d, bitdiff=%g', trialNo, numel(update_iters), i, bitdiff);
-        else
-            myLogInfo('[T%02d] HT update#%d @%d', trialNo, numel(update_iters), i);
-        end
-        H = Hnew;
-        update_time = update_time + toc(t_);
-        %}
     end
 
     % ---- save intermediate model ----
