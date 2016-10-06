@@ -13,9 +13,9 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 ip = inputParser;
 
 % train/test
-ip.addParamValue('ftype', ftype, @isstr);
-ip.addParamValue('dataset', dataset, @isstr);
-ip.addParamValue('nbits', nbits, @isscalar);
+ip.addRequired('ftype', @isstr);
+ip.addRequired('dataset', @isstr);
+ip.addRequired('nbits', @isscalar);
 ip.addParamValue('mapping', 'smooth', @isstr);
 ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
 ip.addParamValue('ntrials', 3, @isscalar);
@@ -67,14 +67,8 @@ ip.addParamValue('tstScenario',1,@isscalar);
 ip.addParamValue('pObserve', 0, @isscalar);
 
 % parse input
-for i = 1:2:length(varargin)-1
-    % only parse defined fields, ignore others
-    try
-        ip.parse(varargin{i}, varargin{i+1});
-    catch
-        myLogInfo('Ignored field: %s', varargin{i});
-    end
-end
+ip.KeepUnmatched = true;
+ip.parse(ftype, dataset, nbits, varargin{:});
 opts = catstruct(opts, ip.Results);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,8 +106,8 @@ if opts.windows
     myLogInfo('We are on Window$. localdir set to %s', opts.localdir);
 end
 % localdir
-if isfield(opts, 'localid') && ~isempty(opts.localid)
-    opts.localdir = fullfile(opts.localdir, opts.localid);
+if isfield(opts, 'methodID') && ~isempty(opts.methodID)
+    opts.localdir = fullfile(opts.localdir, opts.methodID);
 end
 if exist(opts.localdir, 'dir') == 0, 
     mkdir(opts.localdir);
@@ -122,7 +116,7 @@ end
 
 % matlabpool handling
 if isempty(gcp('nocreate')) && opts.nworkers > 0
-    myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
+    myLogInfo('Opening parpool, nworkers = %d', opts.nworkers);
     delete(gcp('nocreate'))  % clear up zombies
     p = parpool(opts.nworkers);
 end

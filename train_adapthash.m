@@ -4,6 +4,8 @@ global Xtrain Ytrain
 train_time  = zeros(1, opts.ntrials);
 update_time = zeros(1, opts.ntrials);
 bit_flips   = zeros(1, opts.ntrials);
+ht_updates  = zeros(1, opts.ntrials);
+bit_recomp  = zeros(1, opts.ntrials);
 parfor t = 1:opts.ntrials
     if run_trial(t) == 0
         myLogInfo('Trial %02d not required, skipped', t);
@@ -22,21 +24,24 @@ parfor t = 1:opts.ntrials
     end
     prefix = sprintf('%s/trial%d', opts.expdir, t);
 
-    % do SGD optimization
-    [train_time(t), update_time(t), bit_flips(t)] = AdaptHash(Xtrain, Ytrain, ...
-        prefix, test_iters, t, opts);
+    % do optimization
+    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
+        = AdaptHash(Xtrain, Ytrain, prefix, test_iters, t, opts);
 end
 
 myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
+myLogInfo('HTupdate time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
 if strcmp(opts.mapping, 'smooth')
-    myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+    myLogInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+    myLogInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
+    myLogInfo('    Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end
 end
 
 
 % ---------------------------------------------------------
-function [train_time, update_time, bitflips] = AdaptHash(...
-    Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
+    AdaptHash(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 % Xtrain (float) n x d matrix where n is number of points 
 %                   and d is the dimensionality 
 %

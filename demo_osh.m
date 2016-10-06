@@ -9,15 +9,11 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 ip = inputParser;
 ip.addParamValue('stepsize', 0.1, @isscalar);
 ip.addParamValue('SGDBoost', 0, @isscalar);
-for i = 1:2:length(varargin)-1
-    % only parse defined fields, ignore others
-    try
-        ip.parse(varargin{i}, varargin{i+1});
-    end
-end
+ip.addParameter('methodID', '');
+ip.KeepUnmatched = true;
+ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
-opts.localid = '';
 
 % get generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters

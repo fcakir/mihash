@@ -4,15 +4,11 @@ function resfn = demo_okh(ftype, dataset, nbits, varargin)
 ip = inputParser;
 ip.addParamValue('c', 0.1, @isscalar);
 ip.addParamValue('alpha', 0.2, @isscalar);
-for i = 1:2:length(varargin)-1
-    % only parse defined fields, ignore others
-    try
-        ip.parse(varargin{i}, varargin{i+1});
-    end
-end
+ip.addParameter('methodID', 'okh');
+ip.KeepUnmatched = true;
+ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('C%gA%g', opts.c, opts.alpha);
-opts.localid = 'okh';
 
 % generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters

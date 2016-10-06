@@ -1,10 +1,4 @@
 function resfn = demo(opts, trainFunc, testFunc)
-% PARAMS
-%  ftype (string) from {'gist', 'cnn'}
-%  dataset (string) from {'cifar', 'sun','nus'}
-%  nbits (integer) is length of binary code
-%  varargin: see get_opts.m for details
-%  
 
 % 0. result files
 Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
@@ -53,12 +47,16 @@ end
 
 % 2. load data (only if necessary)
 global Xtrain Xtest Ytrain Ytest Dtype
-Dtype_this = [dataset '_' ftype];
+Dtype_this = [opts.dataset '_' opts.ftype];
 if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
     myLogInfo('Dataset already loaded for %s', Dtype_this);
 elseif (any(run_trial) || ~all(res_exist))
     myLogInfo('Loading data for %s...', Dtype_this);
-    eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(dataset, opts);']);
+    if strcmp(opts.methodID, 'sketch')
+        eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(opts, false);']);
+    else
+        eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(opts);']);
+    end
     Dtype = Dtype_this;
 end
 

@@ -36,11 +36,12 @@ for t = 1:opts.ntrials
 end
 
 myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
+myLogInfo('HTupdate time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
 if strcmp(opts.mapping, 'smooth')
     %TODO
-    myLogInfo('      Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    myLogInfo('      Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+    myLogInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+    myLogInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
+    myLogInfo('    Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end
 end
 
