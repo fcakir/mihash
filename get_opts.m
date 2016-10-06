@@ -1,4 +1,4 @@
-function opts = get_opts(ftype, dataset, nbits, varargin)
+function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % PARAMS
 %  mapping (string) {'smooth', 'bucket', 'coord'}
 %  ntrials (int) # of random trials
@@ -9,48 +9,50 @@ function opts = get_opts(ftype, dataset, nbits, varargin)
 %  noTrainingPoints (int) # of training points
 %  override (int) override previous results {0, 1}
 %  tstScenario (int) testing scenario to be used {1 (default -old version),2}
+
 ip = inputParser;
-% default values
+
+% train/test
 ip.addParamValue('ftype', ftype, @isstr);
 ip.addParamValue('dataset', dataset, @isstr);
 ip.addParamValue('nbits', nbits, @isscalar);
-
 ip.addParamValue('mapping', 'smooth', @isstr);
-ip.addParamValue('stepsize', 0.1, @isscalar);
-ip.addParamValue('SGDBoost', 0, @isscalar);
-ip.addParamValue('randseed', 12345, @isscalar);
-ip.addParamValue('localdir', ...
-    '/research/object_detection/cachedir/online-hashing', @isstr);
-ip.addParamValue('noTrainingPoints', 20000, @isscalar);
-ip.addParamValue('override', 0, @isscalar);
-ip.addParamValue('showplots', 1, @isscalar);
-
-ip.addParamValue('nworkers', 6, @isscalar);
-ip.addParamValue('ntrials', 5, @isscalar);
+ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
+ip.addParamValue('ntrials', 3, @isscalar);
 ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
-% controling when to update hash table
-% default: save every opts.updateInterval iterations
-% IF use reservoir AND opts.flipThresh > 0, THEN use opts.flipThresh
-ip.addParamValue('updateInterval', -1, @isscalar);  % use with baseline
-ip.addParamValue('adaptive', -1, @isscalar);        % use with reservoir
-ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
-ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
-ip.addParamValue('flipThresh', -1, @isscalar);      % for trigger=bf
+% misc
+ip.addParamValue('randseed', 12345, @isscalar);
+ip.addParamValue('nworkers', 6, @isscalar);
+ip.addParamValue('override', 0, @isscalar);
+ip.addParamValue('showplots', 1, @isscalar);
+ip.addParamValue('localdir', ...
+    '/research/object_detection/cachedir/online-hashing', @isstr);
 
-ip.addParamValue('reservoirSize', 50, @isscalar); % reservoir size, set to 0 if reservoir is not used
-ip.addParamValue('reg_rs', -1, @isscalar);        % reservoir reg. weight, only for regularization 
-ip.addParamValue('reg_smooth', -1, @isscalar);    % smoothness reg. weight
+% Reservoir
+ip.addParamValue('reservoirSize', 1000, @isscalar); % reservoir size, set to 0 if reservoir is not used
+ip.addParamValue('reg_rs', 0, @isscalar);        % reservoir reg. weight, only for regularization 
+ip.addParamValue('reg_smooth', 0, @isscalar);    % smoothness reg. weight
 ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
 ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
-ip.addParamValue('fracHash', 1, @isscalar);       % fraction of hash functions to update (0, 1]
-ip.addParamValue('accuHash', 1 ,@isscalar);       % accumulation strategy {0, 1}
-ip.addParamValue('randomHash',0, @isscalar);      % randomize selected hash functions to be updated {0, 1}
-ip.addParamValue('verifyInv',0,@isscalar);        % {0, 1} 
+
+% hash table update
+ip.addParamValue('updateInterval', 100, @isscalar);  % use with baseline
+ip.addParamValue('adaptive', 0, @isscalar);        % use with reservoir
+ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
+ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
+ip.addParamValue('flipThresh', 0, @isscalar);       % for trigger=bf
+
+% selective bit update
+ip.addParamValue('fracHash', 1, @isscalar);  % fraction of hash functions to update (0, 1]
+ip.addParamValue('accuHash', 1 ,@isscalar);  % accumulation strategy {0, 1}
+ip.addParamValue('randomHash',0, @isscalar); % randomize selected hash functions to be updated {0, 1}
+ip.addParamValue('verifyInv',0,@isscalar);   % {0, 1} 
+
 % Hack for Places
-ip.addParamValue('labelspercls', 0, @isscalar);
+ip.addParamValue('labelsPerCls', 0, @isscalar);
 
 % Testing scenario
 % TODO explain
@@ -65,16 +67,24 @@ ip.addParamValue('tstScenario',1,@isscalar);
 ip.addParamValue('pObserve', 0, @isscalar);
 
 % parse input
-ip.parse(varargin{:});
-opts = ip.Results;
+for i = 1:2:length(varargin)-1
+    % only parse defined fields, ignore others
+    try
+        ip.parse(varargin{i}, varargin{i+1});
+    catch
+        myLogInfo('Ignored field: %s', varargin{i});
+    end
+end
+opts = catstruct(opts, ip.Results);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% assertions
+% ASSERTIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 assert(ismember(opts.ftype, {'gist', 'cnn'}));
 assert(opts.testFrac > 0);
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
-    'updateInterval cannot be used with flipThresh');
+%assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
+    %'updateInterval cannot be used with flipThresh');
 if opts.adaptive > 0,
     assert(opts.flipThresh<=0, 'adaptive cannot have flipThresh>0');
 end
@@ -89,6 +99,9 @@ end
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
 assert(opts.fracHash > 0 && opts.fracHash <= 1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CONFIGS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % are we on window$?
@@ -98,18 +111,20 @@ if opts.windows
     opts.localdir = '\\kraken\object_detection\cachedir\online-hashing';
     myLogInfo('We are on Window$. localdir set to %s', opts.localdir);
 end
+% localdir
+if isfield(opts, 'localid') && ~isempty(opts.localid)
+    opts.localdir = fullfile(opts.localdir, opts.localid);
+end
+if exist(opts.localdir, 'dir') == 0, 
+    mkdir(opts.localdir);
+    if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
+end
 
 % matlabpool handling
 if isempty(gcp('nocreate')) && opts.nworkers > 0
     myLogInfo('Opening matlabpool, nworkers = %d', opts.nworkers);
     delete(gcp('nocreate'))  % clear up zombies
     p = parpool(opts.nworkers);
-end
-
-% make localdir
-if ~exist(opts.localdir, 'dir'),
-    mkdir(opts.localdir);
-    if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
 end
 
 % set randseed -- don't change the randseed if don't have to!
@@ -136,9 +151,27 @@ if strcmp(opts.dataset, 'places')
     end
 end
 
+% decipher evaluation metric
+if ~isempty(strfind(opts.metric, 'prec_k'))
+    % eg. prec_k3 is precision at k=3
+    opts.prec_k = sscanf(opts.metric(7:end), '%d');
+elseif ~isempty(strfind(opts.metric, 'prec_n'))
+    % eg. prec_n3 is precision at n=3
+    opts.prec_n = sscanf(opts.metric(7:end), '%d');
+elseif ~isempty(strfind(opts.metric, 'mAP_'))
+    % eg. mAP_1000 is mAP @ top 1000 retrievals
+    opts.mAP = sscanf(opts.metric(5:end), '%d')
+else 
+    % default: mAP
+    assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
+end
+
+
+% --------------------------------------------
 % identifier string for the current experiment
-opts.identifier = sprintf('%s-%s-%d%s-B%dS%g', opts.dataset, opts.ftype, ...
-    opts.nbits, opts.mapping, opts.SGDBoost, opts.stepsize);
+% NOTE: opts.identifier is already initialized with method-specific params
+opts.identifier = sprintf('%s-%s-%d%s-%s', opts.dataset, opts.ftype, ...
+    opts.nbits, opts.mapping, opts.identifier);
 idr = opts.identifier;
 
 % handle reservoir
@@ -182,6 +215,7 @@ end
 
 opts.identifier = idr;
 myLogInfo('identifier: %s', opts.identifier);
+% -------------------------------------------
 
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
@@ -203,21 +237,6 @@ if ~exist(opts.expdir, 'dir'),
     if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
 end
 
-% decipher evaluation metric
-if ~isempty(strfind(opts.metric, 'prec_k'))
-    % eg. prec_k3 is precision at k=3
-    opts.prec_k = sscanf(opts.metric(7:end), '%d');
-elseif ~isempty(strfind(opts.metric, 'prec_n'))
-    % eg. prec_n3 is precision at n=3
-    opts.prec_n = sscanf(opts.metric(7:end), '%d');
-elseif ~isempty(strfind(opts.metric, 'mAP_'))
-    % eg. mAP_1000 is mAP @ top 1000 retrievals
-    opts.mAP = sscanf(opts.metric(5:end), '%d')
-else 
-    % default: mAP
-    assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
-end
-
 % hold a diary -save it to opts.expdir
 if opts.override
     unix(['rm -f ' opts.expdir '/diary*']);
@@ -228,9 +247,9 @@ while exist(opts.diary_name,'file') && ~opts.override
     diary_index = diary_index + 1;
     opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
 end
-
 diary(opts.diary_name);
 diary('on');
+
 % FINISHED
 disp(opts);
 end
