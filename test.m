@@ -43,7 +43,7 @@ for t = 1:opts.ntrials
         if strcmp(opts.methodID, 'okh')
             % do kernel mapping for test data
             testX_t = exp(-0.5*sqdist(testX', trial_model.Xanchor')/trial_model.sigma^2)';
-            testX_t = [testX_t; ones(1,size(testX_t,2))];
+            testX_t = [testX_t; ones(1,size(testX_t,2))]';
         elseif strcmp(opts.methodID, 'sketch')
             % subtract mean
             testX_t = bsxfun(@minus, testX, trial_model.instFeatAvePre);
