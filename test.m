@@ -83,7 +83,10 @@ for t = 1:opts.ntrials
             %}
 
             % test hash table
-            Htest = (testX_t * d.W > 0)';
+            % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
+            %       to compute Htest, to make sure it's computed using the same
+            %       hash mapping as Htrain.
+            Htest = (testX_t * d.W_lastupdate > 0)';
 
             % evaluate
             fprintf('Trial %d, Ex %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints);

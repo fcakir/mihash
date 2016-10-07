@@ -197,7 +197,7 @@ for i = 1:opts.noTrainingPoints
     %
     if ismember(i, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, i);
-        save(F, 'W', 'H', 'bitflips','bits_computed_all', ...
+        save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
             'train_time', 'update_time', 'seenLabels', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
