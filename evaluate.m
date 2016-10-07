@@ -1,4 +1,4 @@
-function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
+function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 % input: 
 %   Htrain - (logical) training binary codes
 %   Htest  - (logical) testing binary codes
