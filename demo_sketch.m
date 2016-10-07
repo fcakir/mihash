@@ -10,6 +10,7 @@ ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('Ske%dBat%d', opts.sketchSize, opts.batchSize);
+assert(opts.batchSize>=nbits, 'Sketching needs batchSize>=nbits');
 
 % generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});

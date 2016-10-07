@@ -69,7 +69,8 @@ ip.addParamValue('pObserve', 0, @isscalar);
 % parse input
 ip.KeepUnmatched = true;
 ip.parse(ftype, dataset, nbits, varargin{:});
-opts = catstruct(opts, ip.Results);
+opts = catstruct(ip.Results, opts);  % combine w/ existing opts
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ASSERTIONS
@@ -93,6 +94,7 @@ end
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
 assert(opts.fracHash > 0 && opts.fracHash <= 1);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % CONFIGS

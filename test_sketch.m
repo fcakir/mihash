@@ -22,8 +22,6 @@ else
     cateTrainTest = (trainY * testY' > 0);
 end
 
-opts.nbatches = ceil(opts.noTrainingPoints/opts.batchsize);
-
 clear res bitflips train_iter train_time
 for t = 1:opts.ntrials
     if res_exist(t)
@@ -33,13 +31,14 @@ for t = 1:opts.ntrials
         clear t_res t_bitflips t_train_iter t_train_time
         Tprefix = sprintf('%s/trial%d', opts.expdir, t);
         trial_model = load(sprintf('%s.mat', Tprefix));
-        for i = 1:length(trial_model.test_batchInds)
-            iter = trial_model.test_batchInds(i);
-            d = load(sprintf('%s_batch%d.mat', Tprefix, iter));
+        testX_t = bsxfun(@minus, testX, trial_model.instFeatAvePre);
+        for i = 1:length(trial_model.test_iters)
+            iter = trial_model.test_iters(i);
+            d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
             Htrain = d.H;
-            Htest  = (testX * d.W > 0)';
+            Htest  = (testX_t * d.W > 0)';
 
-            fprintf('Trial %d, Batch %d/%d, ', t, iter, opts.nbatches);
+            fprintf('Trial %d, Ex %4d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints);
             t_res(i) = get_results(Htrain, Htest, trainY, testY, opts, cateTrainTest);
 
             t_bitflips(i) = d.bitflips;
