@@ -137,8 +137,8 @@ end
 % if smoothness not applied set sample reservoir size to the entire reservoir
 % [hack] for places
 if strcmp(opts.dataset, 'places')
-    if opts.labelspercls > 0
-        assert(opts.labelspercls >= 500 && opts.labelspercls <= 5000, ...
+    if opts.labelsPerCls > 0
+        assert(opts.labelsPerCls >= 500 && opts.labelsPerCls <= 5000, ...
             'please give a reasonable labelspercls in [500, 5000]');
         myLogInfo('Places will use %d labeled examples per class', opts.labelspercls);
         opts.dataset = [opts.dataset, 'L', num2str(opts.labelspercls)];
@@ -210,7 +210,6 @@ if opts.reg_smooth > 0
 end
 
 opts.identifier = idr;
-myLogInfo('identifier: %s', opts.identifier);
 % -------------------------------------------
 
 % set expdir
@@ -247,5 +246,6 @@ diary(opts.diary_name);
 diary('on');
 
 % FINISHED
+myLogInfo('identifier: %s', opts.identifier);
 disp(opts);
 end
