@@ -1,5 +1,5 @@
 function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(opts, normalizeX)
-if nargin < 3, normalizeX = 1; end
+if nargin < 2, normalizeX = 1; end
 if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
 
 % NOTE: labels are originally [0, L-1], first add 1 to make [1, L]

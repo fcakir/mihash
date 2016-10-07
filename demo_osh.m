@@ -14,6 +14,7 @@ ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
+opts.batchSize  = 1;  % hard-coded
 
 % get generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters

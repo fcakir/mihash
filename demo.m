@@ -24,7 +24,8 @@ else
     run_trial = zeros(1, opts.ntrials);
     for t = 1:opts.ntrials
         if exist(res_trial_fn{t}, 'file')
-            run_trial(t) = 0; continue;
+            run_trial(t) = 0; 
+            continue;
         end
         % [hack] for backward compatibility:
         % if final model trial_%d.mat exists and all the intermediate models 
@@ -61,12 +62,12 @@ elseif (any(run_trial) || ~all(res_exist))
 end
 
 
-% 3. TRAINING: run all _necessary_ trials (handled by train_osh)
+% 3. TRAINING: run all _necessary_ trials (handled by train.m)
 if any(run_trial)
     myLogInfo('Training models...');
-    trainFunc(run_trial, opts);
+    train(trainFunc, run_trial, opts);
 end
-myLogInfo('Training is done.');
+myLogInfo('%s: Training is done.', opts.identifier);
 
 
 % 4. TESTING: run all _necessary_ trials
@@ -74,6 +75,6 @@ if ~all(res_exist) || ~exist(resfn, 'file')
     myLogInfo('Testing models...');
     testFunc(resfn, res_trial_fn, res_exist, opts);
 end
-myLogInfo('Testing is done.');
+myLogInfo('%s: Testing is done.', opts.identifier);
 
 end

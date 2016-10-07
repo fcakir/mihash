@@ -1,55 +1,5 @@
-function train_osh(run_trial, opts)
-% online (semi-)supervised hashing
-
-global Xtrain Ytrain
-train_time  = zeros(1, opts.ntrials);
-update_time = zeros(1, opts.ntrials);
-ht_updates  = zeros(1, opts.ntrials);
-bit_flips   = zeros(1, opts.ntrials);
-bit_recomp  = zeros(1, opts.ntrials);
-for t = 1:opts.ntrials
-    if run_trial(t) == 0
-        myLogInfo('Trial %02d not required, skipped', t);
-        continue;
-    end
-    myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
-    
-    % % shuffle training data for each trial
-    % ind    = randperm(length(Ytrain));
-    % Ytrain_ = Ytrain(ind);
-    % Xtrain_ = Xtrain(ind, :);
-    
-    % randomly set test checkpoints (to better mimic real scenarios)
-    test_iters      = zeros(1, opts.ntests);
-    test_iters(1)   = 1;
-    test_iters(end) = opts.noTrainingPoints;
-    interval = round(opts.noTrainingPoints/(opts.ntests-1));
-    for i = 1:opts.ntests-2
-        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-        test_iters(i+1) = iter;
-    end
-    prefix = sprintf('%s/trial%d', opts.expdir, t);
-    
-    % do SGD optimization
-    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
-        = OSH(Xtrain, Ytrain, prefix, test_iters, t, opts);
-end
-
-myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-myLogInfo('HTupdate time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
-if strcmp(opts.mapping, 'smooth')
-    %TODO
-    myLogInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    myLogInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    myLogInfo('    Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
-end
-end
-
-
-% -------------------------------------------------------------
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    OSH(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
-% optimization via SGD
+    train_osh(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [W, H, ECOCs] = init_osh(Xtrain, opts);
@@ -87,7 +37,6 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     % randomly shuffle training points before taking first noTrainingPoints
-    % this fixes issue #25
     train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
