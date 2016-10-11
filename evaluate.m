@@ -16,7 +16,7 @@ if strcmp(opts.metric, 'mAP')
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     %sim = Htrain'*Htest;
     AP  = zeros(1, testsize);
-    parfor j = 1:testsize
+    for j = 1:testsize
         %if use_cateTrainTest
         %	labels = 2*cateTrainTest(:, j)-1;
         %else
@@ -36,7 +36,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     N   = opts.mAP;
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     AP  = zeros(1, testsize);
-    parfor j = 1:testsize
+    for j = 1:testsize
         [val, idx] = sort(sim, 'descend');
         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
         [~, ~, info] = vl_pr(labels, double(sim(idx(1:N), j)));
