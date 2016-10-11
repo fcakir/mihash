@@ -209,7 +209,9 @@ if opts.reg_smooth > 0
     idr = sprintf('%s-SM%gN%dSS%d', idr, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 end
 
-opts.identifier = idr;
+% TEMP
+%opts.identifier = [idr];
+opts.identifier = ['TEST-' idr];
 % -------------------------------------------
 
 % set expdir
