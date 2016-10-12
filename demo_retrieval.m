@@ -9,7 +9,7 @@ if strcmp(dataset, 'cifar')
 else
     opts = get_opts('cnn', 'places', 32, 'ntrials', 1, 'ntests', 2, ...
         'noTrainingPoints', 50e3, 'updateInterval', 50e3, 'showplots', 0, ...
-        'labelspercls', 0, 'metric', 'prec_n3', 'nworkers', 0);
+        'labelsPerCls', 0, 'metric', 'prec_n3', 'nworkers', 0);
     visFunc = @vis_places;
 end
 

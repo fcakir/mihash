@@ -79,7 +79,7 @@ elseif strcmp(opts.dataset, 'places')
     X = pca_feats;
     Y = (labels + 1)*10;
     T = 20;
-    L = opts.labelspercls;  % default 2500, range {0}U[500, 5000]
+    L = opts.labelsPerCls;  % default 2500, range {0}U[500, 5000]
 
     if normalizeX 
         % normalize features
@@ -168,7 +168,7 @@ for i = 1:length(labels)
     if L > 0  
         % if requested, hide some labels
         if st + L > ed
-            warning(sprintf('%s Class%d: ntrain=%d<%d=labelspercls, keeping all', ...
+            warning(sprintf('%s Class%d: ntrain=%d<%d=labelsPerCls, keeping all', ...
                 labels(i), n_i-T, L));
         else
             % add 1 to mark unlabeled items
