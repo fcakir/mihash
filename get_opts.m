@@ -213,7 +213,7 @@ end
 
 % TEMP
 %opts.identifier = [idr];
-opts.identifier = ['TEST-' idr];
+opts.identifier = ['NEW-' idr];
 % -------------------------------------------
 
 % set expdir
