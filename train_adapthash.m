@@ -95,7 +95,7 @@ for iter = 1:number_iterations
     sample_point2 = Xtrain(u(2),:);
     sample_label1 = Ytrain(u(1));
     sample_label2 = Ytrain(u(2));
-    s = 2*isequal(sample_label1, sample_label2);
+    s = 2*isequal(sample_label1, sample_label2)-1;
 
     k_sample_data = [sample_point1;sample_point2];
 
@@ -106,7 +106,8 @@ for iter = 1:number_iterations
 
     Dh = sum(tY(:,1) ~= tY(:,2)); 
 
-    if s == -1     
+    %if s == -1     
+    if s <= 0  % KH: safety precaution
         loss = max(0, alphaa*code_length - Dh);
         ind = find(tY(:,1) == tY(:,2));
         cind = find(tY(:,1) ~= tY(:,2));
@@ -155,6 +156,7 @@ for iter = 1:number_iterations
     train_time = train_time + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, k_sample_data, ...
             [sample_label1; sample_label2], reservoir_size, W_lastupdate);
