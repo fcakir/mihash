@@ -36,12 +36,21 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     N   = opts.mAP;
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     AP  = zeros(1, testsize);
-    for j = 1:testsize
-        [val, idx] = sort(sim, 'descend');
+    parfor j = 1:testsize
+        %[val, idx] = sort(sim, 'descend');
+        idx = [];
+        for th = opts.nbits:-1:-opts.nbits
+            idx = [idx; find(sim(:, j) == th)];
+            if length(idx) >= N
+                break;
+            end
+        end
         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
         [~, ~, info] = vl_pr(labels, double(sim(idx(1:N), j)));
         AP(j) = info.ap;
     end
+    AP = AP(~isnan(AP));  % for NUSWIDE
+    res = mean(AP);
     myLogInfo('mAP@(N=%d) = %g', N, res);
 
 elseif ~isempty(strfind(opts.metric, 'prec_k'))
