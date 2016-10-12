@@ -31,55 +31,51 @@ function hhh=vline(x,in1,in2)
 if length(x)>1  % vector input
     for I=1:length(x)
         switch nargin
-        case 1
-            linetype='r:';
-            label='';
-        case 2
-            if ~iscell(in1)
-                in1={in1};
-            end
-            if I>length(in1)
-                linetype=in1{end};
-            else
-                linetype=in1{I};
-            end
-            label='';
-        case 3
-            if ~iscell(in1)
-                in1={in1};
-            end
-            if ~iscell(in2)
-                in2={in2};
-            end
-            if I>length(in1)
-                linetype=in1{end};
-            else
-                linetype=in1{I};
-            end
-            if I>length(in2)
-                label=in2{end};
-            else
-                label=in2{I};
-            end
+            case 1
+                linetype='r:';
+                label='';
+            case 2
+                if ~iscell(in1)
+                    in1={in1};
+                end
+                if I>length(in1)
+                    linetype=in1{end};
+                else
+                    linetype=in1{I};
+                end
+                label='';
+            case 3
+                if ~iscell(in1)
+                    in1={in1};
+                end
+                if ~iscell(in2)
+                    in2={in2};
+                end
+                if I>length(in1)
+                    linetype=in1{end};
+                else
+                    linetype=in1{I};
+                end
+                if I>length(in2)
+                    label=in2{end};
+                else
+                    label=in2{I};
+                end
         end
         h(I)=vline(x(I),linetype,label);
     end
 else
     switch nargin
-    case 1
-        linetype='r:';
-        label='';
-    case 2
-        linetype=in1;
-        label='';
-    case 3
-        linetype=in1;
-        label=in2;
+        case 1
+            linetype='r:';
+            label='';
+        case 2
+            linetype=in1;
+            label='';
+        case 3
+            linetype=in1;
+            label=in2;
     end
-
-    
-    
-    
     g=ishold(gca);
     hold on
 
@@ -97,7 +93,7 @@ else
     end     
 
     if g==0
-    hold off
+        hold off
     end
     set(h,'tag','vline','handlevisibility','off')
 end % else
