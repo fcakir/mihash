@@ -1,42 +1,5 @@
-function train_adapthash(run_trial, opts)
-
-global Xtrain Ytrain
-train_time  = zeros(1, opts.ntrials);
-update_time = zeros(1, opts.ntrials);
-bit_flips   = zeros(1, opts.ntrials);
-parfor t = 1:opts.ntrials
-    if run_trial(t) == 0
-        myLogInfo('Trial %02d not required, skipped', t);
-        continue;
-    end
-    myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
-
-    % randomly set test checkpoints (to better mimic real scenarios)
-    test_iters      = zeros(1, opts.ntests);
-    test_iters(1)   = 1;
-    test_iters(end) = opts.noTrainingPoints/2;
-    interval = round(opts.noTrainingPoints/2/(opts.ntests-1));
-    for i = 1:opts.ntests-2
-        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-        test_iters(i+1) = iter;
-    end
-    prefix = sprintf('%s/trial%d', opts.expdir, t);
-
-    % do SGD optimization
-    [train_time(t), update_time(t), bit_flips(t)] = AdaptHash(Xtrain, Ytrain, ...
-        prefix, test_iters, t, opts);
-end
-
-myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-if strcmp(opts.mapping, 'smooth')
-    myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
-end
-end
-
-
-% ---------------------------------------------------------
-function [train_time, update_time, bitflips] = AdaptHash(...
-    Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
+    train_adapthash(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 % Xtrain (float) n x d matrix where n is number of points 
 %                   and d is the dimensionality 
 %
@@ -61,8 +24,13 @@ step_size   = opts.stepsize; %1e-3;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-W = randn(d, opts.nbits);
-W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+if 1
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
@@ -90,7 +58,6 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     % randomly shuffle training points before taking first noTrainingPoints
-    % this fixes issue #25
     train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
@@ -118,17 +85,17 @@ update_time = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-for i=1:number_iterations
+for iter = 1:number_iterations
     t_ = tic;
 
-    u(1) = train_ind(2*i-1);
-    u(2) = train_ind(2*i);
+    u(1) = train_ind(2*iter-1);
+    u(2) = train_ind(2*iter);
 
     sample_point1 = Xtrain(u(1),:);
     sample_point2 = Xtrain(u(2),:);
     sample_label1 = Ytrain(u(1));
     sample_label2 = Ytrain(u(2));
-    s = 2*isequal(sample_label1, sample_label2);
+    s = 2*isequal(sample_label1, sample_label2)-1;
 
     k_sample_data = [sample_point1;sample_point2];
 
@@ -139,7 +106,8 @@ for i=1:number_iterations
 
     Dh = sum(tY(:,1) ~= tY(:,2)); 
 
-    if s == -1     
+    %if s == -1     
+    if s <= 0  % KH: safety precaution
         loss = max(0, alphaa*code_length - Dh);
         ind = find(tY(:,1) == tY(:,2));
         cind = find(tY(:,1) ~= tY(:,2));
@@ -188,6 +156,7 @@ for i=1:number_iterations
     train_time = train_time + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, k_sample_data, ...
             [sample_label1; sample_label2], reservoir_size, W_lastupdate);
@@ -196,8 +165,8 @@ for i=1:number_iterations
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-        W_lastupdate, W, reservoir, Hres_new);
+    [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
+        opts, W_lastupdate, W, reservoir, Hres_new);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);
@@ -215,7 +184,7 @@ for i=1:number_iterations
             stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
-        update_iters = [update_iters, i];
+        update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
@@ -235,15 +204,15 @@ for i=1:number_iterations
     end
 
     % ---- save intermediate model ----
-    if ismember(i, test_iters)
-        F = sprintf('%s_iter%d.mat', prefix, i);
-        save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
+    if ismember(iter, test_iters)
+        F = sprintf('%s_iter%d.mat', prefix, iter);
+        save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
         myLogInfo('[T%02d] (%d/%d) SGD %.2fs, HTU %.2fs, %d Updates #BF=%g', ...
-            trialNo, i, number_iterations, train_time, update_time, numel(update_iters), bitflips);
+            trialNo, iter, number_iterations, train_time, update_time, numel(update_iters), bitflips);
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%

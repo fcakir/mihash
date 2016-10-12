@@ -1,54 +1,5 @@
-function train_osh(run_trial, opts)
-% online (semi-)supervised hashing
-
-global Xtrain Ytrain
-train_time  = zeros(1, opts.ntrials);
-update_time = zeros(1, opts.ntrials);
-ht_updates  = zeros(1, opts.ntrials);
-bit_flips   = zeros(1, opts.ntrials);
-bit_recomp  = zeros(1, opts.ntrials);
-for t = 1:opts.ntrials
-    if run_trial(t) == 0
-        myLogInfo('Trial %02d not required, skipped', t);
-        continue;
-    end
-    myLogInfo('%s: %d trainPts, random trial %d', opts.identifier, opts.noTrainingPoints, t);
-    
-    % % shuffle training data for each trial
-    % ind    = randperm(length(Ytrain));
-    % Ytrain_ = Ytrain(ind);
-    % Xtrain_ = Xtrain(ind, :);
-    
-    % randomly set test checkpoints (to better mimic real scenarios)
-    test_iters      = zeros(1, opts.ntests);
-    test_iters(1)   = 1;
-    test_iters(end) = opts.noTrainingPoints;
-    interval = round(opts.noTrainingPoints/(opts.ntests-1));
-    for i = 1:opts.ntests-2
-        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-        test_iters(i+1) = iter;
-    end
-    prefix = sprintf('%s/trial%d', opts.expdir, t);
-    
-    % do SGD optimization
-    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
-        = OSH(Xtrain, Ytrain, prefix, test_iters, t, opts);
-end
-
-myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-if strcmp(opts.mapping, 'smooth')
-    %TODO
-    myLogInfo('      Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    myLogInfo('      Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    myLogInfo('      Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
-end
-end
-
-
-% -------------------------------------------------------------
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    OSH(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
-% optimization via SGD
+    train_osh(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [W, H, ECOCs] = init_osh(Xtrain, opts);
@@ -86,7 +37,6 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     % randomly shuffle training points before taking first noTrainingPoints
-    % this fixes issue #25
     train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
@@ -118,10 +68,10 @@ num_unlabeled = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-for i = 1:opts.noTrainingPoints
+for iter = 1:opts.noTrainingPoints
     t_ = tic;
     % new training point
-    ind = train_ind(i);
+    ind = train_ind(iter);
     spoint = Xtrain(ind, :);
     slabel = Ytrain(ind, :);
     
@@ -141,7 +91,7 @@ for i = 1:opts.noTrainingPoints
         % When a labelled items comes find its neighors from the reservoir
         if opts.reg_smooth > 0 && reservoir_size > 0
             % hack: for the reservoir, smooth mapping is assumed
-            if i > reservoir_size
+            if iter > reservoir_size
                 resY = 2*single(W'*reservoir.X' > 0)-1;
                 qY = 2* single(W'*spoint' > 0)-1;
                 [~, ind] = sort(resY' * qY,'descend');
@@ -164,7 +114,7 @@ for i = 1:opts.noTrainingPoints
     end
     
     % SGD-2. update W wrt. reservoir regularizer (if specified)
-    if (isLabeled) && (opts.reg_rs>0) && (i>reservoir_size)
+    if (isLabeled) && (opts.reg_rs>0) && (iter>reservoir_size)
         stepsizes = ones(reservoir_size,1) / reservoir_size;
         stepsizes = stepsizes * opts.stepsize * opts.reg_rs;
         ind = randperm(reservoir.size, opts.sampleResSize);
@@ -173,7 +123,7 @@ for i = 1:opts.noTrainingPoints
     end
     
     % SGD-3. update W wrt. unsupervised regularizer (if specified)
-    if opts.reg_smooth > 0 && i > reservoir_size && isLabeled
+    if opts.reg_smooth > 0 && iter > reservoir_size && isLabeled
         ind = randperm(reservoir.size, opts.rs_sm_neigh_size);
         W = reg_smooth(W, [spoint; reservoir.X(ind,:)], opts.reg_smooth);
     end
@@ -186,6 +136,7 @@ for i = 1:opts.noTrainingPoints
     train_time = train_time + toc(t_);
     
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             spoint, slabel, reservoir_size, W_lastupdate);
@@ -196,13 +147,13 @@ for i = 1:opts.noTrainingPoints
     % ---- determine whether to update or not ----
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
-        [update_table, trigger_val] = trigger_update(i, opts, ...
-            W_lastupdate, W, reservoir, Hres_new, bf_thr);
+        [update_table, trigger_val] = trigger_update(opts.batchSize*iter, ...
+            opts, W_lastupdate, W, reservoir, Hres_new, bf_thr);
         h_ind = 1:opts.nbits;
         inv_h_ind = [];
     else
-        [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-            W_lastupdate, W, reservoir, Hres_new);
+        [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
+            opts, W_lastupdate, W, reservoir, Hres_new);
         inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
         if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
             assert(opts.fracHash < 1);
@@ -220,7 +171,7 @@ for i = 1:opts.noTrainingPoints
             stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
-        update_iters = [update_iters, i];
+        update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
@@ -240,26 +191,26 @@ for i = 1:opts.noTrainingPoints
         update_time = update_time + toc(t_);
         
         myLogInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
-            trialNo, numel(update_iters), i, bits_computed_all , bf_all, trigger_val, opts.trigger);
+            trialNo, numel(update_iters), iter, bits_computed_all , bf_all, trigger_val, opts.trigger);
     end
     
     % ---- cache intermediate model to disk ----
     %
-    if ismember(i, test_iters)
-        F = sprintf('%s_iter%d.mat', prefix, i);
-        save(F, 'W', 'H', 'bitflips','bits_computed_all', 'train_time', 'update_time', ...
-            'seenLabels', 'update_iters');
+    if ismember(iter, test_iters)
+        F = sprintf('%s_iter%d.mat', prefix, iter);
+        save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
+            'train_time', 'update_time', 'seenLabels', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
         myLogInfo(['[T%02d] %s\n' ...
             '            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
             '            #BRs=%g, L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
-            trialNo, opts.identifier, i, opts.noTrainingPoints, ...
+            trialNo, opts.identifier, iter, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), ...
             bits_computed_all, num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
     end
-end % end for i
+end % end for iter
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc
@@ -332,10 +283,14 @@ for t = 1:opts.nbits
 end
 clear r
 
-% initialize with LSH
 d = size(Xtrain, 2);
-W = randn(d, opts.nbits);
-W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+if 1
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 H = [];  % the indexing structure
 end
 

@@ -1,4 +1,4 @@
-function res = get_results(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
+function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 % input: 
 %   Htrain - (logical) training binary codes
 %   Htest  - (logical) testing binary codes
@@ -16,7 +16,7 @@ if strcmp(opts.metric, 'mAP')
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     %sim = Htrain'*Htest;
     AP  = zeros(1, testsize);
-    parfor j = 1:testsize
+    for j = 1:testsize
         %if use_cateTrainTest
         %	labels = 2*cateTrainTest(:, j)-1;
         %else

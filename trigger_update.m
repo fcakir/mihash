@@ -77,8 +77,8 @@ switch lower(opts.trigger)
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
                 reservoir.size, opts.nbits);
-            myLogInfo('Max MI=%g, MI diff=%g', max_mi, mi_impr);
             update_table = mi_impr > opts.miThresh;
+            myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
         end
     otherwise
