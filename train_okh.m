@@ -82,6 +82,7 @@ for iter = 1:number_iterations
 
 
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, [xi,xj]', ...
             [idx_i; idx_j], reservoir_size, W_lastupdate);

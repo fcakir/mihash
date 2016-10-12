@@ -111,8 +111,8 @@ for t = 1:opts.ntrials
     train_iter(t, :) = t_train_iter;
     train_examples(t, :) = t_train_iter * opts.batchSize;
 end
-myLogInfo('  FINAL test %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
-myLogInfo('AVERAGE test %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
+myLogInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
+myLogInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
 
 % save all trials in a single file (for backward compatibility)
 % it may overwrite existing file, but whatever

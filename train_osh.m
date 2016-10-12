@@ -136,6 +136,7 @@ for iter = 1:opts.noTrainingPoints
     train_time = train_time + toc(t_);
     
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             spoint, slabel, reservoir_size, W_lastupdate);

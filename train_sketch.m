@@ -157,6 +157,7 @@ for batchInd = 1 : batchCnt
 
 
     % ---- reservoir update & compute new reservoir hash table ----
+    Hres_new = [];
     if reservoir_size > 0
         Xs = bsxfun(@minus, instFeatInBatch, instFeatAvePre);
         Ys = Ytrain(ind, :);
