@@ -25,7 +25,7 @@ ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 
 % misc
 ip.addParamValue('randseed', 12345, @isscalar);
-ip.addParamValue('nworkers', 6, @isscalar);
+ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
 ip.addParamValue('showplots', 1, @isscalar);
 ip.addParamValue('localdir', ...

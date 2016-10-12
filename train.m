@@ -10,6 +10,9 @@ bit_recomp  = zeros(1, opts.ntrials);
 num_iters = ceil(opts.noTrainingPoints/opts.batchSize);
 myLogInfo('%s: %d train_iters', opts.identifier, num_iters);
 
+if isempty(gcp('nocreate'))
+    p = parpool(opts.ntrials);  % get just enough workers
+end
 parfor t = 1:opts.ntrials
     if run_trial(t) == 0
         myLogInfo('Trial %02d not required, skipped', t);

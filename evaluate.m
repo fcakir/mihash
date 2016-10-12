@@ -36,7 +36,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     N   = opts.mAP;
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     AP  = zeros(1, testsize);
-    parfor j = 1:testsize
+    for j = 1:testsize
         %[val, idx] = sort(sim, 'descend');
         idx = [];
         for th = opts.nbits:-1:-opts.nbits

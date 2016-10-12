@@ -78,4 +78,9 @@ if ~all(res_exist) || ~exist(resfn, 'file')
 end
 myLogInfo('%s: Testing is done.', opts.identifier);
 
+
+% 5. close parpool, if any
+if ~isempty(gcp('nocreate'))
+    delete(gcp);
+end
 end
