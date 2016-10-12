@@ -83,6 +83,8 @@ assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 if opts.adaptive > 0,
     assert(opts.flipThresh<=0, 'adaptive cannot have flipThresh>0');
 end
+assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
+    sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
 if ~strcmp(opts.mapping,'smooth')
     opts.updateInterval = opts.noTrainingPoints;

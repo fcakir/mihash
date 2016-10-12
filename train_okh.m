@@ -67,13 +67,13 @@ h_ind_array  = [];
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 %rX = KX(:,idxTrain); %set being search in testing 
 %tX = KX(:,idxTest); %query set in testing
-for i = 1:number_iterations
-    idx_i = Ytrain(2*i-1, :); %idxTrain(dataIdx(2*i-1));
-    idx_j = Ytrain(2*i, :);   %idxTrain(dataIdx(2*i));
+for iter = 1:number_iterations
+    idx_i = Ytrain(2*iter-1, :); %idxTrain(dataIdx(2*i-1));
+    idx_j = Ytrain(2*iter, :);   %idxTrain(dataIdx(2*i));
     s = 2*(idx_i==idx_j)-1;
 
-    xi = KX(:, 2*i-1); %KX(:,idx_i);
-    xj = KX(:, 2*i);   %X(:,idx_j);
+    xi = KX(:, 2*iter-1); %KX(:,idx_i);
+    xj = KX(:, 2*iter);   %X(:,idx_j);
 
     % hash function update
     t_ = tic;
@@ -90,8 +90,8 @@ for i = 1:number_iterations
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-        W_lastupdate, W, reservoir, Hres_new);
+    [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
+        opts, W_lastupdate, W, reservoir, Hres_new);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);
@@ -109,7 +109,7 @@ for i = 1:number_iterations
             stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
-        update_iters = [update_iters, i];
+        update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
@@ -129,15 +129,15 @@ for i = 1:number_iterations
     end
 
     % ---- save intermediate model ----
-    if ismember(i, test_iters)
-        F = sprintf('%s_iter%d.mat', prefix, i);
+    if ismember(iter, test_iters)
+        F = sprintf('%s_iter%d.mat', prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
         myLogInfo('[T%02d] (%d/%d) OKH %.2fs, HTU %.2fs, %d Updates #BF=%g', ...
-            trialNo, i, number_iterations, train_time, update_time, numel(update_iters), bitflips);
+            trialNo, iter, number_iterations, train_time, update_time, numel(update_iters), bitflips);
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%

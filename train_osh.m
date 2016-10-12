@@ -68,10 +68,10 @@ num_unlabeled = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-for i = 1:opts.noTrainingPoints
+for iter = 1:opts.noTrainingPoints
     t_ = tic;
     % new training point
-    ind = train_ind(i);
+    ind = train_ind(iter);
     spoint = Xtrain(ind, :);
     slabel = Ytrain(ind, :);
     
@@ -91,7 +91,7 @@ for i = 1:opts.noTrainingPoints
         % When a labelled items comes find its neighors from the reservoir
         if opts.reg_smooth > 0 && reservoir_size > 0
             % hack: for the reservoir, smooth mapping is assumed
-            if i > reservoir_size
+            if iter > reservoir_size
                 resY = 2*single(W'*reservoir.X' > 0)-1;
                 qY = 2* single(W'*spoint' > 0)-1;
                 [~, ind] = sort(resY' * qY,'descend');
@@ -114,7 +114,7 @@ for i = 1:opts.noTrainingPoints
     end
     
     % SGD-2. update W wrt. reservoir regularizer (if specified)
-    if (isLabeled) && (opts.reg_rs>0) && (i>reservoir_size)
+    if (isLabeled) && (opts.reg_rs>0) && (iter>reservoir_size)
         stepsizes = ones(reservoir_size,1) / reservoir_size;
         stepsizes = stepsizes * opts.stepsize * opts.reg_rs;
         ind = randperm(reservoir.size, opts.sampleResSize);
@@ -123,7 +123,7 @@ for i = 1:opts.noTrainingPoints
     end
     
     % SGD-3. update W wrt. unsupervised regularizer (if specified)
-    if opts.reg_smooth > 0 && i > reservoir_size && isLabeled
+    if opts.reg_smooth > 0 && iter > reservoir_size && isLabeled
         ind = randperm(reservoir.size, opts.rs_sm_neigh_size);
         W = reg_smooth(W, [spoint; reservoir.X(ind,:)], opts.reg_smooth);
     end
@@ -146,13 +146,13 @@ for i = 1:opts.noTrainingPoints
     % ---- determine whether to update or not ----
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
-        [update_table, trigger_val] = trigger_update(i, opts, ...
-            W_lastupdate, W, reservoir, Hres_new, bf_thr);
+        [update_table, trigger_val] = trigger_update(opts.batchSize*iter, ...
+            opts, W_lastupdate, W, reservoir, Hres_new, bf_thr);
         h_ind = 1:opts.nbits;
         inv_h_ind = [];
     else
-        [update_table, trigger_val, h_ind] = trigger_update(i, opts, ...
-            W_lastupdate, W, reservoir, Hres_new);
+        [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
+            opts, W_lastupdate, W, reservoir, Hres_new);
         inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
         if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
             assert(opts.fracHash < 1);
@@ -170,7 +170,7 @@ for i = 1:opts.noTrainingPoints
             stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
         end
         W = W_lastupdate;
-        update_iters = [update_iters, i];
+        update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
@@ -190,13 +190,13 @@ for i = 1:opts.noTrainingPoints
         update_time = update_time + toc(t_);
         
         myLogInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
-            trialNo, numel(update_iters), i, bits_computed_all , bf_all, trigger_val, opts.trigger);
+            trialNo, numel(update_iters), iter, bits_computed_all , bf_all, trigger_val, opts.trigger);
     end
     
     % ---- cache intermediate model to disk ----
     %
-    if ismember(i, test_iters)
-        F = sprintf('%s_iter%d.mat', prefix, i);
+    if ismember(iter, test_iters)
+        F = sprintf('%s_iter%d.mat', prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
             'train_time', 'update_time', 'seenLabels', 'update_iters');
         % fix permission
@@ -205,11 +205,11 @@ for i = 1:opts.noTrainingPoints
         myLogInfo(['[T%02d] %s\n' ...
             '            (%d/%d)  SGD %.2fs, HTU %.2fs, %d Updates\n' ...
             '            #BRs=%g, L=%d, UL=%d, SeenLabels=%d, #BF=%g\n'], ...
-            trialNo, opts.identifier, i, opts.noTrainingPoints, ...
+            trialNo, opts.identifier, iter, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), ...
             bits_computed_all, num_labeled, num_unlabeled, sum(seenLabels>0), bitflips);
     end
-end % end for i
+end % end for iter
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc
