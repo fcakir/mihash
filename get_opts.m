@@ -141,9 +141,9 @@ end
 if strcmp(opts.dataset, 'places')
     if opts.labelsPerCls > 0
         assert(opts.labelsPerCls >= 500 && opts.labelsPerCls <= 5000, ...
-            'please give a reasonable labelspercls in [500, 5000]');
-        myLogInfo('Places will use %d labeled examples per class', opts.labelspercls);
-        opts.dataset = [opts.dataset, 'L', num2str(opts.labelspercls)];
+            'please give a reasonable labelsPerCls in [500, 5000]');
+        myLogInfo('Places will use %d labeled examples per class', opts.labelsPerCls);
+        opts.dataset = [opts.dataset, 'L', num2str(opts.labelsPerCls)];
     else
         myLogInfo('Places: fully supervised experiment');
     end
