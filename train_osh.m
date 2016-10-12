@@ -282,10 +282,14 @@ for t = 1:opts.nbits
 end
 clear r
 
-% initialize with LSH
 d = size(Xtrain, 2);
-W = randn(d, opts.nbits);
-W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+if 1
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 H = [];  % the indexing structure
 end
 

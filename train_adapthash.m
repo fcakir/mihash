@@ -24,8 +24,13 @@ step_size   = opts.stepsize; %1e-3;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-W = randn(d, opts.nbits);
-W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+if 1
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration

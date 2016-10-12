@@ -34,7 +34,14 @@ kInstFeatDimCnt = size(Xtrain, 2);  % feature dim
 bits = opts.nbits;
 
 % initialize hash functions & table
-W = rand(kInstFeatDimCnt, bits) - 0.5;
+if 1
+    % original init for SketchHash
+    W = rand(kInstFeatDimCnt, bits) - 0.5;
+else
+    % LSH init
+    W = randn(kInstFeatDimCnt, bits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;

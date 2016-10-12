@@ -46,7 +46,14 @@ number_iterations = opts.noTrainingPoints/2;
 myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 d = size(KX, 1);
-W = rand(d, opts.nbits)-0.5;
+if 1
+    % original init for OKH
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
