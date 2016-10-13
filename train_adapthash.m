@@ -1,5 +1,5 @@
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    train_adapthash(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+    train_adapthash(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 % Xtrain (float) n x d matrix where n is number of points 
 %                   and d is the dimensionality 
 %
@@ -47,9 +47,13 @@ reservoir_size = opts.reservoirSize;
 if reservoir_size > 0
     reservoir.size = 0;
     reservoir.X    = zeros(0, size(Xtrain, 2));
-    reservoir.Y    = zeros(0, size(Ytrain, 2));
     reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
+    if opts.unsupervised
+	reservoir.Y = [];
+    else
+        reservoir.Y  = zeros(0, size(Ytrain, 2));
+    end
 end
 
 % order training examples
@@ -93,9 +97,14 @@ for iter = 1:number_iterations
 
     sample_point1 = Xtrain(u(1),:);
     sample_point2 = Xtrain(u(2),:);
-    sample_label1 = Ytrain(u(1));
-    sample_label2 = Ytrain(u(2));
-    s = 2*isequal(sample_label1, sample_label2)-1;
+    if ~opts.unsupervised
+        sample_label1 = Ytrain(u(1));
+        sample_label2 = Ytrain(u(2));
+        s = 2*isequal(sample_label1, sample_label2)-1;
+    else
+	sample_label1 = [];sample_label2 = [];
+	s = 2*(pdist([sample_point1;sample_points2],'euclidean') <= thr_dist) - 1;
+    end
 
     k_sample_data = [sample_point1;sample_point2];
 
@@ -159,7 +168,7 @@ for iter = 1:number_iterations
     Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, k_sample_data, ...
-            [sample_label1; sample_label2], reservoir_size, W_lastupdate);
+            [sample_label1; sample_label2], reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
     end
