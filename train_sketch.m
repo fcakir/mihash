@@ -176,7 +176,7 @@ for batchInd = 1 : batchCnt
 
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*batchInd, ...
+    [update_table, trigger_val, h_ind] = trigger_update(batchInd, ...
         opts, W_lastupdate, W, reservoir, Hres_new);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
