@@ -103,7 +103,7 @@ for iter = 1:number_iterations
         s = 2*isequal(sample_label1, sample_label2)-1;
     else
 	sample_label1 = [];sample_label2 = [];
-	s = 2*(pdist([sample_point1;sample_points2],'euclidean') < thr_dist) - 1;
+	s = 2*(pdist([sample_point1;sample_points2],'euclidean') <= thr_dist) - 1;
     end
 
     k_sample_data = [sample_point1;sample_point2];

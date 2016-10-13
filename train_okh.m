@@ -86,7 +86,7 @@ for iter = 1:number_iterations
         s = 2*(idx_i==idx_j)-1;
     else
 	idx_i = [];idx_j = [];
-	s = 2*(pdist([Xtrain(2*iter-1,:);Xtrain(2*iter,:)],'euclidean') < thr_dist) - 1;
+	s = 2*(pdist([Xtrain(2*iter-1,:);Xtrain(2*iter,:)],'euclidean') <= thr_dist) - 1;
     end
 
     

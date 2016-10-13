@@ -54,7 +54,7 @@ if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
 elseif (any(run_trial) || ~all(res_exist))
     myLogInfo('Loading data for %s...', Dtype_this);
     if strcmp(opts.methodID, 'sketch')
-        eval(['[Xtrain, Ytrain, Xtest, Ytest] = load_' opts.ftype '(opts, false);']);
+        eval(['[Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_' opts.ftype '(opts, false);']);
     else
         eval(['[Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_' opts.ftype '(opts);']);
     end
