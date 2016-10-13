@@ -7,6 +7,7 @@ function [reservoir, update_ind] = update_reservoir(reservoir, ...
 % outputs:
 %   update_ind: updated index ([] for no update)
 %
+if nargin < 6, unsupervised = false; end
 assert(isstruct(reservoir));
 assert((~unsupervised && ~isempty(slabels)) || (unsupervised && isempty(slabels)));
 n = size(spoints, 1);
