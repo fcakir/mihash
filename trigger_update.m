@@ -1,5 +1,5 @@
 function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
-    W_last, W, reservoir, Hres_new, unsupervised, thr_dist, bf_thr)
+    W_last, W, reservoir, Hres_new, varargin)
 
 % Do we need to update the hash table?
 % Note: The hash mapping has been updated first, so is the reservoir hash table
@@ -32,9 +32,10 @@ end
 % ----------------------------------------------
 % below: using reservoir
 % the reservoir has been updated before this function
-if nargin < 11 || isempty(bf_thr)
-    bf_thr = opts.flipThresh; 
-end
+%
+%if exist('bf_thr', 'var')==0 || isempty(bf_thr)
+%    bf_thr = opts.flipThresh; 
+%end
 
 switch lower(opts.trigger)
     case 'bf'
@@ -46,6 +47,18 @@ switch lower(opts.trigger)
         bitflips = sum(bitdiff(:)) / reservoir.size;
 
         % signal update of actual hash table, when:
+        % 1) we're at an updateInterval, AND
+        % 2) #bitflips > flipThresh
+        if opts.updateInterval > 0 && ...
+                mod(iter*opts.batchSize, opts.updateInterval) == 0
+            update_table = (bitflips > opts.flipThresh);
+            myLogInfo('BF=%g vs. %g, update=%d', ...
+                bitflips, opts.flipThresh, update_table);
+        end
+
+        % ----------------------------------------
+        % [DEPRECATED: opts.adaptive]
+        % signal update of actual hash table, when:
         %
         % 1) using updateInterval ONLY (for rs_baseline)
         % 2) using updateInterval + adaptive
@@ -54,31 +67,29 @@ switch lower(opts.trigger)
         %
         % NOTE: get_opts() ensures only one scenario will happen
         %
-        if opts.updateInterval > 0 && ...
-                mod(iter*opts.batchSize, opts.updateInterval) == 0
-            % cases 1, 2
-            % check whether to do an update to the hash table
-            %
-            %pret_val = ret_val;
-            %ret_val = trigger_update_fatih(W, Xsample, Ysample, Hres, Hnew, reservoir_size);
-            %
-            if (opts.adaptive <= 0) || (opts.adaptive > 0 && bitflips > bf_thr)
-                update_table = true;
-            end
-        elseif (opts.updateInterval <= 0) && (opts.adaptive > 0 && bitflips > bf_thr)
-            % case 3
-            update_table = true;
-        elseif (opts.flipThresh > 0) && (bitflips > bf_thr)
-            % case 4
-            update_table = true;
-        end
+        %if opts.updateInterval > 0 && ...
+        %        mod(iter*opts.batchSize, opts.updateInterval) == 0
+        %    % cases 1, 2
+        %    % check whether to do an update to the hash table
+        %    %
+        %    if (opts.adaptive <= 0) || (opts.adaptive > 0 && bitflips > opts.flipThresh)
+        %        update_table = true;
+        %    end
+        %elseif (opts.updateInterval <= 0) && (opts.adaptive > 0 && bitflips > opts.flipThresh)
+        %    % case 3
+        %    update_table = true;
+        %elseif (opts.flipThresh > 0) && (bitflips > opts.flipThresh)
+        %    % case 4
+        %    update_table = true;
+        %end
         ret_val = bitflips;
+
     case 'mi'
         if opts.updateInterval > 0 && ...
                 mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                   reservoir.size, opts.nbits, unsupervised, thr_dist);
+                   reservoir.size, opts.nbits, varargin{:});
             update_table = mi_impr > opts.miThresh;
             myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
@@ -103,6 +114,11 @@ function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
     Hres, Hnew, reservoir_size, nbits, unsupervised, thr_dist)
 
 % assertions
+if exist('unsupervised', 'var') == 0 
+    unsupervised = false; 
+elseif unsupervised
+    assert(exist('thr_dist', 'var'));
+end
 assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 assert((~unsupervised && ~isempty(Y)) || (unsupervised && isempty(Y)));

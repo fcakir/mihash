@@ -29,10 +29,10 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     assert(isfield(opts, 'mAP') & opts.mAP > 0);
     assert(opts.mAP < trainsize);
     N   = opts.mAP;
-    sim = single(2*Htrain-1)'*single(2*Htest-1);
+    %sim = single(2*Htrain-1)'*single(2*Htest-1);
     AP  = zeros(1, testsize);
 
-    % NOTE: parfor seems to run out of memory
+    % NOTE: parfor seems to run out of memory on Places
     for j = 1:testsize
         sim_j = single(2*Htrain-1)'*single(2*Htest(:, j)-1);
         %sim_j = sim(:, j);

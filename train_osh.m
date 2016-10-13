@@ -1,5 +1,5 @@
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    train_osh(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+    train_osh(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [W, H, ECOCs] = init_osh(Xtrain, opts);
@@ -23,12 +23,12 @@ if reservoir_size > 0
     reservoir.H    = [];  % mapped binary codes for the reservoir
     
     % for adaptive threshold
-    if opts.adaptive > 0
-        maxLabelSize = 205; % Sun
-        persistent adaptive_thr;
-        adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
-            1:maxLabelSize);
-    end
+    %if opts.adaptive > 0
+    %    maxLabelSize = 205; % Sun
+    %    persistent adaptive_thr;
+    %    adaptive_thr = arrayfun(@bit_fp_thr, opts.nbits*ones(1,maxLabelSize), ...
+    %        1:maxLabelSize);
+    %end
 end
 
 % order training examples
@@ -145,21 +145,23 @@ for iter = 1:opts.noTrainingPoints
     end
 
     % ---- determine whether to update or not ----
-    if opts.adaptive > 0
-        bf_thr = adaptive_thr(max(1, length(seenLabels)));
-        [update_table, trigger_val] = trigger_update(iter, ...
-            opts, W_lastupdate, W, reservoir, Hres_new, bf_thr);
-        h_ind = 1:opts.nbits;
-        inv_h_ind = [];
-    else
-        [update_table, trigger_val, h_ind] = trigger_update(iter, ...
-            opts, W_lastupdate, W, reservoir, Hres_new);
-        inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
-        if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
-            assert(opts.fracHash < 1);
-            Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
-        end
+    %
+    % [DEPRECATED: adaptive]
+    %if opts.adaptive > 0
+    %    bf_thr = adaptive_thr(max(1, length(seenLabels)));
+    %    [update_table, trigger_val] = trigger_update(iter, ...
+    %        opts, W_lastupdate, W, reservoir, Hres_new);
+    %    h_ind = 1:opts.nbits;
+    %    inv_h_ind = [];
+    %else
+    [update_table, trigger_val, h_ind] = trigger_update(iter, ...
+        opts, W_lastupdate, W, reservoir, Hres_new);
+    inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
+    if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
+        assert(opts.fracHash < 1);
+        Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
     end
+    %end
     
     % ---- hash table update, etc ----
     if update_table

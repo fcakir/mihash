@@ -167,7 +167,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     opts.prec_n = sscanf(opts.metric(7:end), '%d');
 elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eg. mAP_1000 is mAP @ top 1000 retrievals
-    opts.mAP = sscanf(opts.metric(5:end), '%d')
+    opts.mAP = sscanf(opts.metric(5:end), '%d');
 else 
     % default: mAP
     assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
