@@ -1,5 +1,5 @@
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    train_sketch(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+    train_sketch(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 % are we handling a mult-labeled dataset?
@@ -12,7 +12,11 @@ reservoir_size = opts.reservoirSize;
 if reservoir_size > 0
     reservoir.size = 0;
     reservoir.X    = [];
-    reservoir.Y    = [];
+    if opts.unsupervised
+	reservoir.Y = [];
+    else
+        reservoir.Y  = zeros(0, size(Ytrain, 2));
+    end
     reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
 end
@@ -167,9 +171,9 @@ for batchInd = 1 : batchCnt
     Hres_new = [];
     if reservoir_size > 0
         Xs = bsxfun(@minus, instFeatInBatch, instFeatAvePre);
-        Ys = Ytrain(ind, :);
+	if ~isempty(Ytrain), Ys = Ytrain(ind, :); else, Ys = []; end;
         [reservoir, update_ind] = update_reservoir(reservoir, Xs, Ys, ...
-            reservoir_size, W_lastupdate);
+            reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
     end
@@ -177,7 +181,7 @@ for batchInd = 1 : batchCnt
 
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*batchInd, ...
-        opts, W_lastupdate, W, reservoir, Hres_new);
+        opts, W_lastupdate, W, reservoir, Hres_new, opts.unsupervised, thr_dist);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);

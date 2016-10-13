@@ -1,5 +1,5 @@
 function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
-    train_okh(Xtrain, Ytrain, prefix, test_iters, trialNo, opts)
+    train_okh(Xtrain, Ytrain, thr_dist,  prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 % are we handling a mult-labeled dataset?
@@ -12,9 +12,13 @@ reservoir_size = opts.reservoirSize;
 if reservoir_size > 0
     reservoir.size = 0;
     reservoir.X    = [];
-    reservoir.Y    = [];
     reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
+    if opts.unsupervised
+	reservoir.Y = [];
+    else
+        reservoir.Y  = zeros(0, size(Ytrain, 2));
+    end
 end
 
 % order training examples
@@ -75,9 +79,17 @@ h_ind_array  = [];
 %rX = KX(:,idxTrain); %set being search in testing 
 %tX = KX(:,idxTest); %query set in testing
 for iter = 1:number_iterations
-    idx_i = Ytrain(2*iter-1, :); %idxTrain(dataIdx(2*i-1));
-    idx_j = Ytrain(2*iter, :);   %idxTrain(dataIdx(2*i));
-    s = 2*(idx_i==idx_j)-1;
+    
+    if ~opts.unsupervised
+        idx_i = Ytrain(2*iter-1, :); %idxTrain(dataIdx(2*i-1));
+        idx_j = Ytrain(2*iter, :);   %idxTrain(dataIdx(2*i));
+        s = 2*(idx_i==idx_j)-1;
+    else
+	idx_i = [];idx_j = [];
+	s = 2*(pdist([Xtrain(2*iter-1,:);Xtrain(2*iter,:)],'euclidean') < thr_dist) - 1;
+    end
+
+    
 
     xi = KX(:, 2*iter-1); %KX(:,idx_i);
     xj = KX(:, 2*iter);   %X(:,idx_j);
@@ -92,14 +104,14 @@ for iter = 1:number_iterations
     Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, [xi,xj]', ...
-            [idx_i; idx_j], reservoir_size, W_lastupdate);
+            [idx_i; idx_j], reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
     end
 
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
-        opts, W_lastupdate, W, reservoir, Hres_new);
+        opts, W_lastupdate, W, reservoir, Hres_new, opts.unsupervised, thr_dist);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);
@@ -188,5 +200,6 @@ clear Xval Kval
 % kernel mapping the whole set
 KX = exp(-0.5*sqdist(Xtrain', Xanchor')/sigma^2)';
 KX = [KX; ones(1,size(KX,2))];
+
 end
 

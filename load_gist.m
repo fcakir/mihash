@@ -1,7 +1,7 @@
-function [Xtrain, Ytrain, Xtest, Ytest] = load_gist(opts, normalizeX)
+function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_gist(opts, normalizeX)
 if nargin < 2, normalizeX = 1; end
 if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
-
+thr_dist = -Inf;
 if opts.windows
     basedir = '\\ivcfs1\codebooks\hashing_project\data';
 else
@@ -50,11 +50,38 @@ elseif strcmp(opts.dataset, 'nus')
     end
     [Xtrain, Ytrain, Xtest, Ytest] = ...
         split_train_test_nus(gist, tags, tstperclass);
-
+elseif strcmp(opts.dataset, 'labelme')
+    load([basedir '/labelme/LabelMe_gist.mat'],'gist');
+    no_tst = 1000;
+    if normalizeX 
+        % normalize features
+        gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+        gist = normalize(double(gist));  % then scale to unit length
+    end
+    [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
+        split_train_test_unsupervised(gist, gistlabels, no_tst);
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest
 myLogInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
+end
+
+%---------------------------------------------------------
+function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
+    split_train_test_unsupervised(gist, gistlabels, no_tst)
+
+% normalize features
+gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
+gist = normalize(gist);  % then scale to unit length
+
+ind    = randperm(size(gist, 1));
+Xtest  = gist(ind(1:no_tst),:);
+Xtrain = gist(ind(no_tst+1:end),:);
+
+assert(size(Xtrain, 1) >= 2000 );
+% Compute threshold value from 2K and 5th percentile (hard wired)
+thr_dist = prctile(pdist(Xtrain(1:2000,:),'euclidean'), 5); 
+Ytrain = []; Ytest = [];
 end
 
 % --------------------------------------------------------
