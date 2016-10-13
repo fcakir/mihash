@@ -59,7 +59,7 @@ elseif strcmp(opts.dataset, 'labelme')
         gist = normalize(double(gist));  % then scale to unit length
     end
     [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
-        split_train_test_unsupervised(gist, gistlabels, no_tst);
+        split_train_test_unsupervised(gist, no_tst);
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest
@@ -68,7 +68,7 @@ end
 
 %---------------------------------------------------------
 function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
-    split_train_test_unsupervised(gist, gistlabels, no_tst)
+    split_train_test_unsupervised(gist, no_tst)
 
 % normalize features
 gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
