@@ -147,12 +147,12 @@ for iter = 1:opts.noTrainingPoints
     % ---- determine whether to update or not ----
     if opts.adaptive > 0
         bf_thr = adaptive_thr(max(1, length(seenLabels)));
-        [update_table, trigger_val] = trigger_update(opts.batchSize*iter, ...
+        [update_table, trigger_val] = trigger_update(iter, ...
             opts, W_lastupdate, W, reservoir, Hres_new, bf_thr);
         h_ind = 1:opts.nbits;
         inv_h_ind = [];
     else
-        [update_table, trigger_val, h_ind] = trigger_update(opts.batchSize*iter, ...
+        [update_table, trigger_val, h_ind] = trigger_update(iter, ...
             opts, W_lastupdate, W, reservoir, Hres_new);
         inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
         if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update

@@ -10,7 +10,7 @@ h_ind = 1:opts.nbits;
 
 % ----------------------------------------------
 % update on first & last iteration no matter what
-if iter == 1 || iter == opts.noTrainingPoints 
+if (iter == 1) || (iter*opts.batchSize >= opts.noTrainingPoints)
     update_table = true;  
     return;
 end
@@ -25,7 +25,7 @@ end
 % ----------------------------------------------
 % no reservoir -- use updateInterval
 if opts.reservoirSize <= 0
-    update_table = ~mod(iter, opts.updateInterval);
+    update_table = ~mod(iter*opts.batchSize, opts.updateInterval);
     return;
 end
 
@@ -54,7 +54,8 @@ switch lower(opts.trigger)
         %
         % NOTE: get_opts() ensures only one scenario will happen
         %
-        if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
+        if opts.updateInterval > 0 && ...
+                mod(iter*opts.batchSize, opts.updateInterval) == 0
             % cases 1, 2
             % check whether to do an update to the hash table
             %
@@ -73,7 +74,8 @@ switch lower(opts.trigger)
         end
         ret_val = bitflips;
     case 'mi'
-        if opts.updateInterval > 0 && mod(iter, opts.updateInterval) == 0
+        if opts.updateInterval > 0 && ...
+                mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
                 reservoir.size, opts.nbits);
