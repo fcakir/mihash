@@ -14,18 +14,13 @@ testsize  = length(Ytest);
 
 if strcmp(opts.metric, 'mAP')
     sim = single(2*Htrain-1)'*single(2*Htest-1);
-    %sim = Htrain'*Htest;
     AP  = zeros(1, testsize);
     for j = 1:testsize
-        %if use_cateTrainTest
-        %	labels = 2*cateTrainTest(:, j)-1;
-        %else
         labels = 2*double(Ytrain==Ytest(j))-1;
-        %end
         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
         AP(j) = info.ap;
     end
-    AP = AP(~isnan(AP));  % for NUSWIDE
+    AP = AP(~isnan(AP));
     res = mean(AP);
     myLogInfo(['mAP = ' num2str(res)]);
 
@@ -36,20 +31,21 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     N   = opts.mAP;
     sim = single(2*Htrain-1)'*single(2*Htest-1);
     AP  = zeros(1, testsize);
+
+    % NOTE: parfor seems to run out of memory
     for j = 1:testsize
-        %[val, idx] = sort(sim, 'descend');
+        sim_j = single(2*Htrain-1)'*single(2*Htest(:, j)-1);
+        %sim_j = sim(:, j);
         idx = [];
         for th = opts.nbits:-1:-opts.nbits
-            idx = [idx; find(sim(:, j) == th)];
-            if length(idx) >= N
-                break;
-            end
+            idx = [idx; find(sim_j == th)];
+            if length(idx) >= N, break; end
         end
         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-        [~, ~, info] = vl_pr(labels, double(sim(idx(1:N), j)));
+        [~, ~, info] = vl_pr(labels, double(sim_j(idx(1:N))));
         AP(j) = info.ap;
     end
-    AP = AP(~isnan(AP));  % for NUSWIDE
+    AP = AP(~isnan(AP));
     res = mean(AP);
     myLogInfo('mAP@(N=%d) = %g', N, res);
 
@@ -58,22 +54,14 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     K = opts.prec_k;
     prec_k = zeros(1, testsize);
     sim = single(2*Htrain-1)'*single(2*Htest-1);
-    %sim = Htrain'*Htest;
 
     parfor i = 1:testsize
-        %if use_cateTrainTest 
-        %	labels = cateTrainTest(:, i);
-        %else
         labels = (Ytrain == Ytest(i));
-        %end
         sim_i = sim(:, i);
-        %th = binsearch(sim_i, K);
-        %[~, I] = sort(sim_i(sim_i>th), 'descend');
         [~, I] = sort(sim_i, 'descend');
         I = I(1:K);
         prec_k(i) = mean(labels(I));
     end
-    %prec_k = prec_k(~isnan(prec_k));
     res = mean(prec_k);
     myLogInfo('Prec@(neighs=%d) = %g', K, res);
 
@@ -83,7 +71,6 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     R = opts.nbits;
     prec_n = zeros(1, testsize);
     sim = single(2*Htrain-1)'*single(2*Htest-1);
-    %sim = Htrain'*Htest;
 
     % NOTE 'for' has better CPU usage
     for j=1:testsize
@@ -97,7 +84,6 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
             prec_n(j) = mean(labels(ind));
         end
     end
-    %prec_n = prec_n(~isnan(prec_n));
     res = mean(prec_n);
     myLogInfo('Prec@(radius=%d) = %g', N, res);
 

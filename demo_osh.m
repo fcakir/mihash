@@ -8,7 +8,7 @@ function resfn = demo_osh(ftype, dataset, nbits, varargin)
 % get OSH-specific fields first
 ip = inputParser;
 ip.addParamValue('stepsize', 0.1, @isscalar);
-ip.addParamValue('SGDBoost', 0, @isscalar);
+ip.addParamValue('SGDBoost', 1, @isscalar);
 ip.addParameter('methodID', '');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
