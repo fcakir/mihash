@@ -1,5 +1,5 @@
 function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
-    W_last, W, reservoir, Hres_new, bf_thr)
+    W_last, W, reservoir, Hres_new, unsupervised, thr_dist, bf_thr)
 
 % Do we need to update the hash table?
 % Note: The hash mapping has been updated first, so is the reservoir hash table
@@ -32,7 +32,7 @@ end
 % ----------------------------------------------
 % below: using reservoir
 % the reservoir has been updated before this function
-if nargin < 9 || isempty(bf_thr)
+if nargin < 11 || isempty(bf_thr)
     bf_thr = opts.flipThresh; 
 end
 
@@ -78,7 +78,7 @@ switch lower(opts.trigger)
                 mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                reservoir.size, opts.nbits);
+                   reservoir.size, opts.nbits, unsupervised, thr_dist);
             update_table = mi_impr > opts.miThresh;
             myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
@@ -100,18 +100,22 @@ end
 
 % -------------------------------------------------------------------------
 function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
-    Hres, Hnew, reservoir_size, nbits)
+    Hres, Hnew, reservoir_size, nbits, unsupervised, thr_dist)
 
 % assertions
 assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+assert((~unsupervised && ~isempty(Y)) || (unsupervised && isempty(Y)));
 
 % take actual reservoir size into account
 %reservoir_size = min(iter, reservoir_size);
 %X = X(1:reservoir_size,:); Y = Y(1:reservoir_size);    
 %Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
-
-cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+if ~unsupervised 
+    cateTrainTrain = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+else
+    cateTrainTrain = squareform(pdist(X, 'euclidean')) <= thr_dist;
+end
 assert(isequal((W_last'*X' > 0)', Hres));
 
 % distance

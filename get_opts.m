@@ -91,11 +91,20 @@ if ~strcmp(opts.mapping,'smooth')
     myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
         '\n setting ntests to 2'])
     opts.ntests = 2;
+    assert(isempty(opts.methodID)); % OSH only
 end
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
 assert(opts.fracHash > 0 && opts.fracHash <= 1);
+
+if strcmp(dataset, 'labelme') 
+    assert(strcmp(opts.ftype, 'gist'));
+    assert(~isempty(opts.methodID)); % if not empty than its not OSH
+    opts.unsupervised = 1;
+else
+    opts.unsupervised = 0;
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

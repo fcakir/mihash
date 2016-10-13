@@ -1,6 +1,6 @@
 function train(trainFunc, run_trial, opts)
 
-global Xtrain Ytrain
+global Xtrain Ytrain thr_dist
 train_time  = zeros(1, opts.ntrials);
 update_time = zeros(1, opts.ntrials);
 ht_updates  = zeros(1, opts.ntrials);
@@ -33,7 +33,7 @@ parfor t = 1:opts.ntrials
     
     % train hash functions
     [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
-        = trainFunc(Xtrain, Ytrain, prefix, test_iters, t, opts);
+        = trainFunc(Xtrain, Ytrain, thr_dist, prefix, test_iters, t, opts);
 end
 
 myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
