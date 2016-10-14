@@ -3,6 +3,7 @@ function train(trainFunc, run_trial, opts)
 global Xtrain Ytrain thr_dist
 train_time  = zeros(1, opts.ntrials);
 update_time = zeros(1, opts.ntrials);
+reservoir_time = zeros(1, opts.ntrials);
 ht_updates  = zeros(1, opts.ntrials);
 bit_flips   = zeros(1, opts.ntrials);
 bit_recomp  = zeros(1, opts.ntrials);
@@ -32,15 +33,17 @@ parfor t = 1:opts.ntrials
     prefix = sprintf('%s/trial%d', opts.expdir, t);
     
     % train hash functions
-    [train_time(t), update_time(t), ht_updates(t), bit_recomp(t), bit_flips(t)] ...
-        = trainFunc(Xtrain, Ytrain, thr_dist, prefix, test_iters, t, opts);
+    [train_time(t), update_time(t), resservoir_time(t), ...
+        ht_updates(t), bit_recomp(t), bit_flips(t)] = ...
+        trainFunc(Xtrain, Ytrain, thr_dist, prefix, test_iters, t, opts);
 end
 
-myLogInfo('Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-myLogInfo('HTupdate time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
+myLogInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
+myLogInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
+myLogInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
 if strcmp(opts.mapping, 'smooth')
     myLogInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
     myLogInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    myLogInfo('    Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+    myLogInfo('             Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end
 end

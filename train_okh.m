@@ -1,4 +1,4 @@
-function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
+function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
     train_okh(Xtrain, Ytrain, thr_dist,  prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
@@ -42,6 +42,7 @@ para.alpha  = opts.alpha; %0.2;
 para.anchor = Xanchor;
 
 % for recording time
+res_time    = 0;
 update_time = 0;
 train_time  = toc;  
 myLogInfo('Preprocessing took %f sec', train_time);
@@ -101,6 +102,7 @@ for iter = 1:number_iterations
 
 
     % ---- reservoir update & compute new reservoir hash table ----
+    t_ = tic;
     Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, [xi,xj]', ...
@@ -117,6 +119,7 @@ for iter = 1:number_iterations
         assert(opts.fracHash < 1);
         Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
     end
+    res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
@@ -152,7 +155,7 @@ for iter = 1:number_iterations
     if ismember(iter, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
-            'train_time', 'update_time', 'update_iters');
+            'train_time', 'update_time', 'res_time', 'update_iters');
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
@@ -165,7 +168,7 @@ end
 % save final model, etc
 F = [prefix '.mat'];
 save(F, 'Xanchor', 'sigma', 'W', 'H', 'bitflips', 'bits_computed_all', ...
-    'train_time', 'update_time', 'test_iters', 'update_iters', ...
+    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
     'h_ind_array');
 % fix permission
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end

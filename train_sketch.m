@@ -1,4 +1,4 @@
-function [train_time, update_time, ht_updates, bits_computed_all, bitflips] = ...
+function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
     train_sketch(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
@@ -55,6 +55,7 @@ H = [];  % initial hash table
 % for recording time
 train_time = 0;
 update_time = 0;
+res_time = 0;
 
 % bit flips & bits computed
 bitflips          = 0;
@@ -168,6 +169,7 @@ for batchInd = 1 : batchCnt
 
 
     % ---- reservoir update & compute new reservoir hash table ----
+    t_ = tic;
     Hres_new = [];
     if reservoir_size > 0
         Xs = bsxfun(@minus, instFeatInBatch, instFeatAvePre);
@@ -187,6 +189,7 @@ for batchInd = 1 : batchCnt
         assert(opts.fracHash < 1);
         Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
     end
+    res_time = res_time + toc(t_);
 
 
     % ---- hash table update, etc ----
@@ -227,7 +230,7 @@ for batchInd = 1 : batchCnt
     if ismember(batchInd, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, batchInd);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
-            'train_time', 'update_time', 'update_iters');
+            'train_time', 'update_time', 'res_time', 'update_iters');
         if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
         myLogInfo('[T%02d] batch%d/%d Func %.2fs, Table %.2fs #BF=%g', ...
             trialNo, batchInd, batchCnt, train_time, update_time, bitflips);
@@ -238,7 +241,7 @@ end
 % save final model, etc
 F = [prefix '.mat'];
 save(F, 'instFeatAvePre', 'W', 'H', 'bitflips', 'bits_computed_all', ...
-    'train_time', 'update_time', 'test_iters', 'update_iters', ...
+    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
     'h_ind_array');
 % fix permission
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
