@@ -28,14 +28,13 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eval mAP on top N retrieved results
     assert(isfield(opts, 'mAP') & opts.mAP > 0);
     assert(opts.mAP < trainsize);
-    N   = opts.mAP;
-    %sim = single(2*Htrain-1)'*single(2*Htest-1);
-    AP  = zeros(1, testsize);
+    N = opts.mAP;
+    AP = zeros(1, testsize);
+    sim = (2*single(Htrain)-1)'*(2*single(Htest)-1);
 
     % NOTE: parfor seems to run out of memory on Places
     for j = 1:testsize
-        sim_j = single(2*Htrain-1)'*single(2*Htest(:, j)-1);
-        %sim_j = sim(:, j);
+        sim_j = sim(:, j);
         idx = [];
         for th = opts.nbits:-1:-opts.nbits
             idx = [idx; find(sim_j == th)];
