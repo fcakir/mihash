@@ -80,7 +80,5 @@ myLogInfo('%s: Testing is done.', opts.identifier);
 
 
 % 5. close parpool, if any
-if ~isempty(gcp('nocreate'))
-    delete(gcp);
-end
+set_parpool(0);
 end

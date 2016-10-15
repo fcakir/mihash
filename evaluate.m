@@ -13,7 +13,7 @@ trainsize = length(Ytrain);
 testsize  = length(Ytest);
 
 if strcmp(opts.metric, 'mAP')
-    sim = single(2*Htrain-1)'*single(2*Htest-1);
+    sim = compare_hash_tables(Htrain, Htest);
     AP  = zeros(1, testsize);
     for j = 1:testsize
         labels = 2*double(Ytrain==Ytest(j))-1;
@@ -30,18 +30,19 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     assert(opts.mAP < trainsize);
     N = opts.mAP;
     AP = zeros(1, testsize);
-    sim = (2*single(Htrain)-1)'*(2*single(Htest)-1);
+    sim = compare_hash_tables(Htrain, Htest);
 
-    % NOTE: parfor seems to run out of memory on Places
-    for j = 1:testsize
-        sim_j = sim(:, j);
+    ncpu = feature('numcores');
+    set_parpool(round(ncpu/2));
+    parfor j = 1:testsize
+        sim_j = double(sim(:, j));
         idx = [];
         for th = opts.nbits:-1:-opts.nbits
             idx = [idx; find(sim_j == th)];
             if length(idx) >= N, break; end
         end
         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-        [~, ~, info] = vl_pr(labels, double(sim_j(idx(1:N))));
+        [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
         AP(j) = info.ap;
     end
     AP = AP(~isnan(AP));
@@ -52,8 +53,10 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     % intended for PLACES, large scale
     K = opts.prec_k;
     prec_k = zeros(1, testsize);
-    sim = single(2*Htrain-1)'*single(2*Htest-1);
+    sim = compare_hash_tables(Htrain, Htest);
 
+    ncpu = feature('numcores');
+    set_parpool(round(ncpu/2));
     parfor i = 1:testsize
         labels = (Ytrain == Ytest(i));
         sim_i = sim(:, i);
@@ -69,7 +72,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     N = opts.prec_n;
     R = opts.nbits;
     prec_n = zeros(1, testsize);
-    sim = single(2*Htrain-1)'*single(2*Htest-1);
+    sim = compare_hash_tables(Htrain, Htest);
 
     % NOTE 'for' has better CPU usage
     for j=1:testsize
@@ -90,6 +93,27 @@ else
     error(['Evaluation metric ' opts.metric ' not implemented']);
 end
 end
+
+% ----------------------------------------------------------
+function sim = compare_hash_tables(Htrain, Htest)
+trainsize = size(Htrain, 2);
+testsize  = size(Htest, 2);
+if trainsize < 100e3
+    sim = (2*single(Htrain)-1)'*(2*single(Htest)-1);
+    sim = int8(sim);
+else
+    Ltest = 2*single(Htest)-1;
+    sim = zeros(trainsize, testsize, 'int8');
+    chunkSize = ceil(trainsize/10);
+    for i = 1:ceil(trainsize/chunkSize)
+        I = (i-1)*chunkSize+1 : min(i*chunkSize, trainsize);
+        tmp = (2*single(Htrain(:,I))-1)' * Ltest;
+        sim(I, :) = int8(tmp);
+    end
+    clear Ltest tmp
+end
+end
+
 
 % ----------------------------------------------------------
 function T = binsearch(x, k)
