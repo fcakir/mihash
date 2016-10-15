@@ -37,66 +37,85 @@ for t = 1:opts.ntrials
         clear t_train_iter t_train_time
 
         Tprefix = sprintf('%s/trial%d', opts.expdir, t);
-        trial_model = load(sprintf('%s.mat', Tprefix));
+        Tmodel = load(sprintf('%s.mat', Tprefix));
 
         % handle transformations to X
         if strcmp(opts.methodID, 'okh')
             % do kernel mapping for test data
-            testX_t = exp(-0.5*sqdist(testX', trial_model.Xanchor')/trial_model.sigma^2)';
+            testX_t = exp(-0.5*sqdist(testX', Tmodel.Xanchor')/Tmodel.sigma^2)';
             testX_t = [testX_t; ones(1,size(testX_t,2))]';
         elseif strcmp(opts.methodID, 'sketch')
             % subtract mean
-            testX_t = bsxfun(@minus, testX, trial_model.instFeatAvePre);
+            testX_t = bsxfun(@minus, testX, Tmodel.instFeatAvePre);
         else
             % OSH, AdaptHash: nothing
             testX_t = testX;
         end
 
-        for i = 1:length(trial_model.test_iters)  % may NOT be 1:opts.ntests!
-            iter = trial_model.test_iters(i);
-            d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-            Htrain = d.H;
-
-            % TODO bring this back when considering tstScenario
-            %{
-            % AdaptHash uses test_osh, currently it doesn't work with the 
-            % 'label arriving strategy' scenario. 
-            if strcmp(caller,'demo_adapthash') 
-                ind = 1:size(testX_t, 1);
+        for i = 1:length(Tmodel.test_iters)
+            % determine whether to actually run test or not
+            % if there's no HT update since last test, just copy results
+            % THIS SAVES TIME!
+            if i == 1 || i == length(Tmodel.test_iters)
+                runtest = true;
             else
-                % We're removing test items in which their labels have
-                % not been observed. However this can cause huge
-                % flunctuations in performance at the beginning. For
-                % instance at very first iteration we've seen only a
-                % label, thus we remove all items that do not belong to that
-                % label from the test. Depending on the label, the mAP
-                % can be very high or low. This should depend on the
-                % testing scenario, imo, for default and 'smooth'
-                % mapping simply apply the hash mapping to all test and
-                % train data -and report the performance.
-                if opts.tstScenario == 2
-                    ind = ismember(testY, unique(d.seenLabels));
-                else
-                    ind = 1:size(testX_t, 1);
-                end
+                st = Tmodel.test_iters(i-1);
+                ed = Tmodel.test_iters(i);
+                runtest = any(Tmodel.update_iters>st & Tmodel.update_iters<=ed);
             end
-            %}
 
-            % test hash table
-            % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
-            %       to compute Htest, to make sure it's computed using the same
-            %       hash mapping as Htrain.
-            Htest = (testX_t * d.W_lastupdate > 0)';
-
-            % evaluate
+            iter = Tmodel.test_iters(i);
+            d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
             fprintf('Trial %d, Ex %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints);
-            t_res(i) = evaluate(Htrain, Htest, trainY, testY, opts, cateTrainTest);
 
-            % TODO bring this back when considering tstScenario
-            %t_res(i) = evaluate(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
+            if runtest
+                Htrain = d.H;
 
-            t_bits_computed_all(i) = d.bits_computed_all;
-            t_bitflips(i) = d.bitflips;
+                % TODO bring this back when considering tstScenario
+                %{
+                % AdaptHash uses test_osh, currently it doesn't work with the 
+                % 'label arriving strategy' scenario. 
+                if strcmp(caller,'demo_adapthash') 
+                    ind = 1:size(testX_t, 1);
+                else
+                    % We're removing test items in which their labels have
+                    % not been observed. However this can cause huge
+                    % flunctuations in performance at the beginning. For
+                    % instance at very first iteration we've seen only a
+                    % label, thus we remove all items that do not belong to that
+                    % label from the test. Depending on the label, the mAP
+                    % can be very high or low. This should depend on the
+                    % testing scenario, imo, for default and 'smooth'
+                    % mapping simply apply the hash mapping to all test and
+                    % train data -and report the performance.
+                    if opts.tstScenario == 2
+                        ind = ismember(testY, unique(d.seenLabels));
+                    else
+                        ind = 1:size(testX_t, 1);
+                    end
+                end
+                %}
+
+                % test hash table
+                % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
+                %       to compute Htest, to make sure it's computed using the same
+                %       hash mapping as Htrain.
+                Htest = (testX_t * d.W_lastupdate > 0)';
+
+                % TODO bring this back when considering tstScenario
+                %t_res(i) = evaluate(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
+
+                % evaluate
+                t_res(i) = evaluate(Htrain, Htest, trainY, testY, opts, cateTrainTest);
+
+                t_bits_computed_all(i) = d.bits_computed_all;
+                t_bitflips(i) = d.bitflips;
+            else
+                t_res(i) = t_res(i-1);
+                t_bits_computed_all(i) = t_bits_computed_all(i-1);
+                t_bitflips(i) = t_bitflips(i-1);
+                fprintf(' %g\n', t_res(i));
+            end
             t_train_time(i) = d.train_time;
             t_train_iter(i) = iter;
         end
