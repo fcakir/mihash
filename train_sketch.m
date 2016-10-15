@@ -194,15 +194,11 @@ for batchInd = 1 : batchCnt
 
     % ---- hash table update, etc ----
     if update_table
-	h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
-
-        % update W
+        h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
         W_lastupdate(:, h_ind) = W(:, h_ind);
-        if opts.accuHash > 0 && ~isempty(inv_h_ind) % gradient accumulation
-            assert(sum(sum(abs((W_lastupdate - stepW) - W))) < 1e-10);
-            stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
+        if opts.accuHash <= 0
+            W = W_lastupdate;
         end
-        W = W_lastupdate;
         update_iters = [update_iters, batchInd];
 
         % update reservoir hash table
@@ -216,8 +212,8 @@ for batchInd = 1 : batchCnt
         % actual hash table update (record time)
         t_ = tic;
         X_cent = bsxfun(@minus, Xtrain, instFeatAvePre);  % centering
-        [H, bf_all, bits_computed] = update_hash_table(H, W, X_cent, Ytrain, ...
-            h_ind, update_iters, opts);
+        [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
+            X_cent, Ytrain, h_ind, update_iters, opts);
         bits_computed_all = bits_computed_all + bits_computed;
         bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);

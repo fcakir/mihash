@@ -129,11 +129,11 @@ for iter = 1:opts.noTrainingPoints
         W = reg_smooth(W, [spoint; reservoir.X(ind,:)], opts.reg_smooth);
     end
     
-    % SGD-4. apply accumulated gradients (if applicable)
-    if reservoir_size > 0 && opts.accuHash > 0
-        W = W - stepW;
-        stepW = zeros(size(W));
-    end
+    % % SGD-4. apply accumulated gradients (if applicable)
+    % if reservoir_size > 0 && opts.accuHash > 0
+    %     W = W - stepW;
+    %     stepW = zeros(size(W));
+    % end
     train_time = train_time + toc(t_);
     
     % ---- reservoir update & compute new reservoir hash table ----
@@ -168,14 +168,13 @@ for iter = 1:opts.noTrainingPoints
     
     % ---- hash table update, etc ----
     if update_table
-	h_ind_array = [h_ind_array ; single(ismember(1:opts.nbits, h_ind))];
-
-	W_lastupdate(:, h_ind) = W(:, h_ind);  % W_lastupdate: last W used to update hash table
-        if opts.accuHash > 0 && ~isempty(inv_h_ind)
-            assert(sum(sum(abs((W_lastupdate - stepW) - W))) < 1e-10);
-            stepW(:, inv_h_ind) = W_lastupdate(:, inv_h_ind) - W(:, inv_h_ind);
+        h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
+        W_lastupdate(:, h_ind) = W(:, h_ind);  % W_lastupdate: last W used to update hash table
+        if opts.accuHash <= 0
+            % no gradient accumulation: 
+            %   throw away increments in unused hash bits
+            W = W_lastupdate;
         end
-        W = W_lastupdate;
         update_iters = [update_iters, iter];
 
         % update reservoir hash table
@@ -188,8 +187,8 @@ for iter = 1:opts.noTrainingPoints
 
         % update actual hash table
         t_ = tic;
-        [H, bf_all, bits_computed] = update_hash_table(H, W, Xtrain, Ytrain, ...
-            h_ind, update_iters, opts, ...
+        [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
+            Xtrain, Ytrain, h_ind, update_iters, opts, ...
             multi_labeled, seenLabels, M_ecoc);
         bits_computed_all = bits_computed_all + bits_computed;
 	bitflips = bitflips + bf_all;
