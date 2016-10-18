@@ -253,11 +253,13 @@ end
 
 % hold a diary -save it to opts.expdir
 if opts.override
-    unix(['rm -f ' opts.expdir '/diary*']);
+    try
+        unix(['rm -f ' opts.expdir '/diary*']);
+    end
 end
 diary_index = 1;
 opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
-while exist(opts.diary_name,'file') && ~opts.override
+while exist(opts.diary_name,'file') % && ~opts.override
     diary_index = diary_index + 1;
     opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
 end
