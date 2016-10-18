@@ -220,10 +220,14 @@ if opts.reg_smooth > 0
     idr = sprintf('%s-SM%gN%dSS%d', idr, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 end
 
-% TEMP
-%opts.identifier = [idr];
-[~, master_ID] = unix(['git rev-parse --short HEAD']);
-opts.identifier = [master_ID(1:end-1) '-' idr];
+if opts.windows
+    head = textread('.git/HEAD', '%s');  
+    head_ID = textread(['.git/' head{2}], '%s');
+    opts.identifier = [head_ID{1}(1:7) '-' idr];
+else
+    [~, master_ID] = unix(['git rev-parse --short HEAD']);
+    opts.identifier = [master_ID(1:end-1) '-' idr];
+else
 
 % -------------------------------------------
 
