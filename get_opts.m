@@ -222,7 +222,9 @@ end
 
 % TEMP
 %opts.identifier = [idr];
-opts.identifier = ['NEW-' idr];
+[~, master_ID] = unix(['git rev-parse --short HEAD']);
+opts.identifier = [master_ID '-' idr];
+
 % -------------------------------------------
 
 % set expdir
