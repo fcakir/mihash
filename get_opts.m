@@ -223,7 +223,7 @@ end
 % TEMP
 %opts.identifier = [idr];
 [~, master_ID] = unix(['git rev-parse --short HEAD']);
-opts.identifier = [master_ID '-' idr];
+opts.identifier = [master_ID(1:end-1) '-' idr];
 
 % -------------------------------------------
 
