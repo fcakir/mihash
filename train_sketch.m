@@ -198,6 +198,11 @@ for batchInd = 1 : batchCnt
         W_lastupdate(:, h_ind) = W(:, h_ind);
         if opts.accuHash <= 0
             W = W_lastupdate;
+            myLogInfo('not accumulating gradients!');
+        end
+        if opts.fracHash < 1
+            myLogInfo('selective update: fracHash=%g, randomHash=%g', ...
+                opts.fracHash, opts.randomHash);
         end
         update_iters = [update_iters, batchInd];
 
