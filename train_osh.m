@@ -288,7 +288,7 @@ end
 clear r
 
 d = size(Xtrain, 2);
-if 1
+if 0
     W = rand(d, opts.nbits)-0.5;
 else
     % LSH init

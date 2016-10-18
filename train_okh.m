@@ -51,7 +51,7 @@ number_iterations = opts.noTrainingPoints/2;
 myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 d = size(KX, 1);
-if 1
+if 0
     % original init for OKH
     W = rand(d, opts.nbits)-0.5;
 else

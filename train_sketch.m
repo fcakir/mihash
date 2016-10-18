@@ -38,7 +38,7 @@ kInstFeatDimCnt = size(Xtrain, 2);  % feature dim
 bits = opts.nbits;
 
 % initialize hash functions & table
-if 1
+if 0
     % original init for SketchHash
     W = rand(kInstFeatDimCnt, bits) - 0.5;
 else

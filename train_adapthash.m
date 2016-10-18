@@ -24,7 +24,7 @@ step_size   = opts.stepsize; %1e-3;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-if 1
+if 0
     W = rand(d, opts.nbits)-0.5;
 else
     % LSH init
