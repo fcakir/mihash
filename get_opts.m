@@ -227,7 +227,7 @@ if opts.windows
 else
     [~, master_ID] = unix(['git rev-parse --short HEAD']);
     opts.identifier = [master_ID(1:end-1) '-' idr];
-else
+end
 
 % -------------------------------------------
 
