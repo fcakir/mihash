@@ -137,6 +137,7 @@ myLogInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean
 % it may overwrite existing file, but whatever
 save(resfn, 'res', 'bitflips', 'bits_computed_all', 'train_iter', 'train_time', ...
     'train_examples');
+if ~opts.windows, unix(['chmod g+w ' resfn]); unix(['chmod o-w ' resfn]); end
 
 % visualize
 if opts.showplots
@@ -161,5 +162,9 @@ catch
     figure, if length(px) == 1, plot(px, py, '+'), else plot(px, py), end
     grid, title(ttl), xlabel(xlb), ylabel('res')
     saveas(gcf, figname);
+    if isempty(strfind(computer, 'WIN'))
+        unix(['chmod g+w ', figname]); 
+        unix(['chmod o-w ', figname]); 
+    end
 end
 end

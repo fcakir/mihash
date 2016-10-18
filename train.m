@@ -14,6 +14,9 @@ myLogInfo('%s: %d train_iters', opts.identifier, num_iters);
 ncpu = feature('numcores');
 set_parpool(min(ncpu, max(opts.ntrials, round(ncpu/2))));
 parfor t = 1:opts.ntrials
+    % KH: fix random seed in parallel worker
+    %     important for reproducible results
+    rng(opts.randseed+t, 'twister');
     if run_trial(t) == 0
         myLogInfo('Trial %02d not required, skipped', t);
         continue;
