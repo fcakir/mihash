@@ -43,7 +43,8 @@ if 0
     W = rand(kInstFeatDimCnt, bits) - 0.5;
 else
     % LSH init
-    W = randn(kInstFeatDimCnt, bits);
+    d = kInstFeatDimCnt;
+    W = randn(d, bits);
     W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
