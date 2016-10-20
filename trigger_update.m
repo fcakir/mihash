@@ -9,8 +9,8 @@ ret_val = -1;
 h_ind = 1:opts.nbits;
 
 % ----------------------------------------------
-% update on first & last iteration no matter what
-if (iter == 1) || (iter*opts.batchSize >= opts.noTrainingPoints)
+% update on first iteration
+if (iter == 1) %|| (iter*opts.batchSize >= opts.noTrainingPoints)
     update_table = true;  
     return;
 end
