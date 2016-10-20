@@ -223,7 +223,9 @@ end
 if 1 %opts.windows
     head = textread('.git/HEAD', '%s');  
     head_ID = textread(['.git/' head{2}], '%s');
-    opts.identifier = [head_ID{1}(1:7) '-' idr];
+    prefix = head_ID{1}(1:7);
+    assert(all(isstrprop(prefix, 'xdigit')));
+    opts.identifier = [prefix '-' idr];
 else
     [~, master_ID] = unix(['git rev-parse --short HEAD']);
     opts.identifier = [master_ID(1:end-1) '-' idr];
