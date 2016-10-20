@@ -146,29 +146,25 @@ Qent = zeros(1, reservoir_size);
 % make this faster
 for j=1:reservoir_size
     A = hdist(j, :); M = A(cateTrainTrain(j, :)); NM = A(~cateTrainTrain(j, :));
-    prob_Q_Cp = histcounts(M, 0:1:nbits, 'Normalization', 'probability'); % P(Q|+)
-    prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
-    prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
+    prob_Q_Cp = histcounts(M, 0:1:nbits);  % raw P(Q|+)
+    prob_Q_Cn = histcounts(NM, 0:1:nbits); % raw P(Q|-)
+    sum_Q_Cp  = sum(prob_Q_Cp);
+    sum_Q_Cn  = sum(prob_Q_Cn);
+    prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
+    prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
+    prob_Q_Cn = prob_Q_Cp/sum_Q_Cn;
     prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
     prob_Cn   = 1 - prob_Cp; % P(-) 
 
     % estimate H(Q) entropy
-    for q = 1:length(prob_Q)
-        if prob_Q(q) == 0, lg = 0; else lg = log2(prob_Q(q)); end
-        Qent(j) = Qent(j) - prob_Q(q) * lg;
-    end
+    idx = find(prob_Q > 0);
+    Qent(j) = -sum(prob_Q(idx).*log2(prob_Q(idx)));
 
     % estimate H(Q|C)
-    p = 0;
-    for q=1:length(prob_Q_Cp)
-        if prob_Q_Cp(q) == 0, lg = 0; else lg = log2(prob_Q_Cp(q)); end
-        p = p - prob_Q_Cp(q) * lg;
-    end
-    n = 0;
-    for q=1:length(prob_Q_Cn)
-        if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
-        n = n - prob_Q_Cn(q) * lg;
-    end
+    idx = find(prob_Q_Cp > 0);
+    p = -sum(prob_Q_Cp(idx).*log2(prob_Q_Cp(idx)));
+    idx = find(prob_Q_Cn > 0);
+    n = -sum(prob_Q_Cn(idx).*log2(prob_Q_Cn(idx)));
     condent(j) = p * prob_Cp + n * prob_Cn;    
 end
 
@@ -183,29 +179,25 @@ Qentn = zeros(1, reservoir_size);
 % make this faster
 for j=1:reservoir_size
     A = hdistn(j, :); M = A(cateTrainTrain(j, :)); NM = A(~cateTrainTrain(j, :));
-    prob_Q_Cp = histcounts(M, 0:1:nbits, 'Normalization', 'probability'); % P(Q|+)
-    prob_Q_Cn = histcounts(NM, 0:1:nbits, 'Normalization', 'probability'); % P(Q|-)
-    prob_Q    = histcounts([M NM], 0:1:nbits, 'Normalization','probability'); % P(Q)        
+    prob_Q_Cp = histcounts(M, 0:1:nbits);  % raw P(Q|+)
+    prob_Q_Cn = histcounts(NM, 0:1:nbits); % raw P(Q|-)
+    sum_Q_Cp  = sum(prob_Q_Cp);
+    sum_Q_Cn  = sum(prob_Q_Cn);
+    prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
+    prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
+    prob_Q_Cn = prob_Q_Cp/sum_Q_Cn;
     prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
-    prob_Cn   = 1 - prob_Cp; % P(-)
+    prob_Cn   = 1 - prob_Cp; % P(-) 
 
     % estimate H(Q) entropy
-    for q = 1:length(prob_Q)
-        if prob_Q(q) == 0, lg = 0; else lg = log2(prob_Q(q)); end
-        Qentn(j) = Qentn(j) - prob_Q(q) * lg;
-    end
+    idx = find(prob_Q > 0);
+    Qentn(j) = -sum(prob_Q(idx).*log2(prob_Q(idx)));
 
     % estimate H(Q|C)
-    p = 0;
-    for q=1:length(prob_Q_Cp)
-        if prob_Q_Cp(q) == 0, lg = 0; else lg = log2(prob_Q_Cp(q)); end
-        p = p - prob_Q_Cp(q) * lg;
-    end
-    n = 0;
-    for q=1:length(prob_Q_Cn)
-        if prob_Q_Cn(q) == 0, lg = 0; else lg = log2(prob_Q_Cn(q)); end
-        n = n - prob_Q_Cn(q) * lg;
-    end  
+    idx = find(prob_Q_Cp > 0);
+    p = -sum(prob_Q_Cp(idx).*log2(prob_Q_Cp(idx)));
+    idx = find(prob_Q_Cn > 0);
+    n = -sum(prob_Q_Cn(idx).*log2(prob_Q_Cn(idx)));
     condentn(j) = p * prob_Cp + n * prob_Cn;    
 end
 
