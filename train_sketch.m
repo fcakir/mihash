@@ -186,8 +186,15 @@ for batchInd = 1 : batchCnt
 
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(batchInd, ...
-        opts, W_lastupdate, W, reservoir, Hres_new);
+    if batchInd*opts.batchSize <= opts.sketchSize
+        % special: fill sketch matrix first
+        update_table = true;
+        trigger_val  = 0;
+        h_ind = 1:opts.nbits;
+    else
+        [update_table, trigger_val, h_ind] = trigger_update(batchInd, ...
+            opts, W_lastupdate, W, reservoir, Hres_new);
+    end
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);
