@@ -220,7 +220,7 @@ if opts.reg_smooth > 0
     idr = sprintf('%s-SM%gN%dSS%d', idr, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
 end
 
-if opts.windows
+if 1 %opts.windows
     head = textread('.git/HEAD', '%s');  
     head_ID = textread(['.git/' head{2}], '%s');
     opts.identifier = [head_ID{1}(1:7) '-' idr];
