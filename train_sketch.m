@@ -36,6 +36,8 @@ end
 % convert parameters from opts to internal ones
 kInstFeatDimCnt = size(Xtrain, 2);  % feature dim
 bits = opts.nbits;
+assert(opts.sketchSize <= kInstFeatDimCnt, ...
+    sprintf('Somehow, sketching needs sketchSize<=d(%d)', kInstFeatDimCnt));
 
 % initialize hash functions & table
 if 0
@@ -78,7 +80,8 @@ batchCnt       = ceil(numUseToTrain/batchsize);
 instCntSeen    = 0;
 instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
 instFeatSkc    = [];
-myLogInfo('%d batches of size %d', batchCnt, batchsize);
+myLogInfo('%d batches of size %d, sketchSize=%d', ...
+    batchCnt, batchsize, opts.sketchSize);
 %%%%%%%%%%%%%%%%%%%%%%% SET UP SketchHash %%%%%%%%%%%%%%%%%%%%%%%
 
 
