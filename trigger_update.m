@@ -152,7 +152,7 @@ for j=1:reservoir_size
     sum_Q_Cn  = sum(prob_Q_Cn);
     prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
     prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
-    prob_Q_Cn = prob_Q_Cp/sum_Q_Cn;
+    prob_Q_Cn = prob_Q_Cn/sum_Q_Cn;
     prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
     prob_Cn   = 1 - prob_Cp; % P(-) 
 
@@ -185,7 +185,7 @@ for j=1:reservoir_size
     sum_Q_Cn  = sum(prob_Q_Cn);
     prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
     prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
-    prob_Q_Cn = prob_Q_Cp/sum_Q_Cn;
+    prob_Q_Cn = prob_Q_Cn/sum_Q_Cn;
     prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
     prob_Cn   = 1 - prob_Cp; % P(-) 
 
