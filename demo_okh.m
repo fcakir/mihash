@@ -1,4 +1,4 @@
-function resfn = demo_okh(ftype, dataset, nbits, varargin)
+function [resfn, dp] = demo_okh(ftype, dataset, nbits, varargin)
 
 % OKH-specific fields
 ip = inputParser;
@@ -15,6 +15,6 @@ opts.batchSize  = 2;  % hard-coded; pair supervision
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 
 % run demo
-resfn = demo(opts, @train_okh, @test_okh);
+[resfn, dp] = demo(opts, @train_okh, @test_okh);
 diary('off');
 end

@@ -1,7 +1,7 @@
 function test(resfn, res_trial_fn, res_exist, opts)
 % if we're running this function, it means some elements in res_exist is false
 % and we need to compute/recompute the corresponding res_trial_fn's
-global Xtest Ytest Ytrain
+global Xtest Ytest Xtrain Ytrain thr_dist
 
 testX  = Xtest;
 testY  = Ytest;
@@ -21,8 +21,12 @@ if size(Ytrain, 2) == 1
     trainY = floor(Ytrain/10);
     testY  = floor(Ytest/10);
     cateTrainTest = [];
-else
+elseif size(Ytrain, 2) > 1
     cateTrainTest = (trainY * testY' > 0);
+elseif isempty(Ytrain)
+    cateTrainTest = pdist2(Xtrain, Xtest, 'euclidean') <= thr_dist; %logical
+else
+    error('Ytrain error in test.m');
 end
 
 clear res bitflips bits_computed_all

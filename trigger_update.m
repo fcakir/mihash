@@ -117,7 +117,7 @@ function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
 if exist('unsupervised', 'var') == 0 
     unsupervised = false; 
 elseif unsupervised
-    assert(exist('thr_dist', 'var'));
+    assert(exist('thr_dist', 'var') == 1);
 end
 assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
