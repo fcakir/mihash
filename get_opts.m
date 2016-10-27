@@ -22,12 +22,12 @@ ip.addParamValue('ntrials', 3, @isscalar);
 ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
-
+ip.addParamValue('val_size', 0, @isscalar);   % set > 0 to d validation
 % misc
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
-ip.addParamValue('showplots', 1, @isscalar);
+ip.addParamValue('showplots', 0, @isscalar);
 ip.addParamValue('localdir', ...
     '/research/object_detection/cachedir/online-hashing', @isstr);
 
@@ -231,7 +231,12 @@ else
     opts.identifier = [master_ID(1:end-1) '-' idr];
 end
 
+
 % -------------------------------------------
+% doing validation?
+if opts.val_size > 0
+    opts.identifier = sprintf('%s-VAL-VS%d', opts.identifier, opts.val_size);
+end
 
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);

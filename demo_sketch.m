@@ -1,4 +1,4 @@
-function resfn = demo_sketch(ftype, dataset, nbits, varargin)
+function [resfn, dp] = demo_sketch(ftype, dataset, nbits, varargin)
 addpath('sketch');
 
 ip = inputParser;
@@ -16,6 +16,6 @@ assert(opts.batchSize>=nbits, 'Sketching needs batchSize>=nbits');
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 
 % run demo
-resfn = demo(opts, @train_sketch, @test_sketch);
+[resfn, dp] = demo(opts, @train_sketch, @test_sketch);
 diary('off');
 end

@@ -104,7 +104,7 @@ for iter = 1:number_iterations
         s = 2*isequal(sample_label1, sample_label2)-1;
     else
 	sample_label1 = [];sample_label2 = [];
-	s = 2*(pdist([sample_point1;sample_points2],'euclidean') <= thr_dist) - 1;
+	s = 2*(pdist([sample_point1;sample_point2],'euclidean') <= thr_dist) - 1;
     end
 
     k_sample_data = [sample_point1;sample_point2];
@@ -177,7 +177,7 @@ for iter = 1:number_iterations
 
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(iter, ...
-        opts, W_lastupdate, W, reservoir, Hres_new);
+        opts, W_lastupdate, W, reservoir, Hres_new, opts.unsupervised, thr_dist);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         assert(opts.fracHash < 1);

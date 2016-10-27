@@ -9,14 +9,22 @@ function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 if nargin < 6, cateTrainTest = []; end
 use_cateTrainTest = ~isempty(cateTrainTest);
 
-trainsize = length(Ytrain);
-testsize  = length(Ytest);
+if ~opts.unsupervised
+    trainsize = length(Ytrain);
+    testsize  = length(Ytest);
+else
+    [trainsize, testsize] = size(cateTrainTest);
+end
 
 if strcmp(opts.metric, 'mAP')
     sim = compare_hash_tables(Htrain, Htest);
     AP  = zeros(1, testsize);
     for j = 1:testsize
-        labels = 2*double(Ytrain==Ytest(j))-1;
+        if use_cateTrainTest    
+            labels = 2*cateTrainTest(:, j)-1;
+        else
+            labels = 2*double(Ytrain==Ytest(j))-1;
+        end
         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
         AP(j) = info.ap;
     end
@@ -41,6 +49,11 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
             idx = [idx; find(sim_j == th)];
             if length(idx) >= N, break; end
         end
+	if use_cateTrainTest    
+		labels = 2*cateTrainTest(:, j)-1;
+	else
+        	labels = 2*double(Ytrain==Ytest(j))-1;
+	end
         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
         [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
         AP(j) = info.ap;
@@ -77,7 +90,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     % NOTE 'for' has better CPU usage
     for j=1:testsize
         if use_cateTrainTest
-            labels = cateTrainTest(:, j);
+            labels = 2*cateTrainTest(:, j)-1;
         else
             labels = (Ytrain == Ytest(j));
         end

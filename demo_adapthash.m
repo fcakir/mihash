@@ -1,4 +1,4 @@
-function resfn = demo_adapthash(ftype, dataset, nbits, varargin)
+function [resfn, dp] = demo_adapthash(ftype, dataset, nbits, varargin)
 
 % AdaptHash-specific fields
 ip = inputParser;
@@ -16,6 +16,6 @@ opts.batchSize  = 2;  % hard-coded; pair supervision
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-resfn = demo(opts, @train_adapthash, @test_osh);
+[resfn, dp] = demo(opts, @train_adapthash, @test_osh);
 diary('off');
 end

@@ -1,4 +1,4 @@
-function resfn = demo(opts, trainFunc, testFunc)
+function [resfn, diary_path] = demo(opts, trainFunc, testFunc)
 
 % 0. result files
 Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
@@ -78,6 +78,7 @@ if ~all(res_exist) || ~exist(resfn, 'file')
 end
 myLogInfo('%s: Testing is done.', opts.identifier);
 
+diary_path = opts.diary_name;
 
 % 5. close parpool, if any
 set_parpool(0);

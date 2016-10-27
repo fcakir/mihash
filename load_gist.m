@@ -24,6 +24,13 @@ if strcmp(opts.dataset, 'cifar')
     [Xtrain, Ytrain, Xtest, Ytest] = ...
         split_train_test(gist, gistlabels, tstperclass);
 
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+    end
 elseif strcmp(opts.dataset, 'sun')
     load([basedir '/sun397/SUN_gist.mat']);
     gistlabels  = labels+1;  % NOTE labels are 0 to 396
@@ -38,6 +45,13 @@ elseif strcmp(opts.dataset, 'sun')
     [Xtrain, Ytrain, Xtest, Ytest] = ...
         split_train_test(gist, gistlabels, tstperclass);
 
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+    end
 elseif strcmp(opts.dataset, 'nus')
     gist = load([basedir '/nuswide/BoW_int.dat']);
     tags = load([basedir '/nuswide/AllLabels81.txt']);
@@ -50,6 +64,13 @@ elseif strcmp(opts.dataset, 'nus')
     end
     [Xtrain, Ytrain, Xtest, Ytest] = ...
         split_train_test_nus(gist, tags, tstperclass);
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+    end
 elseif strcmp(opts.dataset, 'labelme')
     load([basedir '/labelme/LabelMe_gist.mat'],'gist');
     no_tst = 1000;
@@ -60,6 +81,12 @@ elseif strcmp(opts.dataset, 'labelme')
     end
     [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
         split_train_test_unsupervised(gist, no_tst);
+    if opts.val_size > 0
+	assert(size(Xtrain, 1) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+    end
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest

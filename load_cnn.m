@@ -41,6 +41,16 @@ if strcmp(opts.dataset, 'cifar')
     [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, 0);
     Xtrain = X(ind_train, :);
     Xtest  = X(ind_test, :);
+    
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+	ind_train = ind_train(ind_(1:opts.val_size));
+    end
+
     clear Names
     Names.train = num2cell(ind_train);
     Names.test = num2cell(ind_test);
@@ -67,6 +77,15 @@ elseif strcmp(opts.dataset, 'sun')
     Xtrain = X(ind_train, :);
     Xtest  = X(ind_test, :);
 
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+	ind_train = ind_train(ind_(1:opts.val_size));
+    end
+
 elseif strcmp(opts.dataset, 'places')
     if opts.windows
         basedir = '\\kraken\object_detection\data';
@@ -91,6 +110,16 @@ elseif strcmp(opts.dataset, 'places')
     [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, L);
     Xtrain = X(ind_train, :);
     Xtest  = X(ind_test, :);
+    
+    if opts.val_size > 0
+	assert(length(Ytrain) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+	ind_train = ind_train(ind_(1:opts.val_size));
+    end
+
     clear Names
     Names.train = images(ind_train);
     Names.test  = images(ind_test);
@@ -116,6 +145,13 @@ elseif strcmp(opts.dataset, 'nus')
     % TODO Names
     [Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T);
     Names = [];
+    if opts.val_size > 0
+	assert(size(Ytrain, 1) >=  opts.val_size);
+    	myLogInfo('Doing validation!');
+	ind_ = randperm(length(Ytrain));
+	Xtrain = Xtrain(ind_(1:opts.val_size), :);
+	Ytrain = Ytrain(ind_(1:opts.val_size), :);
+    end
 
 else, error(['unknown dataset: ' opts.dataset]); end
 

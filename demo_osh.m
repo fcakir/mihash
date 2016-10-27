@@ -1,4 +1,4 @@
-function resfn = demo_osh(ftype, dataset, nbits, varargin)
+function [resfn, dp] = demo_osh(ftype, dataset, nbits, varargin)
 % PARAMS
 %  ftype (string) from {'gist', 'cnn'}
 %  dataset (string) from {'cifar', 'sun','nus'}
@@ -20,6 +20,6 @@ opts.batchSize  = 1;  % hard-coded
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-resfn = demo(opts, @train_osh, @test_osh);
+[resfn, dp] = demo(opts, @train_osh, @test_osh);
 diary('off');
 end
