@@ -100,8 +100,10 @@ end
 
 % regardless of trigger type, do selective hash function update
 if opts.fracHash < 1
-    h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-        opts.nbits, opts.fracHash, opts.verifyInv);
+    %h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+        %opts.nbits, opts.fracHash, opts.verifyInv);
+    h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
+        opts.nbits, opts.fracHash);
     if opts.randomHash
         h_ind = randperm(opts.nbits, length(h_ind));
     end
@@ -213,6 +215,37 @@ max_mi = mean(Qentn);
 %legend(sprintf('Max MI :%g, MI difference: %g, New mean MI: %g', mean(Qent), mean(Qent - condent), mean(Qentn - condentn)));
 %saveas(gcf, sprintf('/research/codebooks/hashing_project/data/misc/type6-IV/hash_function_bf_%g_%05d.png', nbits, iter));
 %close(gcf);
+end
+
+
+function h_ind = selective_update_corr(Hres, Hnew, reservoir_size, nbits, ...
+    fracHash)
+% selectively update hash bits, criterion: min(max corrcoef with other bits)
+% output
+%   h_ind: indices of hash bits to update
+
+% assertions
+assert(ceil(nbits*fracHash) > 0);
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+
+% which new hash functions are the least correlated with other old ones?
+max_corr = zeros(1, opts.nbits);
+for i = 1:opts.nbits
+    Htmp = Hres;
+    Htmp(:, i) = Hnew(:, i);
+    corr = corrcoef(Htmp);
+    corr(i, i) = -1;
+    max_corr(i) = max(corr(:, i));
+end
+[~, sorted_h] = sort(max_cov, 'ascend');  % min(max corr coef)
+h_ind = sorted_h(1:ceil(nbits*fracHash));
+if isempty(h_ind) 
+    h_ind = sorted_h(1); 
+end;
+if ~isvector(h_ind) || any(isnan(h_ind))
+    error(['Something is wrong with h_ind']);
+end
 end
 
 
