@@ -102,7 +102,7 @@ switch lower(opts.trigger)
     if update_table 
         if opts.miSelect > 0  % mi_select
             h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
-                opts.nbits, opts.fracHash, varargin{:});
+                opts.nbits, varargin{:});
 
         elseif opts.fracHash < 1  % rand/max select
             if opts.randomHash  % rand_select
@@ -272,7 +272,7 @@ end
 
 
 % --------------------------------------------------------------------
-function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
+function h_ind = selective_update_mi(X, Y, Hnew, nbits, ... 
     unsupervised, thr_dist)
 % selectively update hash bits, criterion: MI for each bit
 % output
@@ -283,8 +283,7 @@ elseif unsupervised
     assert(exist('thr_dist', 'var') == 1);
 end
 
-% assertions
-assert(ceil(nbits*fracHash) > 0);
+assert(nbits == size(Hnew, 2));
 
 % precompute affinity matrix
 if ~unsupervised 
@@ -293,13 +292,13 @@ else
     Aff = squareform(pdist(X, 'euclidean')) <= thr_dist;
 end
 
-% greedily select hash functions that give best MI, UP TO ceil(nbits*fracHash)
+% greedily select hash functions that give best MI, UP TO nbits
 % if MI starts dropping before that, stop
 tic;
 h_ind   = [];
 rembits = 1:nbits;
 best_MI = -inf;
-for i = 1:ceil(nbits*fracHash)
+for i = 1:nbits
     % 1. go over each candidate hash function, add to selection, 
     %    compute resulting MI
     MI = [];
@@ -320,8 +319,8 @@ for i = 1:ceil(nbits*fracHash)
         rembits(idx) = [];
     end
 end
-myLogInfo('(%.1f sec) selected %d/%d/%d bits, MI = %g', ...
-    toc, length(h_ind), ceil(nbits*fracHash), nbits, best_MI);
+myLogInfo('(%.1f sec) selected %d/%d bits, MI = %g', ...
+    toc, length(h_ind), nbits, best_MI);
 end
 
 
