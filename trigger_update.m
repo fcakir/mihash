@@ -98,15 +98,22 @@ switch lower(opts.trigger)
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
 end
 
-% regardless of trigger type, do selective hash function update
-if opts.fracHash < 1
-    %h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-        %opts.nbits, opts.fracHash, opts.verifyInv);
-    h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
-        opts.nbits, opts.fracHash);
+% if udpate table, do selective hash function update
+if update_table && opts.fracHash < 1
+    h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+        opts.nbits, opts.fracHash, opts.verifyInv);
+    if 0
+        h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
+            opts.nbits, opts.fracHash);
+    %else
+        h_ind = selective_update_mi(reservoir.H, Hres_new, reservoir.size, ...
+            opts.nbits, opts.fracHash);
+    end
     if opts.randomHash
         h_ind = randperm(opts.nbits, length(h_ind));
     end
+else
+    h_ind = 1:opts.nbits;
 end
 end
 
@@ -218,9 +225,40 @@ max_mi = mean(Qentn);
 end
 
 
+function h_ind = selective_update_mi(Hres, Hnew, reservoir_size, nbits, ...
+    fracHash)
+% selectively update hash bits, criterion: MI for each bit
+% output
+%   h_ind: indices of hash bits to update
+
+% assertions
+assert(ceil(nbits*fracHash) > 0);
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+
+% which new hash functions have the best 1-bit MI?
+max_corr = zeros(1, nbits);
+for i = 1:nbits
+    Htmp = Hres;
+    Htmp(:, i) = Hnew(:, i);
+    corr = corrcoef(Htmp);
+    corr(i, i) = -1;
+    max_corr(i) = max(corr(:, i));
+end
+[~, sorted_h] = sort(max_corr, 'ascend');  % min(max corr coef)
+h_ind = sorted_h(1:ceil(nbits*fracHash));
+if isempty(h_ind) 
+    h_ind = sorted_h(1); 
+end;
+if ~isvector(h_ind) || any(isnan(h_ind))
+    error(['Something is wrong with h_ind']);
+end
+end
+
+
 function h_ind = selective_update_corr(Hres, Hnew, reservoir_size, nbits, ...
     fracHash)
-% selectively update hash bits, criterion: min(max corrcoef with other bits)
+% selectively update hash bits, criterion: decrease(max corrcoef w/ other bits)
 % output
 %   h_ind: indices of hash bits to update
 
@@ -230,21 +268,30 @@ assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % which new hash functions are the least correlated with other old ones?
-max_corr = zeros(1, opts.nbits);
-for i = 1:opts.nbits
-    Htmp = Hres;
-    Htmp(:, i) = Hnew(:, i);
-    corr = corrcoef(Htmp);
-    corr(i, i) = -1;
-    max_corr(i) = max(corr(:, i));
-end
-[~, sorted_h] = sort(max_cov, 'ascend');  % min(max corr coef)
-h_ind = sorted_h(1:ceil(nbits*fracHash));
-if isempty(h_ind) 
-    h_ind = sorted_h(1); 
-end;
-if ~isvector(h_ind) || any(isnan(h_ind))
-    error(['Something is wrong with h_ind']);
+h_ind = [];
+rembits = 1:nbits;
+for i = 1:ceil(nbits*fracHash)
+    % select the bit w/ largest drop in (max corrcoef w/ other bits)
+    %
+    % 1. have old corrcoef ready
+    corr = corrcoef(Hres);
+    corr = corr - eye(nbits)*10;
+    %
+    % 2. for each candidate, compute new corrcoef, record drop in max
+    dec_max_corr = [];
+    for j = rembits
+        Htmp = Hres;
+        Htmp(:, j) = Hnew(:, j);
+        corr_new = corrcoef(Htmp);
+        corr = corr - eye(nbits)*10;
+        dec_max_corr(end+1) = max(corr(:,j)) - max(corr_new(:,j));
+    end
+    %
+    % 3. select best drop in max, update remaining hash table
+    [~, best] = max(dec_max_corr);
+    h_ind = [h_ind, rembits(best)];
+    Hres(:, rembits(best)) = Hnew(:, rembits(best));
+    rembits(best) = [];
 end
 end
 

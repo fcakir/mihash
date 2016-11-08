@@ -60,7 +60,7 @@ for t = 1:opts.ntrials
             % determine whether to actually run test or not
             % if there's no HT update since last test, just copy results
             % THIS SAVES TIME!
-            if i == 1 || i == length(Tmodel.test_iters)
+            if i == 1
                 runtest = true;
             else
                 st = Tmodel.test_iters(i-1);

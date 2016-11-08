@@ -41,7 +41,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     sim = compare_hash_tables(Htrain, Htest);
 
     ncpu = feature('numcores');
-    set_parpool(round(ncpu/2));
+    set_parpool(min(round(ncpu/2), 5));
     parfor j = 1:testsize
         sim_j = double(sim(:, j));
         idx = [];

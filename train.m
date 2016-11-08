@@ -12,7 +12,7 @@ num_iters = ceil(opts.noTrainingPoints/opts.batchSize);
 myLogInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 ncpu = feature('numcores');
-set_parpool(min(ncpu, max(opts.ntrials, round(ncpu/2))));
+set_parpool(min(5, max(opts.ntrials, round(ncpu/2))));
 parfor t = 1:opts.ntrials
     % KH: fix random seed in parallel worker
     %     important for reproducible results
