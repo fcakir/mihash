@@ -89,32 +89,32 @@ switch lower(opts.trigger)
                 mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                   reservoir.size, opts.nbits, varargin{:});
+                reservoir.size, opts.nbits, varargin{:});
             update_table = mi_impr > opts.miThresh;
             myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
         end
     otherwise
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
-end
+    end
 
-% if udpate table, do selective hash function update
-if update_table && opts.fracHash < 1
-    if 0
-			h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-				opts.nbits, opts.fracHash, opts.verifyInv);
-		else
-        h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
-            opts.nbits, opts.fracHash, varargin{:});
-        %h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
+    % if udpate table, do selective hash function update
+    if update_table && opts.fracHash < 1
+        if 0
+            h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+                opts.nbits, opts.fracHash, opts.verifyInv);
+        else
+            h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
+                opts.nbits, opts.fracHash, varargin{:});
+            %h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
             %opts.nbits, opts.fracHash);
+        end
+        if opts.randomHash
+            h_ind = randperm(opts.nbits, length(h_ind));
+        end
+    else
+        h_ind = 1:opts.nbits;
     end
-    if opts.randomHash
-        h_ind = randperm(opts.nbits, length(h_ind));
-    end
-else
-    h_ind = 1:opts.nbits;
-end
 end
 
 
@@ -239,8 +239,8 @@ condent = zeros(1, num);
 Qent = zeros(1, num);
 for j = 1:num
     D  = hdist(j, :); 
-		M  = D( affinity(j, :)); 
-		NM = D(~affinity(j, :));
+    M  = D( affinity(j, :)); 
+    NM = D(~affinity(j, :));
     prob_Q_Cp = histcounts(M,  0:1:nbits);  % raw P(Q|+)
     prob_Q_Cn = histcounts(NM, 0:1:nbits);  % raw P(Q|-)
     sum_Q_Cp  = sum(prob_Q_Cp);
@@ -263,14 +263,15 @@ for j = 1:num
     condent(j) = p * prob_Cp + n * prob_Cn;    
 end
 
-assert(all(Qent-condent >= 0));
-mi = mean(Qent-condent);
+mi = Qent - condent;
+mi(mi < 0) = 0;  % deal with numerical inaccuracies
+mi = mean(mi);
 end
 
 
 % --------------------------------------------------------------------
 function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
-	unsupervised, thr_dist)
+    unsupervised, thr_dist)
 % selectively update hash bits, criterion: MI for each bit
 % output
 %   h_ind: indices of hash bits to update
@@ -294,30 +295,33 @@ end
 
 % greedily select hash functions that give best MI, UP TO ceil(nbits*fracHash)
 % if MI starts dropping before that, stop
+tic;
 h_ind   = [];
 rembits = 1:nbits;
 best_MI = -inf;
 for i = 1:ceil(nbits*fracHash)
-	% 1. go over each candidate hash function, add to selection, 
-	%    compute resulting MI
-	MI = [];
-	for j = rembits
-		Hj = Hnew(:, [h_ind, j]);
-		MI(end+1) = eval_mi(Hj, Aff);
-	end
+    % 1. go over each candidate hash function, add to selection, 
+    %    compute resulting MI
+    MI = [];
+    for j = rembits
+        Hj = Hnew(:, [h_ind, j]);
+        MI(end+1) = eval_mi(Hj, Aff);
+    end
 
-	% 2. find the hash function that gives best MI
-	[new_MI, idx] = max(MI);
-	
-	% 3. if overall MI gets worse, break; else add
-	if new_MI < best_MI
-		break;
-	else
-		best_MI = new_MI;
-		h_ind = [h_ind, rembits(idx)];
-		rembits(idx) = [];
-	end
+    % 2. find the hash function that gives best MI
+    [new_MI, idx] = max(MI);
+
+    % 3. if overall MI gets worse, break; else add
+    if new_MI < best_MI
+        break;
+    else
+        best_MI = new_MI;
+        h_ind = [h_ind, rembits(idx)];
+        rembits(idx) = [];
+    end
 end
+myLogInfo('(%.1f sec) selected %d/%d/%d bits, MI = %g', ...
+    toc, length(h_ind), ceil(nbits*fracHash), nbits, best_MI);
 end
 
 
