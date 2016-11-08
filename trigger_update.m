@@ -100,14 +100,14 @@ end
 
 % if udpate table, do selective hash function update
 if update_table && opts.fracHash < 1
-    h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-        opts.nbits, opts.fracHash, opts.verifyInv);
     if 0
-        h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
-            opts.nbits, opts.fracHash);
-    %else
-        h_ind = selective_update_mi(reservoir.H, Hres_new, reservoir.size, ...
-            opts.nbits, opts.fracHash);
+			h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+				opts.nbits, opts.fracHash, opts.verifyInv);
+		else
+        h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
+            opts.nbits, opts.fracHash, varargin{:});
+        %h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
+            %opts.nbits, opts.fracHash);
     end
     if opts.randomHash
         h_ind = randperm(opts.nbits, length(h_ind));
@@ -225,33 +225,98 @@ max_mi = mean(Qentn);
 end
 
 
-function h_ind = selective_update_mi(Hres, Hnew, reservoir_size, nbits, ...
-    fracHash)
+% --------------------------------------------------------------------
+function mi = eval_mi(H, affinity)
+% distance
+num   = size(H, 1);
+nbits = size(H, 2);
+hdist = (2*H - 1) * (2*H - 1)';
+hdist = (-hdist + nbits)./2;   
+
+% if Q is the (hamming) distance - x axis
+% estimate P(Q|+), P(Q|-) & P(Q)
+condent = zeros(1, num);
+Qent = zeros(1, num);
+for j = 1:num
+    D  = hdist(j, :); 
+		M  = D( affinity(j, :)); 
+		NM = D(~affinity(j, :));
+    prob_Q_Cp = histcounts(M,  0:1:nbits);  % raw P(Q|+)
+    prob_Q_Cn = histcounts(NM, 0:1:nbits);  % raw P(Q|-)
+    sum_Q_Cp  = sum(prob_Q_Cp);
+    sum_Q_Cn  = sum(prob_Q_Cn);
+    prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
+    prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
+    prob_Q_Cn = prob_Q_Cn/sum_Q_Cn;
+    prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
+    prob_Cn   = 1 - prob_Cp; % P(-) 
+
+    % estimate H(Q) entropy
+    idx = find(prob_Q > 0);
+    Qent(j) = -sum(prob_Q(idx).*log2(prob_Q(idx)));
+
+    % estimate H(Q|C)
+    idx = find(prob_Q_Cp > 0);
+    p   = -sum(prob_Q_Cp(idx).*log2(prob_Q_Cp(idx)));
+    idx = find(prob_Q_Cn > 0);
+    n   = -sum(prob_Q_Cn(idx).*log2(prob_Q_Cn(idx)));
+    condent(j) = p * prob_Cp + n * prob_Cn;    
+end
+
+assert(all(Qent-condent >= 0));
+mi = mean(Qent-condent);
+end
+
+
+% --------------------------------------------------------------------
+function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
+	unsupervised, thr_dist)
 % selectively update hash bits, criterion: MI for each bit
 % output
 %   h_ind: indices of hash bits to update
+if exist('unsupervised', 'var') == 0 
+    unsupervised = false; 
+elseif unsupervised
+    assert(exist('thr_dist', 'var') == 1);
+end
 
 % assertions
 assert(ceil(nbits*fracHash) > 0);
-assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
-assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+%assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
+%assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
-% which new hash functions have the best 1-bit MI?
-max_corr = zeros(1, nbits);
-for i = 1:nbits
-    Htmp = Hres;
-    Htmp(:, i) = Hnew(:, i);
-    corr = corrcoef(Htmp);
-    corr(i, i) = -1;
-    max_corr(i) = max(corr(:, i));
+% precompute affinity matrix
+if ~unsupervised 
+    Aff = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+else
+    Aff = squareform(pdist(X, 'euclidean')) <= thr_dist;
 end
-[~, sorted_h] = sort(max_corr, 'ascend');  % min(max corr coef)
-h_ind = sorted_h(1:ceil(nbits*fracHash));
-if isempty(h_ind) 
-    h_ind = sorted_h(1); 
-end;
-if ~isvector(h_ind) || any(isnan(h_ind))
-    error(['Something is wrong with h_ind']);
+
+% greedily select hash functions that give best MI, UP TO ceil(nbits*fracHash)
+% if MI starts dropping before that, stop
+h_ind   = [];
+rembits = 1:nbits;
+best_MI = -inf;
+for i = 1:ceil(nbits*fracHash)
+	% 1. go over each candidate hash function, add to selection, 
+	%    compute resulting MI
+	MI = [];
+	for j = rembits
+		Hj = Hnew(:, [h_ind, j]);
+		MI(end+1) = eval_mi(Hj, Aff);
+	end
+
+	% 2. find the hash function that gives best MI
+	[new_MI, idx] = max(MI);
+	
+	% 3. if overall MI gets worse, break; else add
+	if new_MI < best_MI
+		break;
+	else
+		best_MI = new_MI;
+		h_ind = [h_ind, rembits(idx)];
+		rembits(idx) = [];
+	end
 end
 end
 
