@@ -99,21 +99,22 @@ switch lower(opts.trigger)
     end
 
     % if udpate table, do selective hash function update
-    if update_table && opts.fracHash < 1
-        if 0
-            h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-                opts.nbits, opts.fracHash, opts.verifyInv);
-        else
+    if update_table 
+        if opts.miSelect > 0  % mi_select
             h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
                 opts.nbits, opts.fracHash, varargin{:});
-            %h_ind = selective_update_corr(reservoir.H, Hres_new, reservoir.size, ...
-            %opts.nbits, opts.fracHash);
+
+        elseif opts.fracHash < 1  % rand/max select
+            if opts.randomHash  % rand_select
+                h_ind = randperm(opts.nbits, ceil(opts.nbits*opts.fracHash));
+            else   % max_select
+                h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+                    opts.nbits, opts.fracHash, opts.verifyInv);
+            end
+
+        else  % update all bits
+            h_ind = 1:opts.nbits;
         end
-        if opts.randomHash
-            h_ind = randperm(opts.nbits, length(h_ind));
-        end
-    else
-        h_ind = 1:opts.nbits;
     end
 end
 
@@ -283,8 +284,6 @@ end
 
 % assertions
 assert(ceil(nbits*fracHash) > 0);
-%assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
-%assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % precompute affinity matrix
 if ~unsupervised 
@@ -325,6 +324,42 @@ myLogInfo('(%.1f sec) selected %d/%d/%d bits, MI = %g', ...
 end
 
 
+% ----------------------------------------------------------------
+function h_ind = selective_update(Hres, Hnew, reservoir_size, nbits, ...
+    fracHash, inverse)
+% selectively update hash bits, criterion: #bitflip
+% output
+%   h_ind: indices of hash bits to update
+
+% assertions
+assert(ceil(nbits*fracHash) > 0);
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+
+% take actual reservoir size into account
+%reservoir_size = min(iter, reservoir_size);
+%Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
+
+% which hash functions causes the most bitflips in the reservoir
+[c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
+%h_ind = sorted_h(1:ceil(fracHash*nbits));
+%h_ind = 1:nbits;
+c_h = c_h./ norm(c_h,1);
+h_ind = sorted_h(cumsum(c_h) <= fracHash);
+if isempty(h_ind), h_ind = sorted_h(1); end;
+if inverse
+    inv_sorted_h = fliplr(sorted_h);
+    h_ind = inv_sorted_h(1:length(h_ind));
+end
+if ~isvector(h_ind) || any(isnan(h_ind))
+    error(['Something is wrong with h_ind']);
+end
+end
+
+
+% ----------------------------------------------------------------
+% DEPRECATED
+% ----------------------------------------------------------------
 function h_ind = selective_update_corr(Hres, Hnew, reservoir_size, nbits, ...
     fracHash)
 % selectively update hash bits, criterion: decrease(max corrcoef w/ other bits)
@@ -361,37 +396,5 @@ for i = 1:ceil(nbits*fracHash)
     h_ind = [h_ind, rembits(best)];
     Hres(:, rembits(best)) = Hnew(:, rembits(best));
     rembits(best) = [];
-end
-end
-
-
-function h_ind = selective_update(Hres, Hnew, reservoir_size, nbits, ...
-    fracHash, inverse)
-% selectively update hash bits, criterion: #bitflip
-% output
-%   h_ind: indices of hash bits to update
-
-% assertions
-assert(ceil(nbits*fracHash) > 0);
-assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
-assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
-
-% take actual reservoir size into account
-%reservoir_size = min(iter, reservoir_size);
-%Hres = Hres(1:reservoir_size,:); Hnew = Hnew(1:reservoir_size,:);
-
-% which hash functions causes the most bitflips in the reservoir
-[c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
-%h_ind = sorted_h(1:ceil(fracHash*nbits));
-%h_ind = 1:nbits;
-c_h = c_h./ norm(c_h,1);
-h_ind = sorted_h(cumsum(c_h) <= fracHash);
-if isempty(h_ind), h_ind = sorted_h(1); end;
-if inverse
-    inv_sorted_h = fliplr(sorted_h);
-    h_ind = inv_sorted_h(1:length(h_ind));
-end
-if ~isvector(h_ind) || any(isnan(h_ind))
-    error(['Something is wrong with h_ind']);
 end
 end

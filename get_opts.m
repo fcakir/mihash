@@ -46,6 +46,7 @@ ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
 ip.addParamValue('flipThresh', 0, @isscalar);       % for trigger=bf
 
 % selective bit update
+ip.addParamValue('miSelect', 1, @isscalar);  % quality-aware selection strategy {0, 1}
 ip.addParamValue('fracHash', 1, @isscalar);  % fraction of hash functions to update (0, 1]
 ip.addParamValue('accuHash', 1 ,@isscalar);  % accumulation strategy {0, 1}
 ip.addParamValue('randomHash',0, @isscalar); % randomize selected hash functions to be updated {0, 1}
@@ -203,11 +204,18 @@ if opts.reservoirSize > 0
     else
         idr = sprintf('%s-MI%g', idr, opts.miThresh);
     end
-    if opts.fracHash < 1
-        idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, opts.fracHash, opts.randomHash, opts.accuHash);
-    end
-    if opts.verifyInv > 0
-        idr = sprintf('%s-inverse', idr);
+
+    % note: miSelect overrides fracHash
+    if opts.miSelect > 0
+        idr = sprintf('%s-miSelect', idr);
+    else
+        if opts.fracHash < 1
+            idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, ...
+                opts.fracHash, opts.randomHash, opts.accuHash);
+        end
+        if opts.verifyInv > 0
+            idr = sprintf('%s-inverse', idr);
+        end
     end
 else
     % no reservoir (baseline): must use updateInterval
