@@ -19,7 +19,10 @@ end
 if strcmp(opts.metric, 'mAP')
     sim = compare_hash_tables(Htrain, Htest);
     AP  = zeros(1, testsize);
-    for j = 1:testsize
+
+    ncpu = feature('numcores');
+    set_parpool(min(round(ncpu/2), 8));
+    parfor j = 1:testsize
         if use_cateTrainTest    
             labels = 2*cateTrainTest(:, j)-1;
         else
@@ -41,7 +44,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     sim = compare_hash_tables(Htrain, Htest);
 
     ncpu = feature('numcores');
-    set_parpool(min(round(ncpu/2), 5));
+    set_parpool(min(round(ncpu/2), 8));
     parfor j = 1:testsize
         sim_j = double(sim(:, j));
         idx = [];

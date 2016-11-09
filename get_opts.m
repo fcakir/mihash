@@ -98,6 +98,7 @@ end
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
 assert(opts.fracHash > 0 && opts.fracHash <= 1);
+assert(opts.miSelect <= 0 || opts.miSelect <= 1);
 
 if strcmp(dataset, 'labelme') 
     assert(strcmp(opts.ftype, 'gist'));
@@ -207,7 +208,7 @@ if opts.reservoirSize > 0
 
     % note: miSelect overrides fracHash
     if opts.miSelect > 0
-        idr = sprintf('%s-miSelect', idr);
+        idr = sprintf('%s-miSelect%g', idr, opts.miSelect);
     else
         if opts.fracHash < 1
             idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, ...
