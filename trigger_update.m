@@ -89,21 +89,32 @@ switch lower(opts.trigger)
                 mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                   reservoir.size, opts.nbits, varargin{:});
+                reservoir.size, opts.nbits, varargin{:});
             update_table = mi_impr > opts.miThresh;
             myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
         end
     otherwise
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
-end
+    end
 
-% regardless of trigger type, do selective hash function update
-if opts.fracHash < 1
-    h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-        opts.nbits, opts.fracHash, opts.verifyInv);
-    if opts.randomHash
-        h_ind = randperm(opts.nbits, length(h_ind));
+    % if udpate table, do selective hash function update
+    if update_table 
+        if opts.miSelect > 0  % mi_select
+            h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
+                opts.nbits, opts.miSelect, varargin{:});
+
+        elseif opts.fracHash < 1  % rand/max select
+            if opts.randomHash  % rand_select
+                h_ind = randperm(opts.nbits, ceil(opts.nbits*opts.fracHash));
+            else   % max_select
+                h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
+                    opts.nbits, opts.fracHash, opts.verifyInv);
+            end
+
+        else  % update all bits
+            h_ind = 1:opts.nbits;
+        end
     end
 end
 end
@@ -216,6 +227,105 @@ max_mi = mean(Qentn);
 end
 
 
+% --------------------------------------------------------------------
+function mi = eval_mi(H, affinity)
+% distance
+num   = size(H, 1);
+nbits = size(H, 2);
+hdist = (2*H - 1) * (2*H - 1)';
+hdist = (-hdist + nbits)./2;   
+
+% if Q is the (hamming) distance - x axis
+% estimate P(Q|+), P(Q|-) & P(Q)
+condent = zeros(1, num);
+Qent = zeros(1, num);
+for j = 1:num
+    D  = hdist(j, :); 
+    M  = D( affinity(j, :)); 
+    NM = D(~affinity(j, :));
+    prob_Q_Cp = histcounts(M,  0:1:nbits);  % raw P(Q|+)
+    prob_Q_Cn = histcounts(NM, 0:1:nbits);  % raw P(Q|-)
+    sum_Q_Cp  = sum(prob_Q_Cp);
+    sum_Q_Cn  = sum(prob_Q_Cn);
+    prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
+    prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
+    prob_Q_Cn = prob_Q_Cn/sum_Q_Cn;
+    prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
+    prob_Cn   = 1 - prob_Cp; % P(-) 
+
+    % estimate H(Q) entropy
+    idx = find(prob_Q > 0);
+    Qent(j) = -sum(prob_Q(idx).*log2(prob_Q(idx)));
+
+    % estimate H(Q|C)
+    idx = find(prob_Q_Cp > 0);
+    p   = -sum(prob_Q_Cp(idx).*log2(prob_Q_Cp(idx)));
+    idx = find(prob_Q_Cn > 0);
+    n   = -sum(prob_Q_Cn(idx).*log2(prob_Q_Cn(idx)));
+    condent(j) = p * prob_Cp + n * prob_Cn;    
+end
+
+mi = Qent - condent;
+mi(mi < 0) = 0;  % deal with numerical inaccuracies
+mi = mean(mi);
+end
+
+
+% --------------------------------------------------------------------
+function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
+    unsupervised, thr_dist)
+% selectively update hash bits, criterion: MI for each bit
+% output
+%   h_ind: indices of hash bits to update
+if exist('unsupervised', 'var') == 0 
+    unsupervised = false; 
+elseif unsupervised
+    assert(exist('thr_dist', 'var') == 1);
+end
+
+assert(nbits == size(Hnew, 2));
+assert(ceil(nbits * fracHash) > 0);
+
+% precompute affinity matrix
+if ~unsupervised 
+    Aff = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
+else
+    Aff = squareform(pdist(X, 'euclidean')) <= thr_dist;
+end
+
+% greedily select hash functions that give best MI, UP TO nbits
+% if MI starts dropping before that, stop
+tic;
+h_ind   = [];
+rembits = 1:nbits;
+best_MI = -inf;
+for i = 1 : ceil(nbits * fracHash)
+    % 1. go over each candidate hash function, add to selection, 
+    %    compute resulting MI
+    MI = [];
+    for j = rembits
+        Hj = Hnew(:, [h_ind, j]);
+        MI(end+1) = eval_mi(Hj, Aff);
+    end
+
+    % 2. find the hash function that gives best MI
+    [new_MI, idx] = max(MI);
+
+    % 3. if overall MI gets worse, break; else add
+    if new_MI < best_MI
+        break;
+    else
+        best_MI = new_MI;
+        h_ind = [h_ind, rembits(idx)];
+        rembits(idx) = [];
+    end
+end
+myLogInfo('(%.1f sec) selected %d/%d/%d bits, MI = %g', ...
+    toc, length(h_ind), ceil(nbits * fracHash), nbits, best_MI);
+end
+
+
+% ----------------------------------------------------------------
 function h_ind = selective_update(Hres, Hnew, reservoir_size, nbits, ...
     fracHash, inverse)
 % selectively update hash bits, criterion: #bitflip
@@ -244,5 +354,48 @@ if inverse
 end
 if ~isvector(h_ind) || any(isnan(h_ind))
     error(['Something is wrong with h_ind']);
+end
+end
+
+
+% ----------------------------------------------------------------
+% DEPRECATED
+% ----------------------------------------------------------------
+function h_ind = selective_update_corr(Hres, Hnew, reservoir_size, nbits, ...
+    fracHash)
+% selectively update hash bits, criterion: decrease(max corrcoef w/ other bits)
+% output
+%   h_ind: indices of hash bits to update
+
+% assertions
+assert(ceil(nbits*fracHash) > 0);
+assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
+assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
+
+% which new hash functions are the least correlated with other old ones?
+h_ind = [];
+rembits = 1:nbits;
+for i = 1:ceil(nbits*fracHash)
+    % select the bit w/ largest drop in (max corrcoef w/ other bits)
+    %
+    % 1. have old corrcoef ready
+    corr = corrcoef(Hres);
+    corr = corr - eye(nbits)*10;
+    %
+    % 2. for each candidate, compute new corrcoef, record drop in max
+    dec_max_corr = [];
+    for j = rembits
+        Htmp = Hres;
+        Htmp(:, j) = Hnew(:, j);
+        corr_new = corrcoef(Htmp);
+        corr = corr - eye(nbits)*10;
+        dec_max_corr(end+1) = max(corr(:,j)) - max(corr_new(:,j));
+    end
+    %
+    % 3. select best drop in max, update remaining hash table
+    [~, best] = max(dec_max_corr);
+    h_ind = [h_ind, rembits(best)];
+    Hres(:, rembits(best)) = Hnew(:, rembits(best));
+    rembits(best) = [];
 end
 end
