@@ -327,6 +327,9 @@ while count < miSelectMaxIter
         h_ind = [h_ind, rembits(idx)];
         assert(length(unique(h_ind)) == length(h_ind));
     end
+    if length(h_ind) >= ceil(nbits * subsetHash)
+        break;
+    end
     
 end
 myLogInfo('(%.1f sec) selected %d/%d/%d(%d) bits, MI = %g, loop size %d', ...
