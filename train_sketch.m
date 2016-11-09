@@ -197,7 +197,7 @@ for batchInd = 1 : batchCnt
     end
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
-        assert(opts.fracHash < 1);
+        %assert(opts.fracHash < 1);
         Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
     end
     res_time = res_time + toc(t_);
