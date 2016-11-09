@@ -22,14 +22,18 @@ if strcmp(opts.metric, 'mAP')
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    parfor j = 1:testsize
-        if use_cateTrainTest    
+    if use_cateTrainTest
+        parfor j = 1:testsize
             labels = 2*cateTrainTest(:, j)-1;
-        else
-            labels = 2*double(Ytrain==Ytest(j))-1;
+            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
+            AP(j) = info.ap;
         end
-        [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-        AP(j) = info.ap;
+    else
+        parfor j = 1:testsize
+            labels = 2*double(Ytrain==Ytest(j))-1;
+            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
+            AP(j) = info.ap;
+        end
     end
     AP = AP(~isnan(AP));
     res = mean(AP);
@@ -45,21 +49,30 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    parfor j = 1:testsize
-        sim_j = double(sim(:, j));
-        idx = [];
-        for th = opts.nbits:-1:-opts.nbits
-            idx = [idx; find(sim_j == th)];
-            if length(idx) >= N, break; end
+    if use_cateTrainTest
+        parfor j = 1:testsize
+            sim_j = double(sim(:, j));
+            idx = [];
+            for th = opts.nbits:-1:-opts.nbits
+                idx = [idx; find(sim_j == th)];
+                if length(idx) >= N, break; end
+            end
+            labels = 2*cateTrainTest(idx(1:N), j)-1;
+            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
+            AP(j) = info.ap;
         end
-	if use_cateTrainTest    
-		labels = 2*cateTrainTest(:, j)-1;
-	else
-        	labels = 2*double(Ytrain==Ytest(j))-1;
-	end
-        labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-        [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-        AP(j) = info.ap;
+    else
+        parfor j = 1:testsize
+            sim_j = double(sim(:, j));
+            idx = [];
+            for th = opts.nbits:-1:-opts.nbits
+                idx = [idx; find(sim_j == th)];
+                if length(idx) >= N, break; end
+            end
+            labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
+            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
+            AP(j) = info.ap;
+        end
     end
     AP = AP(~isnan(AP));
     res = mean(AP);
