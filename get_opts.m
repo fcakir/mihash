@@ -230,7 +230,7 @@ if opts.reservoirSize > 0
                 opts.fracHash, opts.randomHash, opts.accuHash);
         end
         if opts.verifyInv > 0
-            idr = sprintf('%s-inverse', idr);
+            idr = sprintf('%s-maxSelect-inverse', idr);
         end
     end
 else
