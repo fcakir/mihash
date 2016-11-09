@@ -48,6 +48,9 @@ ip.addParamValue('flipThresh', 0, @isscalar);       % for trigger=bf
 % selective bit update
 ip.addParamValue('miSelect', 1, @isscalar);  % quality-aware selection strategy {0, 1}
 ip.addParamValue('fracHash', 1, @isscalar);  % fraction of hash functions to update (0, 1]
+ip.addParamValue('sampleSelectSize',1, @isscalar); % between (0, 1], samples ceil(nbits*sampleSelectSize) 
+						 % hash functions to select from during greedy search
+ip.addParamValue('miSelectMaxIter', 100, @isscalar); % 
 ip.addParamValue('accuHash', 1 ,@isscalar);  % accumulation strategy {0, 1}
 ip.addParamValue('randomHash',0, @isscalar); % randomize selected hash functions to be updated {0, 1}
 ip.addParamValue('verifyInv',0,@isscalar);   % {0, 1} 
@@ -98,7 +101,9 @@ end
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
 assert(opts.fracHash > 0 && opts.fracHash <= 1);
-assert(opts.miSelect <= 0 || opts.miSelect <= 1);
+assert(opts.miSelect <= 1);
+assert(opts.sampleSelectSize <= 1 && opts.sampleSelectSize > 0);
+assert(opts.miSelectMaxIter> 0);
 
 if strcmp(dataset, 'labelme') 
     assert(strcmp(opts.ftype, 'gist'));
@@ -208,10 +213,20 @@ if opts.reservoirSize > 0
 
     % note: miSelect overrides fracHash
     if opts.miSelect > 0
-        idr = sprintf('%s-miSelect%g', idr, opts.miSelect);
+ 	if opts.sampleSelectSize < 1
+            idr = sprintf('%s-miSelect%gSample%g-maxIter%g', idr, ...
+	    	opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter);
+        else
+	    opts.miSelectMaxIter = opts.nbits;
+            idr = sprintf('%s-miSelect%g-maxIter%g', idr, ...
+	    	opts.miSelect, opts.miSelectMaxIter);
+	end
+	if opts.fracHash < 1
+	   idr = sprintf('%s-frac%g', idr, opts.fracHash);
+	end
     else
         if opts.fracHash < 1
-            idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, ...
+            idr = sprintf('%s-maxSelect-frac%g-RND%d-accuHash%d', idr, ...
                 opts.fracHash, opts.randomHash, opts.accuHash);
         end
         if opts.verifyInv > 0

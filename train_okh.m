@@ -114,7 +114,8 @@ for iter = 1:number_iterations
 
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(iter, ...
-        opts, W_lastupdate, W, reservoir, Hres_new, opts.unsupervised, thr_dist);
+        opts, W_lastupdate, W, reservoir, Hres_new, opts.sampleSelectSize, ...
+		opts.miSelectMaxIter, opts.unsupervised, thr_dist);
     inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
     if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
         %assert(opts.fracHash < 1);

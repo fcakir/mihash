@@ -96,7 +96,7 @@ switch lower(opts.trigger)
         end
     otherwise
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
-    end
+end
 
     % if udpate table, do selective hash function update
     if update_table 
@@ -117,12 +117,12 @@ switch lower(opts.trigger)
         end
     end
 end
-end
+
 
 
 % -------------------------------------------------------------------------
 function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
-    Hres, Hnew, reservoir_size, nbits, unsupervised, thr_dist)
+    Hres, Hnew, reservoir_size, nbits, sampleSelectSize, miSelectMaxIter, unsupervised, thr_dist)
 
 % assertions
 if exist('unsupervised', 'var') == 0 
@@ -227,6 +227,7 @@ max_mi = mean(Qentn);
 end
 
 
+
 % --------------------------------------------------------------------
 function mi = eval_mi(H, affinity)
 % distance
@@ -273,7 +274,7 @@ end
 
 % --------------------------------------------------------------------
 function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
-    unsupervised, thr_dist)
+     sampleSelectSize, miSelectMaxIter, unsupervised, thr_dist)
 % selectively update hash bits, criterion: MI for each bit
 % output
 %   h_ind: indices of hash bits to update
@@ -285,6 +286,9 @@ end
 
 assert(nbits == size(Hnew, 2));
 assert(ceil(nbits * fracHash) > 0);
+assert(ceil(nbits * sampleSelectSize) > 0);
+
+sampleSelectSize = ceil(nbits*sampleSelectSize);
 
 % precompute affinity matrix
 if ~unsupervised 
@@ -297,12 +301,16 @@ end
 % if MI starts dropping before that, stop
 tic;
 h_ind   = [];
-rembits = 1:nbits;
 best_MI = -inf;
-for i = 1 : ceil(nbits * fracHash)
+count = 0;
+while count < miSelectMaxIter
     % 1. go over each candidate hash function, add to selection, 
     %    compute resulting MI
+    count = count + 1;
     MI = [];
+    rembits = randperm(nbits, sampleSelectSize);
+    rembits(ismember(rembits, h_ind)) = [];
+    if isempty(rembits), continue; end;
     for j = rembits
         Hj = Hnew(:, [h_ind, j]);
         MI(end+1) = eval_mi(Hj, Aff);
@@ -317,11 +325,12 @@ for i = 1 : ceil(nbits * fracHash)
     else
         best_MI = new_MI;
         h_ind = [h_ind, rembits(idx)];
-        rembits(idx) = [];
+        assert(length(unique(h_ind)) == length(h_ind));
     end
+    
 end
-myLogInfo('(%.1f sec) selected %d/%d/%d bits, MI = %g', ...
-    toc, length(h_ind), ceil(nbits * fracHash), nbits, best_MI);
+myLogInfo('(%.1f sec) selected %d/%d/%d(%d) bits, MI = %g, loop size %d', ...
+    toc, length(h_ind), ceil(nbits * fracHash), sampleSelectSize, nbits, best_MI, count);
 end
 
 
