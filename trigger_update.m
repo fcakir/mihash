@@ -102,7 +102,7 @@ end
     if update_table 
         if opts.miSelect > 0  % mi_select
             h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
-                opts.nbits, opts.miSelect, varargin{:});
+                opts.nbits, opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter, varargin{:});
 
         elseif opts.fracHash < 1  % rand/max select
             if opts.randomHash  % rand_select
@@ -122,7 +122,7 @@ end
 
 % -------------------------------------------------------------------------
 function [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, X, Y, ...
-    Hres, Hnew, reservoir_size, nbits, sampleSelectSize, miSelectMaxIter, unsupervised, thr_dist)
+    Hres, Hnew, reservoir_size, nbits, unsupervised, thr_dist)
 
 % assertions
 if exist('unsupervised', 'var') == 0 
@@ -273,7 +273,7 @@ end
 
 
 % --------------------------------------------------------------------
-function h_ind = selective_update_mi(X, Y, Hnew, nbits, fracHash, ... 
+function h_ind = selective_update_mi(X, Y, Hnew, nbits, subsetHash, ... 
      sampleSelectSize, miSelectMaxIter, unsupervised, thr_dist)
 % selectively update hash bits, criterion: MI for each bit
 % output
@@ -285,7 +285,7 @@ elseif unsupervised
 end
 
 assert(nbits == size(Hnew, 2));
-assert(ceil(nbits * fracHash) > 0);
+assert(ceil(nbits * subsetHash) > 0);
 assert(ceil(nbits * sampleSelectSize) > 0);
 
 sampleSelectSize = ceil(nbits*sampleSelectSize);
@@ -330,19 +330,19 @@ while count < miSelectMaxIter
     
 end
 myLogInfo('(%.1f sec) selected %d/%d/%d(%d) bits, MI = %g, loop size %d', ...
-    toc, length(h_ind), ceil(nbits * fracHash), sampleSelectSize, nbits, best_MI, count);
+    toc, length(h_ind), ceil(nbits * subsetHash), sampleSelectSize, nbits, best_MI, count);
 end
 
 
 % ----------------------------------------------------------------
 function h_ind = selective_update(Hres, Hnew, reservoir_size, nbits, ...
-    fracHash, inverse)
+    subsetHash, inverse)
 % selectively update hash bits, criterion: #bitflip
 % output
 %   h_ind: indices of hash bits to update
 
 % assertions
-assert(ceil(nbits*fracHash) > 0);
+assert(ceil(nbits*subsetHash) > 0);
 assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
@@ -352,10 +352,10 @@ assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % which hash functions causes the most bitflips in the reservoir
 [c_h, sorted_h] = sort(sum(xor(Hnew, Hres),1),'descend');
-%h_ind = sorted_h(1:ceil(fracHash*nbits));
+%h_ind = sorted_h(1:ceil(subsetHash*nbits));
 %h_ind = 1:nbits;
 c_h = c_h./ norm(c_h,1);
-h_ind = sorted_h(cumsum(c_h) <= fracHash);
+h_ind = sorted_h(cumsum(c_h) <= subsetHash);
 if isempty(h_ind), h_ind = sorted_h(1); end;
 if inverse
     inv_sorted_h = fliplr(sorted_h);
@@ -371,20 +371,20 @@ end
 % DEPRECATED
 % ----------------------------------------------------------------
 function h_ind = selective_update_corr(Hres, Hnew, reservoir_size, nbits, ...
-    fracHash)
+    subsetHash)
 % selectively update hash bits, criterion: decrease(max corrcoef w/ other bits)
 % output
 %   h_ind: indices of hash bits to update
 
 % assertions
-assert(ceil(nbits*fracHash) > 0);
+assert(ceil(nbits*subsetHash) > 0);
 assert(isequal(nbits, size(Hnew,2), size(Hres,2)));  % N*nbits
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 
 % which new hash functions are the least correlated with other old ones?
 h_ind = [];
 rembits = 1:nbits;
-for i = 1:ceil(nbits*fracHash)
+for i = 1:ceil(nbits*subsetHash)
     % select the bit w/ largest drop in (max corrcoef w/ other bits)
     %
     % 1. have old corrcoef ready

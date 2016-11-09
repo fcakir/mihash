@@ -221,16 +221,13 @@ if opts.reservoirSize > 0
             idr = sprintf('%s-miSelect%g-maxIter%g', idr, ...
 	    	opts.miSelect, opts.miSelectMaxIter);
 	end
-	if opts.fracHash < 1
-	   idr = sprintf('%s-frac%g', idr, opts.fracHash);
-	end
     else
         if opts.fracHash < 1
-            idr = sprintf('%s-maxSelect-frac%g-RND%d-accuHash%d', idr, ...
+            idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, ...
                 opts.fracHash, opts.randomHash, opts.accuHash);
         end
         if opts.verifyInv > 0
-            idr = sprintf('%s-maxSelect-inverse', idr);
+            idr = sprintf('%s-inverse', idr);
         end
     end
 else
