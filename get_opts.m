@@ -55,6 +55,7 @@ ip.addParamValue('accuHash', 1 ,@isscalar);  % accumulation strategy {0, 1}
 ip.addParamValue('randomHash',0, @isscalar); % randomize selected hash functions to be updated {0, 1}
 ip.addParamValue('verifyInv',0,@isscalar);   % {0, 1} 
 
+
 % Hack for Places
 ip.addParamValue('labelsPerCls', 0, @isscalar);
 
