@@ -10,11 +10,13 @@ ip = inputParser;
 ip.addParamValue('no_bins', 16, @isscalar);
 ip.addParamValue('stepsize', 1, @isscalar);
 ip.addParamValue('sigmf_p', [1 0], @isnumeric);
+ip.addParamValue('init_r_size', 500, @isscalar); % initial size of reservoir
 ip.addParameter('methodID', 'mutual_info');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('NoBins%dS%g', opts.no_bins, opts.stepsize);
+opts.identifier = sprintf('NoBins%dS%gInit_RSize%gSGMFP%g-%g', opts.no_bins, ...
+        opts.stepsize, opts.init_r_size, opts.sigmf_p(1), opts.sigmf_p(2));
 opts.batchSize  = 1;  % hard-coded
 
 % get generic fields

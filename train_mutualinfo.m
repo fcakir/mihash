@@ -44,12 +44,11 @@ else
     train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 
-
 % initialize reservoir
-if reservoir_size > 0
-    ind = randperm(length(train_ind));
+if reservoir_size > 0 
+    ind = randperm(size(Xtrain, 1));
     [reservoir, update_ind] = update_reservoir(reservoir, ...
-        Xtrain(train_ind(ind(1:500)),:), Ytrain(train_ind(ind(1:500)),:), reservoir_size, W, opts.unsupervised);
+        Xtrain(ind(1:opts.init_r_size),:), Ytrain(ind(1:opts.init_r_size),:), reservoir_size, W, opts.unsupervised);
     % compute new reservoir hash table (do not update yet)
 end
 

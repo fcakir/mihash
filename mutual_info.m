@@ -40,7 +40,7 @@ Y = input.Y;
 if ~unsupervised     
     % if multilabel
     if size(reservoir.Y,2) > 1
-        catePointTrain = (reservoir.Y' * Y > 0);    
+        catePointTrain = (reservoir.Y * Y' > 0);    
     % if multiclass
     else
         catePointTrain = (reservoir.Y == Y);
@@ -86,14 +86,15 @@ M = hdist(catePointTrain); NM = hdist(~catePointTrain);
 pQCp = zeros(1, no_bins+1);
 pQCn = zeros(1, no_bins+1);
 for i=1:no_bins+1
+    
     pQCp(i) = sum(triPulse(bordersQ(i) - deltaQ, bordersQ(i) + deltaQ, M));
     pQCn(i) = sum(triPulse(bordersQ(i) - deltaQ, bordersQ(i) + deltaQ, NM));
 end
 
 prCp = length(M) ./ (length(M) + length(NM));
 prCn = 1 - prCp;
-pQCp = pQCp ./ sum(pQCp);
-pQCn = pQCn ./ sum(pQCn);
+if sum(pQCp) ~= 0, pQCp = pQCp ./ sum(pQCp); end;
+if sum(pQCn) ~= 0, pQCn = pQCn ./ sum(pQCn); end;
 %if any(pQCp < 0)
 %    pQCp = pQCp - min(pQCp);
 %    pQCp = pQCp ./ sum(pQCp);
@@ -134,8 +135,8 @@ if bool_gradient
 
 	for i=1:no_bins+1
 		A = squeeze(d_delta_phi(i,:,:));
-		d_pQCp_phi(i,:) = sum(A(:, catePointTrain),2)'./length(M);%row vector
-		d_pQCn_phi(i,:) = sum(A(:, ~catePointTrain),2)'./length(NM); %row vector        
+        if length(M) ~= 0, d_pQCp_phi(i,:) = sum(A(:, catePointTrain),2)'./length(M); end;%row vector
+		if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(A(:, ~catePointTrain),2)'./length(NM); end; %row vector        
 	end
 
 	d_pQ_phi = d_pQCp_phi*prCp + d_pQCn_phi*prCn;
