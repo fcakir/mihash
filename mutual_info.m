@@ -160,7 +160,7 @@ if bool_gradient
 
 	d_MI_phi = d_H_phi - d_cond_phi;
 	ty = sigmf_p(1) * (W_last'*X' - sigmf_p(2)); % a vector
-	gradient = (diag(d_MI_phi) * (diag(sigmf(ty, [1 0]) .* sigmf(ty, [1 0]) .* sigmf_p(1)) ...
+	gradient = (diag(d_MI_phi) * (diag(sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1)) ...
 			* repmat(X', 1, length(ty))'))'; % a gradient matrix
 end
 
