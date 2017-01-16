@@ -126,42 +126,42 @@ Hres = Hres'; % nbits x reservoir_size
 % Assumes hash codes are relaxed from {-1, 1} to [-1, 1]
 if bool_gradient
 	d_dh_phi = -0.5*Hres;
-	d_delta_phi = zeros(no_bins+1, nbits, reservoir.size);
+	d_delta_phi = zeros(nbits, reservoir.size, no_bins+1);
 	d_pQCp_phi = zeros(no_bins+1, nbits);
 	d_pQCn_phi = zeros(no_bins+1, nbits);
 	for i=1:no_bins+1
-		d_delta_phi(i,:,:) = (diag(dTPulse(bordersQ(i) - deltaQ, bordersQ(i) + deltaQ, hdist)) * d_dh_phi')';
+        A = dTPulse(bordersQ(i) - deltaQ, bordersQ(i) + deltaQ, hdist);
+        %A = diag(A);
+		%d_delta_phi(:,:,i) = (d_dh_phi * A);
+        d_delta_phi(:,:,i) = bsxfun(@times, d_dh_phi, A);
 	end
 
 	for i=1:no_bins+1
-		A = squeeze(d_delta_phi(i,:,:));
-        if length(M) ~= 0, d_pQCp_phi(i,:) = sum(A(:, catePointTrain),2)'./length(M); end;%row vector
-		if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(A(:, ~catePointTrain),2)'./length(NM); end; %row vector        
+		%A = squeeze(d_delta_phi(i,:,:));
+        if length(M) ~= 0, d_pQCp_phi(i,:) = sum(d_delta_phi(:, catePointTrain, i),2)'./length(M); end;%row vector
+		if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(d_delta_phi(:, ~catePointTrain, i),2)'./length(NM); end; %row vector        
 	end
 
 	d_pQ_phi = d_pQCp_phi*prCp + d_pQCn_phi*prCn;
-	t_log = zeros(1, no_bins+1);
+	t_log = ones(1, no_bins+1);
 	idx = find(pQ > 0);
-	t_log(idx) = log2(pQ(idx));
-	t_log = t_log+1;
-	d_H_phi = sum(diag(t_log) * d_pQ_phi, 1)'; % row vector
+	t_log(idx) = t_log(idx) + log2(pQ(idx));
+	d_H_phi = sum(bsxfun(@times, d_pQ_phi, t_log'), 1)'; % row vector
 
-	t_log_p = zeros(1, no_bins+1);
-	t_log_n = zeros(1, no_bins+1);
+	t_log_p = ones(1, no_bins+1);
+	t_log_n = ones(1, no_bins+1);
 	idx = find(pQCp > 0);
 	idx2 = find(pQCn > 0);
-	t_log_p(idx) = log2(pQCp(idx));
-	t_log_p = t_log_p + 1;
-	t_log_n(idx2) = log2(pQCn(idx2));
-	t_log_n = t_log_n + 1;
+	t_log_p(idx) = t_log_p(idx) + log2(pQCp(idx));
+	t_log_n(idx2) = t_log_n(idx2) + log2(pQCn(idx2));
 
-	d_cond_phi = prCp * sum(diag(t_log_p) * d_pQCp_phi,1)' + ...
-		prCn* sum(diag(t_log_n)*d_pQCn_phi, 1)';
+	d_cond_phi = prCp * sum(bsxfun(@times, d_pQCp_phi, t_log_p'),1)' + ...
+		prCn* sum(bsxfun(@times, d_pQCn_phi, t_log_n'), 1)';
 
 	d_MI_phi = d_H_phi - d_cond_phi;
 	ty = sigmf_p(1) * (W_last'*X' - sigmf_p(2)); % a vector
-	gradient = (diag(d_MI_phi) * (diag(sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1)) ...
-			* repmat(X', 1, length(ty))'))'; % a gradient matrix
+	gradient = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
+        (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_MI_phi'));
 end
 
 
@@ -190,20 +190,27 @@ end
 end
 
 
+function y = triPulseV(a,c,x)
+    mid = (a+c) ./ 2;
+    y = zeros(length(mid),length(x));
+    ind = bsxfun(@gt, x, a) & bsxfun(@le, x, mid);
+    %y(:, ind) = 1-abs
+end
+
 function y = triPulse(a,c,x)
 % a must be smaller than c
 	mid = (a+c)/2;
 	%der = 2/(c-a);
 	y = zeros(1, length(x));
-    ind = single(x > a) .* single(x <= mid) == 1;    
+    ind = x > a & x <= mid;    
 	y(ind) = 1-abs(x(ind)-mid)./(c-mid);
     
-    ind = single(x > mid) .* single(x <= c) == 1;
+    ind = x > mid & x <= c;
 	y(ind) = 1-abs(x(ind)-mid)./(c-mid);
-    if any(y < 0)
-        disp('check triPulse');
-        keyboard;
-    end
+    %if any(y < 0)
+    %    disp('check triPulse');
+    %    keyboard;
+    %end
 end
 
 function y = dTPulse(a,c,x)
@@ -211,7 +218,7 @@ function y = dTPulse(a,c,x)
 	mid = (a+c)/2;
 	der = 2/(c-a);
 	y = zeros(1, length(x));
-	y(single(x > a) .* single(x <= mid) == 1) = der;
-	y(single(x > mid) .* single(x <= c) == 1) = -der;
+	y(x > a & x <= mid) = der;
+	y(x > mid & x <= c) = -der;
 end
 

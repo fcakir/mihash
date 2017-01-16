@@ -94,7 +94,8 @@ for iter = 1:number_iterations
     [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
                                        opts.unsupervised, thr_dist, 1);
     % sgd
-    W = W - opts.stepsize*gradient;
+    lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
+    W = W - lr*gradient;
     train_time = train_time + toc(t_);
 
 
