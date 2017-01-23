@@ -8,7 +8,7 @@ if 0
 else
     % LSH init
     W = randn(d, opts.nbits);
-    %W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 end
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
