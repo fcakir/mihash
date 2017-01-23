@@ -8,7 +8,7 @@ ht_updates  = zeros(1, opts.ntrials);
 bit_flips   = zeros(1, opts.ntrials);
 bit_recomp  = zeros(1, opts.ntrials);
 
-num_iters = ceil(opts.noTrainingPoints/opts.batchSize);
+num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);
 myLogInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 ncpu = feature('numcores');

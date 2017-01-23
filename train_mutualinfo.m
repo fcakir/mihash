@@ -8,7 +8,7 @@ if 0
 else
     % LSH init
     W = randn(d, opts.nbits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+    %W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 end
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
@@ -29,7 +29,7 @@ if reservoir_size > 0
     reservoir.PQ   = [];
     reservoir.H    = [];  % mapped binary codes for the reservoir
     if opts.unsupervised
-	reservoir.Y = [];
+        reservoir.Y = [];
     else
         reservoir.Y  = zeros(0, size(Ytrain, 2));
     end
@@ -40,15 +40,24 @@ if opts.pObserve > 0
     % [OPTIONAL] order training points according to label arrival strategy
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-    % randomly shuffle training points before taking first noTrainingPoints
-    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
+    for e = 1:opts.epoch
+	% randomly shuffle training points before taking first noTrainingPoints
+    	train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+		randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    end
 end
 
 % initialize reservoir
 if reservoir_size > 0 
     ind = randperm(size(Xtrain, 1));
-    [reservoir, update_ind] = update_reservoir(reservoir, ...
-        Xtrain(ind(1:opts.init_r_size),:), Ytrain(ind(1:opts.init_r_size),:), reservoir_size, W, opts.unsupervised);
+    if ~isempty(Ytrain)
+        [reservoir, update_ind] = update_reservoir(reservoir, ...
+            Xtrain(ind(1:opts.init_r_size),:), Ytrain(ind(1:opts.init_r_size),:), reservoir_size, W, opts.unsupervised);
+    else
+        [reservoir, update_ind] = update_reservoir(reservoir, ...
+            Xtrain(ind(1:opts.init_r_size),:), [], reservoir_size, W, opts.unsupervised);
+    end
     % compute new reservoir hash table (do not update yet)
 end
 
@@ -58,6 +67,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%% SET UP MUTUALINFO %%%%%%%%%%%%%%%%%%%%%%%
 % for AdaptHash
 code_length = opts.nbits;
+opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 number_iterations = opts.noTrainingPoints;
 myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
@@ -78,12 +88,15 @@ res_time    = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
+
 for iter = 1:number_iterations
     
     ind = train_ind(iter);
     spoint = Xtrain(ind, :);
     if ~opts.unsupervised
         slabel = Ytrain(ind, :);
+    else
+  	slabel = [];
     end    
     
     % hash function update
@@ -92,7 +105,7 @@ for iter = 1:number_iterations
     input.Y = slabel;
    
     [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-                                       opts.unsupervised, thr_dist, 1);
+                                       opts.unsupervised, thr_dist, opts.max_dif,  1);
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
     W = W - lr*gradient;
@@ -160,12 +173,13 @@ for iter = 1:number_iterations
 
         myLogInfo(['[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
-            '     total #BRs=%g, avg #BF=%g'], ...
+            '     total #BRs=%g, avg #BF=%g obj_val=%g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), res_time, ...
-            bits_computed_all, bitflips);
+            bits_computed_all, bitflips, output);
     end
 end
+
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc

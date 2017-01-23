@@ -1,5 +1,5 @@
 function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigmf_p,...
-                                       unsupervised, thr_dist, bool_gradient)
+                                       unsupervised, thr_dist, max_dif, bool_gradient)
 % W             : matrix, contains hash function parameters
 % input.X       : data point
 % input.Y       : label of X, empty if X has no labels
@@ -11,6 +11,8 @@ function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sig
 % sigmf_p 	: two length numeric vector, e.g., [a c], to be used in sigmf
 % unsupervised  : 1 if neighborhood is defined using thr_dist see below
 % thr_dist      : numeric value for thresholding
+% max_dif       : maximize the separability between the conditionals
+% bool_gradient : return gradient
 
 
 % compute loss
@@ -46,7 +48,7 @@ if ~unsupervised
         catePointTrain = (reservoir.Y == Y);
     end
 else
-    catePointTrain = squareform(pdist2(X, reservoir.X, 'euclidean')) <= thr_dist;
+    catePointTrain = pdist2(X, reservoir.X, 'euclidean') <= thr_dist;
 end
 
 %assert(isequal((W_last'*reservoir.X' > 0)', reservoir.H));
@@ -120,7 +122,22 @@ n = -sum(pQCn(idx).*log2(pQCn(idx)));
 condent = p * prCp + n * prCn;    
 
 assert(Qent-condent >= 0);
-output = Qent - condent;
+output = -(Qent - condent); % we're minimizing the mutual info.
+
+% ToDO consider max_dif in calculating the objective value
+if max_dif
+	pZ = zeros(1, no_bins+1);
+
+	for z=0:no_bins
+		pZCn1 = circshift(pQCn,-z, 2);
+		pZCn1(end-z+1:end) = 0;
+		pZCn2 = circshift(pQCn, z, 2);
+		pZCn2(1:z) = 0;
+		pZ(z+1) = sum(pZCn1 .* pQCp) + sum(pZCn2 .* pQCp);
+	end
+	output = output - max_dif * sum(bsxfun(@times, pZ, 0:1:no_bins));
+end
+
 
 Hres = Hres'; % nbits x reservoir_size
 % Assumes hash codes are relaxed from {-1, 1} to [-1, 1]
@@ -146,7 +163,7 @@ if bool_gradient
 	t_log = ones(1, no_bins+1);
 	idx = find(pQ > 0);
 	t_log(idx) = t_log(idx) + log2(pQ(idx));
-	d_H_phi = sum(bsxfun(@times, d_pQ_phi, t_log'), 1)'; % row vector
+	d_H_phi = sum(bsxfun(@times, d_pQ_phi, t_log'), 1)'; % row vector, this is equal to negative gradient of entropy -grad H
 
 	t_log_p = ones(1, no_bins+1);
 	t_log_n = ones(1, no_bins+1);
@@ -156,9 +173,31 @@ if bool_gradient
 	t_log_n(idx2) = t_log_n(idx2) + log2(pQCn(idx2));
 
 	d_cond_phi = prCp * sum(bsxfun(@times, d_pQCp_phi, t_log_p'),1)' + ...
-		prCn* sum(bsxfun(@times, d_pQCn_phi, t_log_n'), 1)';
+		prCn* sum(bsxfun(@times, d_pQCn_phi, t_log_n'), 1)'; % This is equal to negative gradient of cond entropy -grad H(|)
 
-	d_MI_phi = d_H_phi - d_cond_phi;
+	d_MI_phi = d_H_phi - d_cond_phi; % This is equal to the gradient of negative MI, 
+	
+	% calculate gradient to maximize expected distance between the conditionals pQCp and pQCn
+	if max_dif 
+		d_pZ_phi = zeros(no_bins+1, nbits); 
+		for z = 0:no_bins
+			pZCn1 = circshift(pQCn,-z, 2); % P(d+z|-)
+			pZCn1(end-z+1:end) = 0;
+			pZCn2 = circshift(pQCn, z, 2); % P(d-z|-)
+			pZCn2(1:z) = 0;
+			
+			d_ZCn_phi1 = circshift(d_pQCn_phi, -z, 2); % \delta P(d+z|-)/ \delta \Phi
+			d_ZCn_phi1(:, end-z+1:end) = 0;
+			d_ZCn_phi2 = circshift(d_pQCn_phi, z, 2); % \delta P(d-z|-)/ \delta \Phi
+			d_ZCn_phi2(:, 1:z) = 0;
+
+			d_pZ_phi(z+1, :) = sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
+						sum(bsxfun(@times, d_ZCn_phi2', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn2)', 1)'; 
+		end
+		d_MI_phi = d_MI_phi - max_dif * sum(bsxfun(@times, d_pZ_phi', 0:1:no_bins), 2);
+        
+	end
+	
 	ty = sigmf_p(1) * (W_last'*X' - sigmf_p(2)); % a vector
 	gradient = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
         (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_MI_phi'));
