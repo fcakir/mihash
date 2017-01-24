@@ -128,13 +128,14 @@ output = -(Qent - condent); % we're minimizing the mutual info.
 if max_dif
 	pZ = zeros(1, no_bins+1);
 
-	for z=0:no_bins
+	for z=1:no_bins
 		pZCn1 = circshift(pQCn,-z, 2);
 		pZCn1(end-z+1:end) = 0;
 		pZCn2 = circshift(pQCn, z, 2);
 		pZCn2(1:z) = 0;
 		pZ(z+1) = sum(pZCn1 .* pQCp) + sum(pZCn2 .* pQCp);
-	end
+    end
+    pZ(1) = sum(pQCn .* pQCp);
 	output = output - max_dif * sum(bsxfun(@times, pZ, 0:1:no_bins));
 end
 
@@ -180,7 +181,7 @@ if bool_gradient
 	% calculate gradient to maximize expected distance between the conditionals pQCp and pQCn
 	if max_dif 
 		d_pZ_phi = zeros(no_bins+1, nbits); 
-		for z = 0:no_bins
+		for z = 1:no_bins
 			pZCn1 = circshift(pQCn,-z, 2); % P(d+z|-)
 			pZCn1(end-z+1:end) = 0;
 			pZCn2 = circshift(pQCn, z, 2); % P(d-z|-)
@@ -193,7 +194,8 @@ if bool_gradient
 
 			d_pZ_phi(z+1, :) = sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
 						sum(bsxfun(@times, d_ZCn_phi2', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn2)', 1)'; 
-		end
+        end
+        d_pZ_phi(1,:) = sum(bsxfun(@times, d_pQCn_phi', pQCp)' + bsxfun(@times, d_pQCp_phi', pQCn)',1)';
 		d_MI_phi = d_MI_phi - max_dif * sum(bsxfun(@times, d_pZ_phi', 0:1:no_bins), 2);
         
 	end
