@@ -23,6 +23,7 @@ ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('val_size', 0, @isscalar);   % set > 0 to d validation
+ip.addParamValue('epoch', 1, @isscalar);
 % misc
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
@@ -262,7 +263,7 @@ end
 
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-opts.expdir = sprintf('%s/%gpts_%dtests', expdir_base, opts.noTrainingPoints, opts.ntests);
+opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, opts.noTrainingPoints*opts.epoch, opts.epoch, opts.ntests);
 if opts.pObserve > 0
     assert(opts.pObserve < 1);
     opts.expdir = sprintf('%s_arr%g', opts.expdir, opts.pObserve);
