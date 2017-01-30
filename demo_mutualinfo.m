@@ -10,7 +10,7 @@ ip = inputParser;
 ip.addParamValue('no_bins', 16, @isscalar);
 ip.addParamValue('stepsize', 1, @isscalar);
 ip.addParamValue('max_dif', 0, @isscalar); % regularizer parameter 
-ip.addParamValue('decay', 1e-4, @isscalar);
+ip.addParamValue('decay', 0, @isscalar);
 ip.addParamValue('sigmf_p', [1 0], @isnumeric);
 ip.addParamValue('init_r_size', 500, @isscalar); % initial size of reservoir
 ip.addParameter('methodID', 'mutual_info');

@@ -9,11 +9,13 @@ function [resfn, dp] = demo_osh(ftype, dataset, nbits, varargin)
 ip = inputParser;
 ip.addParamValue('stepsize', 0.1, @isscalar);
 ip.addParamValue('SGDBoost', 1, @isscalar);
+ip.addParamValue('learn_ecoc', 1, @isscalar);
 ip.addParameter('methodID', '');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
+opts.identifier = sprintf('B%d_S%g_LECOC%g', opts.SGDBoost, opts.stepsize, ...
+	opts.learn_ecoc);
 opts.batchSize  = 1;  % hard-coded
 
 % get generic fields

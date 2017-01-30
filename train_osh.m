@@ -2,7 +2,12 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
     train_osh(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-[W, H, ECOCs] = init_osh(Xtrain, opts);
+if ~opts.learn_ecoc
+	[W, H, ECOCs] = init_osh(Xtrain, opts);
+	uYtrain = [];
+else
+	[W, H, ECOCs, uYtrain] = init_osh_l(Xtrain, Ytrain, opts);
+end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
@@ -86,7 +91,7 @@ for iter = 1:opts.noTrainingPoints
         end
         num_labeled = num_labeled + 1;
         [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-            slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
+            slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, opts.learn_ecoc, uYtrain);
         
         % if using smoothness regularizer:
         % When a labelled items comes find its neighors from the reservoir
@@ -304,9 +309,53 @@ H = [];  % the indexing structure
 end
 
 % -----------------------------------------------------------
+% initialize online hashing
+function [W, H, ECOCs] = init_osh_l(Xtrain, Ytrain, opts)
+% randomly generate candidate codewords, store in ECOCs
+[uYtrain] = unique(Ytrain, 'rows');
+
+if ~strcmpi(opts.dataset, 'nus')
+	S = 2*(repmat(uYtrain,1,length(uYtrain)) == repmat(uYtrain,1,length(uYtrain))') - 1;
+else
+	K = size(uYtrain, 1);
+	K = randperm(K);
+	uYtrain = uYtrain(K(1:5000),:)
+	S = 2*single(uYtrain * uYtrain' > 0) - 1;
+end
+S = S * opts.nbits;
+bigM = size(uYtrain, 1);
+
+% NOTE ECOCs now is a BINARY (0/1) MATRIX!
+ECOCs = logical(zeros(bigM, opts.nbits));
+for t = 1:opts.nbits
+	if t > 1
+		y = 2*single(y) - 1;
+		S = S - y*y';
+	end
+	[U, V] = eig(single(S));
+	eigenvalue = diag(V)';
+	[eigenvalue, order] = sort(eigenvalue, 'descend');
+	y = U(:, order(1));
+	y = y > 0;
+	ECOCs(:, t) = y;
+end
+clear r
+
+d = size(Xtrain, 2);
+if 0
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
+H = [];  % the indexing structure
+end
+
+% -----------------------------------------------------------
 % find target codes for a new labeled example
 function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-    slabel, seenLabels, M_ecoc, i_ecoc, ECOCs)
+    slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, l_ecoc, uYtrain)
 assert(sum(slabel) ~= 0, 'Error: finding target codes for unlabeled example');
 
 if numel(slabel) == 1
@@ -315,7 +364,12 @@ if numel(slabel) == 1
     if ismem == 0
         seenLabels = [seenLabels; slabel];
         % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-        M_ecoc = [M_ecoc; 2*ECOCs(i_ecoc,:)-1];
+	if ~l_ecoc
+	        M_ecoc = [M_ecoc; 2*ECOCs(i_ecoc,:)-1];
+	else
+		ind = find(uYtrain == slabel*10);
+		M_ecoc = [M_ecoc; 2*ECOCs(ind, :) - 1];
+	end
         ind    = i_ecoc;
         i_ecoc = i_ecoc + 1;
     end
@@ -327,17 +381,27 @@ else
         seenLabels = zeros(size(slabel));
         M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
     end
-    % find incoming labels that are unseen
-    unseen = find((slabel==1) & (seenLabels==0));
-    if ~isempty(unseen)
-        for j = unseen
-            % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-            M_ecoc(j, :) = 2*ECOCs(i_ecoc, :)-1;
-            i_ecoc = i_ecoc + 1;
-        end
-        seenLabels(unseen) = 1;
+    if ~l_ecoc
+	% find incoming labels that are unseen
+	unseen = find((slabel==1) & (seenLabels==0));
+	if ~isempty(unseen)
+	    for j = unseen
+	        % NOTE ECOCs now is a BINARY (0/1) MATRIX!
+	        M_ecoc(j, :) = 2*ECOCs(i_ecoc, :)-1;
+	        i_ecoc = i_ecoc + 1;
+	end
+	seenLabels(unseen) = 1;
+	end
+        ind = find(slabel==1);
+    else
+    	ind = find(ismember(uYtrain, slabel, 'rows'));
+	if isempty(ind)
+		[~, ind] = max(uYtrain*slabel');
+	end
+	M_ecoc = [M_ecoc; 2*ECOCs(ind,:) - 1];
+	ind = i_ecoc;
+	i_ecoc = i_ecoc + 1;
     end
-    ind = find(slabel==1);
 end
 
 % find/assign target codes
