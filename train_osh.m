@@ -4,9 +4,9 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 if ~opts.learn_ecoc
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
-	uYtrain = [];
+	uYtrain = [];c_idx = [];c_centers = [];
 else
-	[W, H, ECOCs, uYtrain] = init_osh_l(Xtrain, Ytrain, opts);
+	[W, H, ECOCs, uYtrain, c_centers, c_idx] = init_osh_l(Xtrain, Ytrain, opts);
 end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
@@ -91,7 +91,7 @@ for iter = 1:opts.noTrainingPoints
         end
         num_labeled = num_labeled + 1;
         [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-            slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, opts.learn_ecoc, uYtrain);
+            slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, opts.learn_ecoc, uYtrain, c_centers, c_idx);
         
         % if using smoothness regularizer:
         % When a labelled items comes find its neighors from the reservoir
@@ -310,34 +310,57 @@ end
 
 % -----------------------------------------------------------
 % initialize online hashing
-function [W, H, ECOCs] = init_osh_l(Xtrain, Ytrain, opts)
+function [W, H, ECOCs, uYtrain, c_centers, c_idx] = init_osh_l(Xtrain, Ytrain, opts)
 % randomly generate candidate codewords, store in ECOCs
 [uYtrain] = unique(Ytrain, 'rows');
-
+c_idx = [];
 if ~strcmpi(opts.dataset, 'nus')
+	% generally speaking, the number of classes in multiclass datasets are <= 1K
 	S = 2*(repmat(uYtrain,1,length(uYtrain)) == repmat(uYtrain,1,length(uYtrain))') - 1;
 else
+	% if number of distinct label combinations is large, then we need to cluster them
+	% otherwise there will be only a few instances to train for each of the combinations
+
 	K = size(uYtrain, 1);
-	K = randperm(K);
-	uYtrain = uYtrain(K(1:5000),:)
-	S = 2*single(uYtrain * uYtrain' > 0) - 1;
+	if K > opts.cluster_size
+		myLogInfo(sprintf('Too many (%d) combinations, clustering...', K));
+		[c_idx, c_centers] = kmedoids(uYtrain, opts.cluster_size, 'Distance', 'jaccard');
+	else
+		c_idx = 1:K;
+		c_centers = uYtrain;
+	end
+	%K = randperm(K);
+	%uYtrain = uYtrain(K(1:5000),:);
+	% even though you're using k-medoids the below can give you sparse S
+	% mean of each cluster > 1/2 would be more appropiate
+	S = 2*single(c_centers * c_centers' > 0) - 1;
 end
 S = S * opts.nbits;
-bigM = size(uYtrain, 1);
+bigM = size(S, 1);
 
 % NOTE ECOCs now is a BINARY (0/1) MATRIX!
 ECOCs = logical(zeros(bigM, opts.nbits));
-for t = 1:opts.nbits
-	if t > 1
-		y = 2*single(y) - 1;
-		S = S - y*y';
+if 0 %strcmpi(opts.dataset,'nus')
+	for t = 1:opts.nbits
+	    r = ones(bigM, 1);
+	    while (sum(r)==bigM || sum(r)==0)
+		r = randi([0,1], bigM, 1);
+	    end
+	    ECOCs(:, t) = logical(r);
 	end
-	[U, V] = eig(single(S));
-	eigenvalue = diag(V)';
-	[eigenvalue, order] = sort(eigenvalue, 'descend');
-	y = U(:, order(1));
-	y = y > 0;
-	ECOCs(:, t) = y;
+else
+	for t = 1:opts.nbits
+		if t > 1
+			y = 2*single(y) - 1;
+			S = S - y*y';
+		end
+		[U, V] = eig(single(S));
+		eigenvalue = diag(V)';
+		[eigenvalue, order] = sort(eigenvalue, 'descend');
+		y = U(:, order(1));
+		y = y > 0;
+		ECOCs(:, t) = y;
+	end
 end
 clear r
 
@@ -355,7 +378,7 @@ end
 % -----------------------------------------------------------
 % find target codes for a new labeled example
 function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-    slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, l_ecoc, uYtrain)
+    slabel, seenLabels, M_ecoc, i_ecoc, ECOCs, l_ecoc, uYtrain, c_centers, c_idx)
 assert(sum(slabel) ~= 0, 'Error: finding target codes for unlabeled example');
 
 if numel(slabel) == 1
@@ -394,10 +417,9 @@ else
 	end
         ind = find(slabel==1);
     else
-    	ind = find(ismember(uYtrain, slabel, 'rows'));
-	if isempty(ind)
-		[~, ind] = max(uYtrain*slabel');
-	end
+	ind_ = find(ismember(uYtrain, slabel, 'rows'));
+	assert(~isempty(ind_));
+	ind = c_idx(ind_);
 	M_ecoc = [M_ecoc; 2*ECOCs(ind,:) - 1];
 	ind = i_ecoc;
 	i_ecoc = i_ecoc + 1;
