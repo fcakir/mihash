@@ -6,7 +6,8 @@ function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
 %
 update_table = false;
 ret_val = -1;
-h_ind = 1:opts.nbits;
+nbits = opts.nbits*opts.no_blocks;
+h_ind = 1:nbits;
 
 % ----------------------------------------------
 % update on first iteration
@@ -89,7 +90,7 @@ switch lower(opts.trigger)
                 mod(iter*opts.batchSize, opts.updateInterval) == 0
             [mi_impr, max_mi] = trigger_mutualinfo(iter, W, W_last, ...
                 reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-                reservoir.size, opts.nbits, varargin{:});
+                reservoir.size, nbits, varargin{:});
             update_table = mi_impr > opts.miThresh;
             myLogInfo('Max MI=%g, MI diff=%g, update=%d', max_mi, mi_impr, update_table);
             ret_val = mi_impr;
@@ -102,18 +103,18 @@ end
     if update_table 
         if opts.miSelect > 0  % mi_select
             h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
-                opts.nbits, opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter, varargin{:});
+                nbits, opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter, varargin{:});
 
         elseif opts.fracHash < 1  % rand/max select
             if opts.randomHash  % rand_select
-                h_ind = randperm(opts.nbits, ceil(opts.nbits*opts.fracHash));
+                h_ind = randperm(nbits, ceil(nbits*opts.fracHash));
             else   % max_select
                 h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-                    opts.nbits, opts.fracHash, opts.verifyInv);
+                    nbits, opts.fracHash, opts.verifyInv);
             end
 
         else  % update all bits
-            h_ind = 1:opts.nbits;
+            h_ind = 1:nbits;
         end
     end
 end
