@@ -12,11 +12,11 @@ ip.addParamValue('SGDBoost', 1, @isscalar);
 ip.addParamValue('learn_ecoc', 0, @isscalar);
 ip.addParamValue('cluster_size', 2000, @isscalar);
 ip.addParamValue('block_size', 1, @isscalar);
-ip.addParameter('methodID', '');
+ip.addParameter('methodID', 'oshb');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('B%d_S%g_LECOC%g_ClustSize%g_BlockSize', opts.SGDBoost, opts.stepsize, ...
+opts.identifier = sprintf('B%d_S%g_LECOC%g_ClustSize%g_BlockSize%g', opts.SGDBoost, opts.stepsize, ...
 	opts.learn_ecoc, opts.cluster_size, opts.block_size);
 opts.batchSize  = 1;  % hard-coded
 
@@ -24,6 +24,6 @@ opts.batchSize  = 1;  % hard-coded
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-[resfn, dp] = demo(opts, @train_osh, @test_osh);
+[resfn, dp] = demo(opts, @train_oshb, @test_osh);
 diary('off');
 end

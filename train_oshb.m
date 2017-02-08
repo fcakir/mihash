@@ -4,6 +4,7 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 if ~opts.learn_ecoc
 	[ext_W, H, ECOCs] = init_osh(Xtrain, Ytrain, opts);
+    opts.no_blocks = size(ext_W, 3);
 	uYtrain = [];c_idx = [];c_centers = [];
 else
 	[W, H, ECOCs, uYtrain, c_centers, c_idx] = init_osh_l(Xtrain, Ytrain, opts);
@@ -273,6 +274,7 @@ if SGDBoost == 0
     for i = 1:size(points, 1)
         xi = points(i, :);
         ci = codes(i, :);
+        ci(ci == 0) = [];
         id = (xi * W .* ci < 1);  % logical indexing > find()
         n  = sum(id);
         if n > 0
@@ -302,7 +304,7 @@ end
 % initialize online hashing
 function [W, H, ECOCs] = init_osh(Xtrain, Ytrain, opts, bigM)
 % randomly generate candidate codewords, store in ECOCs
-if nargin < 3, bigM = 10000; end
+if nargin < 4, bigM = 10000; end
 
 % NOTE ECOCs now is a BINARY (0/1) MATRIX!
 ECOCs = logical(zeros(bigM, opts.nbits));
@@ -317,8 +319,7 @@ clear r
 
 d = size(Xtrain, 2);
 no_blocks = ceil(length(unique(Ytrain,'rows'))/opts.block_size);
-opts.no_blocks = no_blocks;
-myLogInfo('Block size %g, Number of blocks %g', opts.block_size, opts.no_blocks);
+myLogInfo('Block size %g, Number of blocks %g', opts.block_size, no_blocks);
 
 % LSH_init
 % W is not a collection of matrices each matrix represents hash function
@@ -419,7 +420,7 @@ if numel(slabel) == 1
 			ind_w = ceil(islabel/block_size);
 			old_ind_w = ceil((islabel-1)/block_size);
 
-			if ond_ind_w ~= ind_w
+			if old_ind_w ~= ind_w
 				M_ecoc = [M_ecoc zeros(size(M_ecoc, 1), nbits)];
 			end
 
