@@ -195,12 +195,12 @@ if bool_gradient
 			pZCn2 = circshift(pQCn, z, 2); % P(d-z|-)
 			pZCn2(1:z) = 0;
 			
-			d_ZCn_phi1 = circshift(d_pQCn_phi, -z, 2); % \delta P(d+z|-)/ \delta \Phi
+			d_ZCn_phi1 = circshift(d_pQCn_phi, -z, 1); % \delta P(d+z|-)/ \delta \Phi
 			d_ZCn_phi1(:, end-z+1:end) = 0;
-			d_ZCn_phi2 = circshift(d_pQCn_phi, z, 2); % \delta P(d-z|-)/ \delta \Phi
+			d_ZCn_phi2 = circshift(d_pQCn_phi, z, 1); % \delta P(d-z|-)/ \delta \Phi
 			d_ZCn_phi2(:, 1:z) = 0;
 
-			d_pZ_phi(z+1, :) = sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
+			d_pZ_phi(z+1, :) = 0*sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
 						sum(bsxfun(@times, d_ZCn_phi2', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn2)', 1)'; 
         end
         d_pZ_phi(1,:) = sum(bsxfun(@times, d_pQCn_phi', pQCp)' + bsxfun(@times, d_pQCp_phi', pQCn)',1)';

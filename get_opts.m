@@ -23,7 +23,8 @@ ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('val_size', 0, @isscalar);   % set > 0 to d validation
-ip.addParamValue('epoch', 1, @isscalar);
+ip.addParamValue('epoch', 1, @isscalar)
+ip.addParamValue('no_blocks',1, @isscalar);
 % misc
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
