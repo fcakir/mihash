@@ -41,8 +41,30 @@ if opts.pObserve > 0
     % [OPTIONAL] order training points according to label arrival strategy
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-    % randomly shuffle training points before taking first noTrainingPoints
-    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
+    if opts.learn_ecoc && strcmp(opts.dataset,'nus')
+	    % ToDo: currently only works without clustering, i.e., c_centers represent all uYtrain
+	    keyboard
+	    [uY, ia, ic] = unique(Ytrain, 'rows');
+	    count = 0;
+	    i_ = 1:length(ic);
+	    ic_ = ic;
+	    while count < opts.noTrainingPoints*opts.epoch
+	    	[~,loc] = ismember(1:length(ia), ic_);
+		train_ind(count+1:count+length(loc)) = i_(loc);
+		assert(size(unique(Ytrain(i_(loc), :),'rows'),1) == length(ia));
+		i_ = randperm(length(ic));
+		ic_ = ic(i_);
+		count = count + length(loc);
+	    end
+    else
+
+	    for e = 1:opts.epoch
+		% randomly shuffle training points before taking first noTrainingPoints
+		train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+			randperm(size(Xtrain, 1), opts.noTrainingPoints);
+	    end
+    end
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -71,7 +93,7 @@ res_time    = 0;
 num_labeled   = 0; 
 num_unlabeled = 0;
 %%%%%%%%%%%%%%%%%%%%%%% SET UP OSH %%%%%%%%%%%%%%%%%%%%%%%
-
+opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 for iter = 1:opts.noTrainingPoints
@@ -320,20 +342,36 @@ if ~strcmpi(opts.dataset, 'nus')
 else
 	% if number of distinct label combinations is large, then we need to cluster them
 	% otherwise there will be only a few instances to train for each of the combinations
-
 	K = size(uYtrain, 1);
 	if K > opts.cluster_size
 		myLogInfo(sprintf('Too many (%d) combinations, clustering...', K));
 		[c_idx, c_centers] = kmedoids(uYtrain, opts.cluster_size, 'Distance', 'jaccard');
+		u_c_idx = unique(c_idx);
+		D = zeros(length(u_c_idx), length(u_c_idx));
+	        D(1:length(u_c_idx)+1:length(u_c_idx)^2) = 1;
+		for i = 1:length(u_c_idx)-1
+			for j = i+1:length(u_c_idx)
+				ci_ = find(c_idx == u_c_idx(i));
+				cj_ = find(c_idx == u_c_idx(j));
+				D(i, j) = sum(sum(pdist2(uYtrain(ci_, :), uYtrain(cj_, :), 'jaccard')))/(length(ci_)*length(cj_));
+				D(j, i) = D(i, j);
+			end
+		end
+    
+		D = D - min(D(:));
+	        D = D ./ max(D(:));
+	        myLogInfo('MAX D=%g, MIN D=%g', max(D(:)), min(D(:)));
+		S = 2*D - 1;
 	else
 		c_idx = 1:K;
 		c_centers = uYtrain;
+		S = 2*single(c_centers*c_centers' > 0 ) - 1;
 	end
 	%K = randperm(K);
 	%uYtrain = uYtrain(K(1:5000),:);
 	% even though you're using k-medoids the below can give you sparse S
 	% mean of each cluster > 1/2 would be more appropiate
-	S = 2*single(c_centers * c_centers' > 0) - 1;
+	%S = 2*single(c_centers * c_centers' > 0) - 1;
 end
 S = S * opts.nbits;
 bigM = size(S, 1);

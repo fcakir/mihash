@@ -133,9 +133,19 @@ elseif strcmp(opts.dataset, 'nus')
     end
     load([basedir '/nuswide/AllNuswide_fc7.mat']);  % FVs
     Y = load([basedir '/nuswide/AllLabels81.txt']);
+    use21FrequentConcepts = 1;
+    if use21FrequentConcepts
+    	myLogInfo('Using 21 most frequent concepts, removing rest...');
+	[~, fi_] = sort(sum(Y, 1), 'descend');
+	Y(:, fi_(22:end)) = [];
+	fi2_ = find(sum(Y, 2) == 0);
+	Y(fi2_,:) = [];
+	FVs(fi2_,:) = [];
+	myLogInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
+		size(FVs,1), size(FVs, 2), size(Y, 2));
+    end
     X = double(FVs);  clear FVs
-    T = 30;
-
+    T = 500;
     if normalizeX 
         % normalize features
         X = bsxfun(@minus, X, mean(X,1));  % first center at 0
@@ -143,7 +153,8 @@ elseif strcmp(opts.dataset, 'nus')
     end
 
     % TODO Names
-    [Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T);
+    [Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(X, Y, T, ...
+    	use21FrequentConcepts);
     Names = [];
     if opts.val_size > 0
 	assert(size(Ytrain, 1) >=  opts.val_size);
@@ -229,14 +240,15 @@ end
 
 % --------------------------------------------------------
 function [Xtrain, Ytrain, Xtest, Ytest] = ...
-    split_train_test_nus(gist, tags, tstperclass)
+    split_train_test_nus(gist, tags, tstperclass, ufq)
 
 % normalize features
 gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
 gist = normalize(gist);  % then scale to unit length
 
 % construct test and training set
-num_classes = 81;
+num_classes = size(tags, 2);
+%if ufq == 0, num_classes = 81;else, num_classes = 21; end;
 testsize    = num_classes * tstperclass;
 ind         = randperm(size(gist, 1));
 Xtest       = gist(ind(1:testsize), :);

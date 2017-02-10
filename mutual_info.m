@@ -124,6 +124,11 @@ condent = p * prCp + n * prCn;
 assert(Qent-condent >= 0);
 output = -(Qent - condent); % we're minimizing the mutual info.
 
+% generate figs
+%f = figure('visible','off');
+
+%close f;
+
 % ToDO consider max_dif in calculating the objective value
 if max_dif
 	pZ = zeros(1, no_bins+1);

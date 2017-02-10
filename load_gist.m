@@ -55,6 +55,18 @@ elseif strcmp(opts.dataset, 'sun')
 elseif strcmp(opts.dataset, 'nus')
     gist = load([basedir '/nuswide/BoW_int.dat']);
     tags = load([basedir '/nuswide/AllLabels81.txt']);
+    
+    use21FrequentConcepts = 1;
+    if use21FrequentConcepts
+    	myLogInfo('Using 21 most frequent concepts, removing rest...');
+	[~, fi_] = sort(sum(tags, 1), 'descend');
+	tags(:, fi_(22:end)) = [];
+	fi2_ = find(sum(tags, 2) == 0);
+	tags(fi2_,:) = [];
+	gist(fi2_,:) = [];
+	myLogInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
+		size(gist,1), size(gist, 2), size(tags, 2));
+    end
     tstperclass = 30;
 
     if normalizeX 
@@ -63,7 +75,7 @@ elseif strcmp(opts.dataset, 'nus')
         gist = normalize(double(gist));  % then scale to unit length
     end
     [Xtrain, Ytrain, Xtest, Ytest] = ...
-        split_train_test_nus(gist, tags, tstperclass);
+        split_train_test_nus(gist, tags, tstperclass, use21FrequentConcepts);
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
     	myLogInfo('Doing validation!');
@@ -154,14 +166,15 @@ end
 
 % --------------------------------------------------------
 function [Xtrain, Ytrain, Xtest, Ytest] = ...
-    split_train_test_nus(gist, tags, tstperclass)
+    split_train_test_nus(gist, tags, tstperclass, ufq)
 
 % normalize features
 gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
 gist = normalize(gist);  % then scale to unit length
 
 % construct test and training set
-num_classes = 81;
+num_classes = size(tags, 2);
+%num_classes = 81;
 testsize    = num_classes * tstperclass;
 ind         = randperm(size(gist, 1));
 Xtest       = gist(ind(1:testsize), :);
