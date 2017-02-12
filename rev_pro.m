@@ -1,4 +1,4 @@
-function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigmf_p,...
+function [output, gradient] = rev_pro(W_last, input, reservoir, no_bins, sigmf_p,...
                                        unsupervised, thr_dist, max_dif, bool_gradient)
 % W             : matrix, contains hash function parameters
 % input.X       : data point
@@ -13,7 +13,7 @@ function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sig
 % thr_dist      : numeric value for thresholding
 % max_dif       : maximize the separability between the conditionals
 % bool_gradient : return gradient
-
+% NIPS 2016 HISTOGRAM LOSS 
 
 % compute loss
 % compute distances
@@ -110,40 +110,10 @@ assert(sum(abs((pQCp*prCp+ pQCn*prCn) - pQ)) < 1e-6);
 %    pQ = pQCp*prCp + pQCn*prCn;
 %end
 
-% estimate H(Q) entropy -> Qent
-idx = find(pQ > 0);
-Qent = -sum(pQ(idx).*log2(pQ(idx)));
-
-% estimate H(Q|C) -> condent
-idx = find(pQCp > 0);
-p = -sum(pQCp(idx).*log2(pQCp(idx)));
-idx = find(pQCn > 0);
-n = -sum(pQCn(idx).*log2(pQCn(idx)));
-condent = p * prCp + n * prCn;    
-
-assert(Qent-condent >= 0);
-output = -(Qent - condent); % we're minimizing the mutual info.
-
-% generate figs
-%f = figure('visible','off');
-
-%close f;
-
-% ToDO consider max_dif in calculating the objective value
-if max_dif
-	pZ = zeros(1, no_bins+1);
-
-	for z=1:no_bins
-		pZCn1 = circshift(pQCn,-z, 2);
-		pZCn1(end-z+1:end) = 0;
-		pZCn2 = circshift(pQCn, z, 2);
-		pZCn2(1:z) = 0;
-		pZ(z+1) = sum(pZCn1 .* pQCp) + sum(pZCn2 .* pQCp);
-    end
-    pZ(1) = sum(pQCn .* pQCp);
-	output = output - max_dif * sum(bsxfun(@times, pZ, 0:1:no_bins));
-end
-
+%------------------------------------------------------
+psi = cumsum(pQCp);
+output = sum(pQCn .* psi);
+%------------------------------------------------------
 
 Hres = Hres'; % nbits x reservoir_size
 % Assumes hash codes are relaxed from {-1, 1} to [-1, 1]
@@ -168,56 +138,19 @@ if bool_gradient
         % \partial Phi(x)
 		if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(d_delta_phi(:, ~catePointTrain, i),2)'./length(NM); end; %row vector        
     end
-    % Eq. 8 \partial p_{D,l} / \partial \Phi(x), computed from Eq. 9
-	d_pQ_phi = d_pQCp_phi*prCp + d_pQCn_phi*prCn;
-	t_log = ones(1, no_bins+1);
-	idx = find(pQ > 0);
-	t_log(idx) = t_log(idx) + log2(pQ(idx));
-    
-    % \partial H(D) / \Phi(x), see Eq. 6 and 7
-	d_H_phi = sum(bsxfun(@times, d_pQ_phi, t_log'), 1)'; % column vector, this is equal to negative gradient of entropy -grad H
-
-	t_log_p = ones(1, no_bins+1);
-	t_log_n = ones(1, no_bins+1);
-	idx = find(pQCp > 0);
-	idx2 = find(pQCn > 0);
-	t_log_p(idx) = t_log_p(idx) + log2(pQCp(idx));
-	t_log_n(idx2) = t_log_n(idx2) + log2(pQCn(idx2));
-    
-    % \partial H(D|C) / \partial \Phi(x)
-	d_cond_phi = prCp * sum(bsxfun(@times, d_pQCp_phi, t_log_p'),1)' + ...
-		prCn* sum(bsxfun(@times, d_pQCn_phi, t_log_n'), 1)'; % This is equal to negative gradient of cond entropy -grad H(|)
-
-    % Eq. 6 - a vector
-	d_MI_phi = d_H_phi - d_cond_phi; % This is equal to the gradient of negative MI, 
-	
-	% calculate gradient to maximize expected distance between the conditionals pQCp and pQCn
-	if max_dif 
-		d_pZ_phi = zeros(no_bins+1, nbits); 
-		for z = 1:no_bins % original cross correlation requires -inf to +inf, but this gives the same result
-			pZCn1 = circshift(pQCn,-z, 2); % P(d+z|-)
-			pZCn1(end-z+1:end) = 0;
-			pZCn2 = circshift(pQCn, z, 2); % P(d-z|-)
-			pZCn2(1:z) = 0;
-			
-			d_ZCn_phi1 = circshift(d_pQCn_phi, -z, 1); % \delta P(d+z|-)/ \delta \Phi
-			d_ZCn_phi1(:, end-z+1:end) = 0;
-			d_ZCn_phi2 = circshift(d_pQCn_phi, z, 1); % \delta P(d-z|-)/ \delta \Phi
-			d_ZCn_phi2(:, 1:z) = 0;
-
-			d_pZ_phi(z+1, :) = 0*sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
-						sum(bsxfun(@times, d_ZCn_phi2', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn2)', 1)'; 
-        end
-        d_pZ_phi(1,:) = sum(bsxfun(@times, d_pQCn_phi', pQCp)' + bsxfun(@times, d_pQCp_phi', pQCn)',1)';
-		d_MI_phi = d_MI_phi - max_dif * sum(bsxfun(@times, d_pZ_phi', 0:1:no_bins), 2);
-        
+        %----------------------------------------------
+	d_rev_phi = zeros(nbits,1);
+	d_psiCp_phi = cumsum(d_pQCp_phi);
+	for ix = 1:nbits
+	        d_rev_phi(ix) = sum(d_pQCn_phi(:, ix) .* psi' + pQCn' .*  d_psiCp_phi(:, ix));
 	end
+        %----------------------------------------------
 	% Since \Phi(x) = [\phi_1(x),...,\phi_b(x)] where \phi_i(x) = \sigma(w_i^t \times x)
     % take gradient of each \phi_i wrt to weight w_i, and multiply the
     % resulting vector with corresponding entry in d_MI_phi
 	ty = sigmf_p(1) * (W_last'*X' - sigmf_p(2)); % a vector
 	gradient = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
-        (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_MI_phi'));
+        (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_rev_phi'));
 end
 
 

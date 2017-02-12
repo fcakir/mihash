@@ -13,12 +13,15 @@ ip.addParamValue('max_dif', 0, @isscalar); % regularizer parameter
 ip.addParamValue('decay', 0, @isscalar);
 ip.addParamValue('sigmf_p', [1 0], @isnumeric);
 ip.addParamValue('init_r_size', 500, @isscalar); % initial size of reservoir
+ip.addParamValue('hloss', 0, @isscalar); % set 1 for nips 16 histogram loss
+ip.addParamValue('epoch', 1, @isscalar);
 ip.addParameter('methodID', 'mutual_info');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('NoBins%d_StepSize%g_Decay%g_InitRSize%g_SGMFP%g-%g_MaxDif%g_Epoch%g', opts.no_bins, ...
-        opts.stepsize, opts.decay, opts.init_r_size, opts.sigmf_p(1), opts.sigmf_p(2), opts.max_dif);
+opts.identifier = sprintf('NoBins%d_StepSize%g_Decay%g_InitRSize%g_SGMFP%g-%g_MaxDif%g_Epoch%g_HLOSS%d', opts.no_bins, ...
+        opts.stepsize, opts.decay, opts.init_r_size, opts.sigmf_p(1), opts.sigmf_p(2), opts.max_dif, opts.epoch, opts.hloss);
+	
 opts.batchSize  = 1;  % hard-coded
 
 % get generic fields

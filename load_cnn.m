@@ -145,7 +145,7 @@ elseif strcmp(opts.dataset, 'nus')
 		size(FVs,1), size(FVs, 2), size(Y, 2));
     end
     X = double(FVs);  clear FVs
-    T = 500;
+    T = 100;
     if normalizeX 
         % normalize features
         X = bsxfun(@minus, X, mean(X,1));  % first center at 0

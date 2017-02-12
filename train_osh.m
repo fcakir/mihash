@@ -4,9 +4,9 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 if ~opts.learn_ecoc
 	[W, H, ECOCs] = init_osh(Xtrain, opts);
-	uYtrain = [];c_idx = [];c_centers = [];
+	uYtrain = [];c_idx = [];c_centers = [];b_w = [];
 else
-	[W, H, ECOCs, uYtrain, c_centers, c_idx] = init_osh_l(Xtrain, Ytrain, opts);
+	[W, H, ECOCs, uYtrain, c_centers, c_idx, b_w] = init_osh_l(Xtrain, Ytrain, opts);
 end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
@@ -42,23 +42,25 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
+    % For nus, the classes (combinations of labels) are highly unbalanced -this shuffles data so that 
+    % train_ind contains data from all possible combinations of labels with equal probability
     if opts.learn_ecoc && strcmp(opts.dataset,'nus')
 	    % ToDo: currently only works without clustering, i.e., c_centers represent all uYtrain
-	    keyboard
 	    [uY, ia, ic] = unique(Ytrain, 'rows');
 	    count = 0;
 	    i_ = 1:length(ic);
 	    ic_ = ic;
 	    while count < opts.noTrainingPoints*opts.epoch
 	    	[~,loc] = ismember(1:length(ia), ic_);
-		train_ind(count+1:count+length(loc)) = i_(loc);
+		inds = i_(loc);
+		train_ind(count+1:count+length(loc)) = inds(randperm(length(inds)));
 		assert(size(unique(Ytrain(i_(loc), :),'rows'),1) == length(ia));
 		i_ = randperm(length(ic));
 		ic_ = ic(i_);
 		count = count + length(loc);
 	    end
+	    %train_ind = train_ind(randperm(length(train_ind)));
     else
-
 	    for e = 1:opts.epoch
 		% randomly shuffle training points before taking first noTrainingPoints
 		train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
@@ -67,7 +69,6 @@ else
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-
 
 %%%%%%%%%%%%%%%%%%%%%%% SET UP OSH %%%%%%%%%%%%%%%%%%%%%%%
 % for ECOC
@@ -131,13 +132,12 @@ for iter = 1:opts.noTrainingPoints
         slabel = zeros(size(slabel));  % mark as unlabeled for subsequent functions
         num_unlabeled = num_unlabeled + 1;
     end
-    
     % ---- hash function update ----
     % SGD-1. update W wrt. loss term(s)
     if isLabeled
         for c = 1:size(target_codes, 1)
             code = target_codes(c, :);
-            W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost);
+            W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost, b_w);
         end
     end
     
@@ -264,7 +264,7 @@ end
 
 % -----------------------------------------------------------
 % SGD mini-batch update
-function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
+function W = sgd_update(W, points, codes, stepsizes, SGDBoost, b_w)
 % input:
 %   W         - D*nbits matrix, each col is a hyperplane
 %   points    - n*D matrix, each row is a point
@@ -275,12 +275,15 @@ function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
 if SGDBoost == 0
     % no online boosting, hinge loss
     for i = 1:size(points, 1)
+        %bal = zeros(1, length(b_w));
         xi = points(i, :);
         ci = codes(i, :);
+        bal(ci == 1) = 1 - b_w(ci == 1);
+        bal(ci == -1) = b_w(ci == -1);
         id = (xi * W .* ci < 1);  % logical indexing > find()
         n  = sum(id);
         if n > 0
-            W(:,id) = W(:,id) + stepsizes(i)*repmat(xi',[1 n])*diag(ci(id));
+            W(:,id) = W(:,id) + stepsizes(i)*(repmat(xi',[1 n])*diag(ci(id)));%*diag(bal(id));
         end
     end
 else
@@ -332,10 +335,10 @@ end
 
 % -----------------------------------------------------------
 % initialize online hashing
-function [W, H, ECOCs, uYtrain, c_centers, c_idx] = init_osh_l(Xtrain, Ytrain, opts)
+function [W, H, ECOCs, uYtrain, c_centers, c_idx, b_w] = init_osh_l(Xtrain, Ytrain, opts)
 % randomly generate candidate codewords, store in ECOCs
 [uYtrain] = unique(Ytrain, 'rows');
-c_idx = [];
+c_centers = []; c_idx = [];
 if ~strcmpi(opts.dataset, 'nus')
 	% generally speaking, the number of classes in multiclass datasets are <= 1K
 	S = 2*(repmat(uYtrain,1,length(uYtrain)) == repmat(uYtrain,1,length(uYtrain))') - 1;
@@ -367,6 +370,7 @@ else
 		c_centers = uYtrain;
 		S = 2*single(c_centers*c_centers' > 0 ) - 1;
 	end
+	
 	%K = randperm(K);
 	%uYtrain = uYtrain(K(1:5000),:);
 	% even though you're using k-medoids the below can give you sparse S
@@ -378,15 +382,8 @@ bigM = size(S, 1);
 
 % NOTE ECOCs now is a BINARY (0/1) MATRIX!
 ECOCs = logical(zeros(bigM, opts.nbits));
-if 0 %strcmpi(opts.dataset,'nus')
-	for t = 1:opts.nbits
-	    r = ones(bigM, 1);
-	    while (sum(r)==bigM || sum(r)==0)
-		r = randi([0,1], bigM, 1);
-	    end
-	    ECOCs(:, t) = logical(r);
-	end
-else
+
+if 1 %strcmpi(opts.dataset,'nus')
 	for t = 1:opts.nbits
 		if t > 1
 			y = 2*single(y) - 1;
@@ -399,9 +396,19 @@ else
 		y = y > 0;
 		ECOCs(:, t) = y;
 	end
+else
+% keep below block for debugging purposes
+	for t = 1:opts.nbits
+	    r = ones(bigM, 1);
+	    while (sum(r)==bigM || sum(r)==0)
+		r = randi([0,1], bigM, 1);
+	    end
+	    ECOCs(:, t) = logical(r);
+	end
 end
+% arranging stepsize for unbalanced class distribution
+b_w = (mean(2*ECOCs-1,1)+1)./2;
 clear r
-
 d = size(Xtrain, 2);
 if 0
     W = rand(d, opts.nbits)-0.5;
@@ -436,31 +443,36 @@ if numel(slabel) == 1
     end
     
 else
-    % multi-label dataset
-    if isempty(seenLabels)
-        assert(isempty(M_ecoc));
-        seenLabels = zeros(size(slabel));
-        M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
-    end
     if ~l_ecoc
-	% find incoming labels that are unseen
-	unseen = find((slabel==1) & (seenLabels==0));
-	if ~isempty(unseen)
-	    for j = unseen
-	        % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-	        M_ecoc(j, :) = 2*ECOCs(i_ecoc, :)-1;
-	        i_ecoc = i_ecoc + 1;
-	end
-	seenLabels(unseen) = 1;
-	end
+        % multi-label dataset
+        if isempty(seenLabels)
+            assert(isempty(M_ecoc));
+            seenLabels = zeros(size(slabel));
+            M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
+        end
+        % find incoming labels that are unseen
+        unseen = find((slabel==1) & (seenLabels==0));
+        if ~isempty(unseen)
+            for j = unseen
+                % NOTE ECOCs now is a BINARY (0/1) MATRIX!
+                M_ecoc(j, :) = 2*ECOCs(i_ecoc, :)-1;
+                i_ecoc = i_ecoc + 1;
+            end
+            seenLabels(unseen) = 1;
+        end
         ind = find(slabel==1);
     else
-	ind_ = find(ismember(uYtrain, slabel, 'rows'));
-	assert(~isempty(ind_));
-	ind = c_idx(ind_);
-	M_ecoc = [M_ecoc; 2*ECOCs(ind,:) - 1];
-	ind = i_ecoc;
-	i_ecoc = i_ecoc + 1;
+        if isempty(seenLabels)
+            assert(isempty(M_ecoc));
+            seenLabels = zeros(1, length(c_idx));
+            M_ecoc = 2*ECOCs-1;
+        end
+        
+        %if isempty(M_ecoc), M_ecoc = 2*ECOCs - 1; end;
+        ind = find(ismember(uYtrain, slabel, 'rows'));        
+        assert(~isempty(ind));
+        seenLabels(ind) = 1;
+        
     end
 end
 

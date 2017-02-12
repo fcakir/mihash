@@ -41,10 +41,27 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
-    for e = 1:opts.epoch
-	% randomly shuffle training points before taking first noTrainingPoints
-    	train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
-		randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    % ToDO: For future purposes, keep block below,for unbalanced datasets 
+    if 0
+	    [uY, ia, ic] = unique(Ytrain, 'rows');
+	    count = 0;
+	    i_ = 1:length(ic);
+	    ic_ = ic;
+	    while count < opts.noTrainingPoints*opts.epoch
+	    	[~,loc] = ismember(1:length(ia), ic_);
+		inds = i_(loc);
+		train_ind(count+1:count+length(loc)) = inds(randperm(length(inds)));
+		assert(size(unique(Ytrain(i_(loc), :),'rows'),1) == length(ia));
+		i_ = randperm(length(ic));
+		ic_ = ic(i_);
+		count = count + length(loc);
+	    end
+    else
+	    for e = 1:opts.epoch
+		% randomly shuffle training points before taking first noTrainingPoints
+		train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+			randperm(size(Xtrain, 1), opts.noTrainingPoints);
+	    end
     end
 end
 
@@ -103,9 +120,15 @@ for iter = 1:number_iterations
     t_ = tic;
     input.X = spoint;
     input.Y = slabel;
-   
-    [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-                                       opts.unsupervised, thr_dist, opts.max_dif,  1);
+    % rev_pro implements the NIPS 16 Histogram Loss
+    if ~opts.hloss   
+	    [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
+					       opts.unsupervised, thr_dist, opts.max_dif,  1);
+    
+    else
+	    [output, gradient] = rev_pro(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
+					       opts.unsupervised, thr_dist, opts.max_dif,  1);
+    end
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
     W = W - lr*gradient;
