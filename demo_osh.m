@@ -11,7 +11,7 @@ ip.addParamValue('stepsize', 0.1, @isscalar);
 ip.addParamValue('SGDBoost', 1, @isscalar);
 ip.addParamValue('learn_ecoc', 0, @isscalar);
 ip.addParamValue('cluster_size', 2000, @isscalar);
-ip.addParameter('methodID', '');
+ip.addParameter('methodID', 'osh');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;

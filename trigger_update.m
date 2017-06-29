@@ -25,7 +25,7 @@ end
 
 % ----------------------------------------------
 % no reservoir -- use updateInterval
-if (1) %opts.reservoirSize <= 0
+if opts.reservoirSize <= 0
     update_table = ~mod(iter*opts.batchSize, opts.updateInterval);
     return;
 end
@@ -33,11 +33,6 @@ end
 % ----------------------------------------------
 % below: using reservoir
 % the reservoir has been updated before this function
-%
-%if exist('bf_thr', 'var')==0 || isempty(bf_thr)
-%    bf_thr = opts.flipThresh; 
-%end
-
 switch lower(opts.trigger)
     case 'bf'
         assert(~isempty(reservoir.H));
@@ -56,33 +51,6 @@ switch lower(opts.trigger)
             myLogInfo('BF=%g vs. %g, update=%d', ...
                 bitflips, opts.flipThresh, update_table);
         end
-
-        % ----------------------------------------
-        % [DEPRECATED: opts.adaptive]
-        % signal update of actual hash table, when:
-        %
-        % 1) using updateInterval ONLY (for rs_baseline)
-        % 2) using updateInterval + adaptive
-        % 3) #bitflips > adaptive thresh (for rs, USING adaptive threshold)
-        % 4) #bitflips > flipThresh (for rs, NOT USING adaptive threshold)
-        %
-        % NOTE: get_opts() ensures only one scenario will happen
-        %
-        %if opts.updateInterval > 0 && ...
-        %        mod(iter*opts.batchSize, opts.updateInterval) == 0
-        %    % cases 1, 2
-        %    % check whether to do an update to the hash table
-        %    %
-        %    if (opts.adaptive <= 0) || (opts.adaptive > 0 && bitflips > opts.flipThresh)
-        %        update_table = true;
-        %    end
-        %elseif (opts.updateInterval <= 0) && (opts.adaptive > 0 && bitflips > opts.flipThresh)
-        %    % case 3
-        %    update_table = true;
-        %elseif (opts.flipThresh > 0) && (bitflips > opts.flipThresh)
-        %    % case 4
-        %    update_table = true;
-        %end
         ret_val = bitflips;
 
     case 'mi'
@@ -98,27 +66,7 @@ switch lower(opts.trigger)
     otherwise
         error(['unknown/unimplemented opts.trigger: ' opts.trigger]);
 end
-
-    % if udpate table, do selective hash function update
-    if update_table 
-        if opts.miSelect > 0  % mi_select
-            h_ind = selective_update_mi(reservoir.X, reservoir.Y, Hres_new, ...
-                nbits, opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter, varargin{:});
-
-        elseif opts.fracHash < 1  % rand/max select
-            if opts.randomHash  % rand_select
-                h_ind = randperm(nbits, ceil(nbits*opts.fracHash));
-            else   % max_select
-                h_ind = selective_update(reservoir.H, Hres_new, reservoir.size, ...
-                    nbits, opts.fracHash, opts.verifyInv);
-            end
-
-        else  % update all bits
-            h_ind = 1:nbits;
-        end
-    end
 end
-
 
 
 % -------------------------------------------------------------------------

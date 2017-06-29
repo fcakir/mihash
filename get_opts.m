@@ -22,10 +22,10 @@ ip.addParamValue('ntrials', 3, @isscalar);
 ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
-ip.addParamValue('val_size', 0, @isscalar);   % set > 0 to d validation
 ip.addParamValue('epoch', 1, @isscalar)
 ip.addParamValue('no_blocks',1, @isscalar);
 % misc
+ip.addParamValue('prefix','', @isstr);
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
@@ -35,28 +35,12 @@ ip.addParamValue('localdir', ...
 
 % Reservoir
 ip.addParamValue('reservoirSize', 1000, @isscalar); % reservoir size, set to 0 if reservoir is not used
-ip.addParamValue('reg_rs', 0, @isscalar);        % reservoir reg. weight, only for regularization 
-ip.addParamValue('reg_smooth', 0, @isscalar);    % smoothness reg. weight
-ip.addParamValue('rs_sm_neigh_size',2,@isscalar); % neighbor size for smoothness
-ip.addParamValue('sampleResSize',10,@isscalar);   % sample size for reservoir
 
 % hash table update
 ip.addParamValue('updateInterval', 100, @isscalar);  % use with baseline
-ip.addParamValue('adaptive', 0, @isscalar);        % use with reservoir
 ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
 ip.addParamValue('miThresh', 0, @isscalar);         % for trigger=mi
 ip.addParamValue('flipThresh', 0, @isscalar);       % for trigger=bf
-
-% selective bit update
-ip.addParamValue('miSelect', 1, @isscalar);  % quality-aware selection strategy {0, 1}
-ip.addParamValue('fracHash', 1, @isscalar);  % fraction of hash functions to update (0, 1]
-ip.addParamValue('sampleSelectSize',1, @isscalar); % between (0, 1], samples ceil(nbits*sampleSelectSize) 
-						 % hash functions to select from during greedy search
-ip.addParamValue('miSelectMaxIter', 100, @isscalar); % 
-ip.addParamValue('accuHash', 1 ,@isscalar);  % accumulation strategy {0, 1}
-ip.addParamValue('randomHash',0, @isscalar); % randomize selected hash functions to be updated {0, 1}
-ip.addParamValue('verifyInv',0,@isscalar);   % {0, 1} 
-
 
 % Hack for Places
 ip.addParamValue('labelsPerCls', 0, @isscalar);
@@ -87,9 +71,6 @@ assert(opts.testFrac > 0);
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 %assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
     %'updateInterval cannot be used with flipThresh');
-if opts.adaptive > 0,
-    assert(opts.flipThresh<=0, 'adaptive cannot have flipThresh>0');
-end
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
@@ -98,19 +79,15 @@ if ~strcmp(opts.mapping,'smooth')
     myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
         '\n setting ntests to 2'])
     opts.ntests = 2;
-    assert(isempty(opts.methodID)); % OSH only
+    assert(strmcpi(opts.methodID,'osh')); % OSH only
 end
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
-assert(opts.fracHash > 0 && opts.fracHash <= 1);
-assert(opts.miSelect <= 1);
-assert(opts.sampleSelectSize <= 1 && opts.sampleSelectSize > 0);
-assert(opts.miSelectMaxIter> 0);
 
 if strcmp(dataset, 'labelme') 
     assert(strcmp(opts.ftype, 'gist'));
-    assert(~isempty(opts.methodID)); % if not empty than its not OSH
+    assert(~strmcpi(opts.methodID,'osh')); % if not empty than its not OSH
     opts.unsupervised = 1;
 else
     opts.unsupervised = 0;
@@ -146,14 +123,6 @@ end
 
 % set randseed -- don't change the randseed if don't have to!
 rng(opts.randseed, 'twister');
-
-% FC: if mapping is not smooth, set updateInterval to noTrainingPoints
-if ~strcmp(opts.mapping, 'smooth') && opts.updateInterval > 0 && ...
-        (opts.updateInterval ~= opts.noTrainingPoints)
-    myLogInfo('Mapping: %s. Overriding updateInterval=%d to noTrainingPoints=%d', ...
-        opts.mapping, opts.updateInterval, opts.noTrainingPoints);
-    opts.updateInterval = opts.noTrainingPoints;
-end
 
 % if smoothness not applied set sample reservoir size to the entire reservoir
 % [hack] for places
@@ -194,10 +163,6 @@ idr = opts.identifier;
 % handle reservoir
 if opts.reservoirSize > 0
     idr = sprintf('%s-RS%d', idr, opts.reservoirSize);
-    if opts.reg_rs > 0
-        % using reservoir
-        idr = sprintf('%sL%g', idr, opts.reg_rs);
-    end
     % in this order: U, (F, Ada) or (MI)
     % only possible combinations:  U, U+Ada, F, Ada
     if opts.updateInterval > 0
@@ -207,60 +172,16 @@ if opts.reservoirSize > 0
         if opts.flipThresh > 0
             idr = sprintf('%sF%g', idr, opts.flipThresh);
         end
-        if opts.adaptive > 0
-            idr = [idr, 'Ada'];
-        end
     else
         idr = sprintf('%s-MI%g', idr, opts.miThresh);
-    end
-
-    % note: miSelect overrides fracHash
-    if opts.miSelect > 0
- 	if opts.sampleSelectSize < 1
-            idr = sprintf('%s-miSelect%gSample%g-maxIter%g', idr, ...
-	    	opts.miSelect, opts.sampleSelectSize, opts.miSelectMaxIter);
-        else
-	    opts.miSelectMaxIter = opts.nbits;
-            idr = sprintf('%s-miSelect%g-maxIter%g', idr, ...
-	    	opts.miSelect, opts.miSelectMaxIter);
-	end
-    else
-        if opts.fracHash < 1
-            idr = sprintf('%s-frac%g-RND%d-accuHash%d', idr, ...
-                opts.fracHash, opts.randomHash, opts.accuHash);
-        end
-        if opts.verifyInv > 0
-            idr = sprintf('%s-inverse', idr);
-        end
     end
 else
     % no reservoir (baseline): must use updateInterval
     assert(opts.updateInterval > 0);
     idr = sprintf('%s-U%d', idr, opts.updateInterval);
 end
-
-% handle smoothness reg
-if opts.reg_smooth > 0
-    idr = sprintf('%s-SM%gN%dSS%d', idr, opts.reg_smooth, opts.rs_sm_neigh_size, opts.sampleResSize);
-end
-
-if 1 %opts.windows
-    head = textread('.git/HEAD', '%s');  
-    head_ID = textread(['.git/' head{2}], '%s');
-    prefix = head_ID{1}(1:7);
-    assert(all(isstrprop(prefix, 'xdigit')));
-    opts.identifier = [prefix '-' idr];
-else
-    [~, master_ID] = unix(['git rev-parse --short HEAD']);
-    opts.identifier = [master_ID(1:end-1) '-' idr];
-end
-
-
-% -------------------------------------------
-% doing validation?
-if opts.val_size > 0
-    opts.identifier = sprintf('%s-VAL-VS%d', opts.identifier, opts.val_size);
-end
+if isempty(opts.prefix), prefix = datetime('now'); end;
+opts.identifier = [prefix '-' idr];
 
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
