@@ -179,25 +179,12 @@ for iter = 1:number_iterations
     [update_table, trigger_val, h_ind] = trigger_update(iter, ...
         opts, W_lastupdate, W, reservoir, Hres_new, ...
 		 opts.unsupervised, thr_dist);
-    inv_h_ind = setdiff(1:opts.nbits, h_ind);  % keep these bits unchanged
-    if reservoir_size > 0 && numel(h_ind) < opts.nbits  % selective update
-        %assert(opts.fracHash < 1);
-        Hres_new(:, inv_h_ind) = reservoir.H(:, inv_h_ind);
-    end
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
         h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
         W_lastupdate(:, h_ind) = W(:, h_ind);
-        if opts.accuHash <= 0
-            W = W_lastupdate;
-            myLogInfo('not accumulating gradients!');
-        end
-        if opts.fracHash < 1
-            myLogInfo('selective update: fracHash=%g, randomHash=%g', ...
-                opts.fracHash, opts.randomHash);
-        end
         update_iters = [update_iters, iter];
 
         % update reservoir hash table
