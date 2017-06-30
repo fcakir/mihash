@@ -80,7 +80,7 @@ if ~strcmp(opts.mapping,'smooth')
     myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
         '\n setting ntests to 2'])
     opts.ntests = 2;
-    assert(strmcpi(opts.methodID,'osh')); % OSH only
+    assert(strcmpi(opts.methodID,'osh')); % OSH only
 end
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
