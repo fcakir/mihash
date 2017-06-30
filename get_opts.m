@@ -29,6 +29,7 @@ ip.addParamValue('prefix','', @isstr);
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
+ip.addParamValue('val_size', 0, @isscalar);
 ip.addParamValue('showplots', 0, @isscalar);
 ip.addParamValue('localdir', ...
     '/research/object_detection/cachedir/online-hashing', @isstr);
@@ -180,7 +181,7 @@ else
     assert(opts.updateInterval > 0);
     idr = sprintf('%s-U%d', idr, opts.updateInterval);
 end
-if isempty(opts.prefix), prefix = datetime('now'); end;
+if isempty(opts.prefix), prefix = sprintf('%s',datetime('today','InputFormat','yyyy-MM-dd')); end;
 opts.identifier = [prefix '-' idr];
 
 % set expdir

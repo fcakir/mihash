@@ -81,5 +81,5 @@ myLogInfo('%s: Testing is done.', opts.identifier);
 diary_path = opts.diary_name;
 
 % 5. close parpool, if any
-set_parpool(0);
+%set_parpool(0);
 end
