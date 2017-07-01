@@ -1,4 +1,17 @@
 function [resfn, dp] = demo_okh(ftype, dataset, nbits, varargin)
+% Implementation of OKH as described in: 
+%
+% L. K. Huang, Q. Y. Yang and W. S. Zheng
+% "Online Hashing"
+% International Joint Conference on Artificial Intelligence (IJCAI) 2013
+%
+% INPUTS
+%	c 	 - (float) Parameter C as in Alg. 1 of OKH. 
+% 	alpha	 - (float) \alpha as in Eq. 3 of OKH
+%       methodID - (string) Hard-coded to 'okh'.
+% OUTPUTS
+% 	resfn 	- (string) Path to the results file. see demo.m .
+% 	dp 	- (string) Path to the diary which contains the command window text
 
 % OKH-specific fields
 ip = inputParser;

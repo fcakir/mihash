@@ -1,4 +1,26 @@
 function [resfn, diary_path] = demo(opts, trainFunc, testFunc)
+% Creates the experimental results files and determines whether it is necessary 
+% to do training and testing. 
+% A result file is created for each trial (see opts.ntrials in get_opts.m)
+% parameter. Such a file has the METRIC_trialX.mat format and is saved in the 
+% results folder specified by opts.expdir. METRIC is the performance metric as 
+% indicated by opts.metric and X is the trial number. This file contains the 
+% performance values at each "checkpoint" among other information.
+% A final result file having format METRIC_Ntrials.mat is created where N is the
+% total number of trials, equal to opts.ntrials. This file contains the average
+% statistics of the individual trial (see test.m).
+%
+% INPUTS
+%	opts   - (struct)      Parameter structure.
+%    trainFunc - (func handle) Function handle determining which training routine
+% 			       to call
+%    testFunc  - (func handle) Function handle determining which test routine to 
+% 			       call. Note in the current version there is only 
+% 			       a single test routine for all methods. 
+% OUTPUTS
+% 	resfn - (string)       Path to final results file. 
+%  diary_path - (string)       Path to the diary containing the command window
+%			       output.
 
 % 0. result files
 Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);

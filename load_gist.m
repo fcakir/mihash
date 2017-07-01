@@ -1,4 +1,37 @@
 function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_gist(opts, normalizeX)
+% Load and prepare GIST features. The data paths must be changed. For all datasets,
+% X represents the data matrix. Rows correspond to data instances and columns
+% correspond to variables/features.
+% Y represents the label matrix where each row corresponds to a label vector of 
+% an item, i.e., for multiclass datasets this vector has a single dimension and 
+% for multilabel datasets the number of columns of Y equal the number of labels
+% in the dataset. Y can be empty for unsupervised datasets.
+% 
+%
+% INPUTS
+%	opts   - (struct)  Parameter structure.
+%   normalizeX - (int)     Choices are {0, 1}. If normalizeX = 1, the data is 
+% 			   mean centered and unit-normalized. 
+% 		
+% OUTPUTS
+% 	Xtrain - (nxd) 	   Training data matrix, each row corresponds to a data
+%			   instance.
+%	Ytrain - (nxl)     Training data label matrix. l=1 for multiclass datasets.
+%			   For unsupervised dataset Ytrain=[], see LabelMe in 
+%			   load_gist.m
+%	Xtest  - (nxd)     Test data matrix, each row corresponds to a data instance.
+%	Ytest  - (nxl)	   Test data label matrix, l=1 for multiclass datasets. 
+%			   For unsupervised dataset Ytrain=[], see LabelMe in 
+%			   load_gist.m
+%	thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
+%			   value to be used in determining whether two data instance
+% 			   are neighbors. If their distance is smaller, then they are
+% 			   considered neighbors.
+%			   Given the standard setup, this threshold value
+%			   is hard-wired to be compute from the 5th percentile 
+% 			   distance value obtain through 2,000 training instance. 
+% 			   See labelme case below.
+%
 if nargin < 2, normalizeX = 1; end
 if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
 thr_dist = -Inf;

@@ -1,5 +1,38 @@
 function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
     train_sketch(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
+% Training routine for SketchHash method, see demo_sketch.m .
+%
+% INPUTS
+% 	Xtrain - (float) n x d matrix where n is number of points 
+%       	         and d is the dimensionality 
+%
+% 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
+% 			 might be empty, e.g., LabelMe.
+%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
+%		         value to be used in determining whether two data instance
+% 		         are neighbors. If their distance is smaller, then they are
+% 		         considered neighbors.
+%	       	         Given the standard setup, this threshold value
+%		         is hard-wired to be compute from the 5th percentile 
+% 		         distance value obtain through 2,000 training instance.
+% 			 see load_gist.m . 
+% 	prefix - (string) Prefix of the "checkpoint" files.
+%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
+%   trialNo    - (int)   Trial ID
+%	opts   - (struct)Parameter structure.
+%
+% OUTPUTS
+%  train_time  - (float) elapsed time in learning the hash mapping
+%  update_time - (float) elapsed time in updating the hash table
+%  res_time    - (float) elapsed time in maintaing the reservoir set
+%  ht_updates  - (int)   total number of hash table updates performed
+%  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
+%  bitflips    - (int) total number of bit flips, see update_hash_table.m 
+ 
+% NOTES
+% 	W is d x b where d is the dimensionality 
+%            and b is the bit length / # hash functions
+%
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 % are we handling a mult-labeled dataset?
@@ -26,9 +59,14 @@ if opts.pObserve > 0
     % [OPTIONAL] order training points according to label arrival strategy
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-    % randomly shuffle training points before taking first noTrainingPoints
-    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
+    for e = 1:opts.epoch
+	    % randomly shuffle training points before taking first noTrainingPoints
+	    train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+		randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    end
 end
+opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 

@@ -1,14 +1,102 @@
 function opts = get_opts(opts, ftype, dataset, nbits, varargin)
-% PARAMS
-%  mapping (string) {'smooth', 'bucket', 'coord'}
-%  ntrials (int) # of random trials
-%  stepsize (float) is step size in SGD
-%  SGDBoost (integer) is 0 for OSHEG, 1 for OSH
-%  updateInterval (int) update hash table
-%  localdir (string) where to save stuff
-%  noTrainingPoints (int) # of training points
-%  override (int) override previous results {0, 1}
-%  tstScenario (int) testing scenario to be used {1 (default -old version),2}
+% Sets up data stream settings.
+% The data stream constitutes "trainingPoints" x "epochs" training instances, i.e., the
+% online learning is continued until "trainingPoints" x "epochs" examples are processed
+% where "trainingPoints" should be smaller than the available training data.  
+% In this data stream, "ntests" checkpoints are randomly placed in which the 
+% performance, as measured by the "metric" value, is evaluated. This can be used
+% to plot performance vs. training instances curves. See illustration below.
+%
+% |----o-------o--------o----o-------o--------| ← Data stream 
+% ↑    ↑                ↑                     ↑
+% 1 "checkpoint #2"  "checkpoint #4"        "trainingPoints" x "epochs"
+%
+% (checkpoint #1 is on the 1st iteration)
+%
+% INPUTS
+% 	ftype	- (string) Choices are 'gist' and 'cnn'. load_gist.m and load_cnn.m
+%			   function are called. 'gist' and 'cnn' correspond to
+% 			   GIST and CNN descriptors, respectively.% 			   
+% 			   Please inspect/edit load_gist.m and load_cnn.m for
+% 			   further information. 
+% 	dataset - (string) A string denoting the dataset to be used. 
+%			   Please add/edit  load_gist.m and load_cnn.m for available
+%			   datasets.
+% 	nbits   - (int)    Hash code length
+% 	mapping - (string) Choices are 'smooth' and 'bucket'. 'Smooth' populates
+% 			   the hash table with the hash mapping output. 'bucket'
+% 			   is only applicate for the "Online Supervised Hashing (osh)"
+% 			   method in which the hash table can be populated with 
+% 			   Error Correcting Output Codes of the data items (if their
+%			   label information exists). 'smooth' is the traditional
+% 			   approach in hashing methods. 
+% noTrainingPoints - (int) The number of training instances to be process at each
+% 			   epoch. Must be smaller than the available training data.
+% 	ntrials - (int)	   The number of trials. A trial corresponds to a separate
+% 			   experimental run. The performance results then are average
+% 			   across different trials. See test.m .
+% 	ntests  - (int)    This parameter corresponds to the number of checkpoints
+% 			   as illustrated above. This amount of checkpoints is placed
+% 			   at random locations in the data stream to evaluate the 
+% 			   hash methods performance. Must be [2, "trainingPoints"x"epochs"].
+% 			   The performance is evaluated on the first and last 
+%			   iteration, at the least.
+%      testFrac - (float)  A value between (0, 1]. testFrac = 0.5 results in only
+%			   testing with a random half of the test/query set. For
+% 			   speed purposes. 
+% 	metric  - (string) Choices are 'preck_X', 'precn_X', 'mAP_X' and 'mAP' where
+%			   X is an integer. 'preck_100' evaluates the  precision 
+% 			   value of the 100 nearest neighbors (average over the 
+% 			   query set). 'precn_3' evaluates the precision value 
+% 			   of neighbors returned within a Hamming radius 3 
+% 			   (averaged over the query set). 'mAP_100' evaluates the
+% 			   average precision of the 100 nearest neighbors (average
+%			   over the query set). 'mAP' evaluates the mean average 
+% 			   precision.  
+%	epoch 	- (int)    Number of epochs, [1, inf) 			    
+% 	prefix 	- (string) Prefix for the results folder title, if empty, the 
+% 			   results folder will be prefixes with todays date.
+% 	no_blocks - (int)  Hard-coded to 1. For future release.
+%	randseed - (int)   Random seed for reproducility. 			   
+%	nworkers - (int)   Number of parallel workers. If ntrials > 1, each trial
+% 			   is run on a different worker. Testing is done in a 
+% 			   parallel manner as well. 
+% 	override - (int)   {0, 1}. If override=0, then training and/or testing
+% 			   that correspond to the same experiment, is avoided when
+% 			   possible. if override=1, then (re-)runs the experiment
+% 			   no matter what.
+%	val_size - (int)   {0, 1}. Should be kept to 0, for future release purposes.
+%      showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
+% 			   training instances, CPU time and Bit Recomputations. 
+% 			   See test.m .
+%      localdir - (string) Directory path where the results folder will be created.
+% reservoirSize - (int)    The size of the set to be sampled via reservoir sampling 
+% 			   from the data stream. The reservoir can be used to 
+% 			   compute statistical properties of the stream. For future 
+% 			   release purposes.
+% updateInterval - (int)   The hash table is updated after each "updateInterval" 
+%			   number of training instances is processed.
+%	trigger	- (string) Choices are 'bf' only. The type of trigger used to determine 
+% 			   if a hash table update is needed. 'bf' means bit flips.
+% 			   For future release purposes.
+%     flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
+% 			   exceeds "flipThresh", a hash table update is performed. 
+% 			   Evaluated only after each "updateInterval". If flipThresh=-1
+% 			   the hash table is always updated at each "updateInterval".
+% 			   Hard-coded to 0. For future release.
+%   labelsPerCls - (int)   Hard-coded to 0. For future release.
+%   tstScenario  - (int)   Hard-coded to 1. Corresponds to populating the hash table 
+% 			   with all the data, excluding the test set. Other
+% 			   alternative might be to populate only with the processed/observed
+% 			   training instances. 
+%       pObserve - (float) For multiclass datasets. To generate different data streams
+% 			   in which a new class appears with pObserve probability. 
+%			   pObserve=0 corresponds to uniform probability, i.e., 
+% 			   see get_ordering.m .
+% 
+% OUTPUTS
+%	opts	- (struct) struct containing name and values of the inputs, e.g.,
+%			   opts.ftype, opts.dataset, opts.nbits, ... .
 
 ip = inputParser;
 
@@ -23,9 +111,9 @@ ip.addParamValue('ntests', 50, @isscalar);
 ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('epoch', 1, @isscalar)
-ip.addParamValue('no_blocks',1, @isscalar);
 % misc
 ip.addParamValue('prefix','', @isstr);
+ip.addParamValue('no_blocks', 1, @isscalar);
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);

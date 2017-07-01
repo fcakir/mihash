@@ -29,9 +29,14 @@ if opts.pObserve > 0
     % [OPTIONAL] order training points according to label arrival strategy
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
-    % randomly shuffle training points before taking first noTrainingPoints
-    train_ind = randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
+    for e = 1:opts.epoch
+	    % randomly shuffle training points before taking first noTrainingPoints
+	    train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+		randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    end
 end
+opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 

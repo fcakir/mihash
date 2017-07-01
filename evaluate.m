@@ -1,11 +1,24 @@
 function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
-% input: 
-%   Htrain - (logical) training binary codes
-%   Htest  - (logical) testing binary codes
-%   Ytrain - (int32) training labels
-%   Ytest  - (int32) testing labels
-% output:
-%  mAP - mean Average Precision
+% Given the hash codes of the training data (Htrain) and the hash codes of the test
+% data (Htest) evaluates the performance.
+% 
+% INPUTS
+% 	Htrain - (logical) Matrix containing the hash codes of the training
+% 			   data. Each column corresponds to a hash code. 
+%  	Htest  - (logical) Matrix containing the hash codes of the test data. 
+%			   Each column corresponds to a hash code.
+%  	Ytrain - (int) 	   Training data labels. For multilabel datasets such as nuswide
+% 			   each column corresponds to a label. For unsupervised 
+% 			   datasets such as LabelMe, Ytrain is set to [].
+%   	Ytest  - (int) 	   Testing data labels. 
+%	opts   - (struct)  Parameter structure.
+% cateTrainTest - (logical) Neighbor indicator matrix. trainingsize x testsize. 
+%			   May be empty to save memory. Then the indicator matrix 
+% 			   is computer on-the-fly, see below. 
+%
+% OUTPUTS
+%  	res    - (float) performance value as determined by opts.metric, e.g., mAP value.
+
 if nargin < 6, cateTrainTest = []; end
 use_cateTrainTest = ~isempty(cateTrainTest);
 
@@ -43,7 +56,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eval mAP on top N retrieved results
     assert(isfield(opts, 'mAP') & opts.mAP > 0);
     assert(opts.mAP < trainsize);
-    N = opts.mAP;
+    N = sscanf(opts.metric(5:end), '%d');
     AP = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
@@ -78,9 +91,9 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     res = mean(AP);
     myLogInfo('mAP@(N=%d) = %g', N, res);
 
-elseif ~isempty(strfind(opts.metric, 'prec_k'))
+elseif ~isempty(strfind(opts.metric, 'preck_'))
     % intended for PLACES, large scale
-    K = opts.prec_k;
+    K = sscanf(opts.metric(7:end), '%d');
     prec_k = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
@@ -97,8 +110,8 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     myLogInfo('Prec@(neighs=%d) = %g', K, res);
 
 
-elseif ~isempty(strfind(opts.metric, 'prec_n'))
-    N = opts.prec_n;
+elseif ~isempty(strfind(opts.metric, 'precn_'))
+    N = sscanf(opts.metric(7:end), '%d');
     R = opts.nbits;
     prec_n = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);

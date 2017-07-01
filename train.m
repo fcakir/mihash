@@ -1,11 +1,31 @@
 function train(trainFunc, run_trial, opts)
+% This is the routine which calls different training subroutines based on the 
+% hashing method. Separate trials are executed here and rudimentary statistics 
+% are computed and displayed. 
+%
+% INPUTS
+%    trainFunc - (func handle) Function handle determining which training routine
+% 			       to call
+%    run_trial - (vector)      Boolean vector specifying which trials to run.
+% 			       if opts.override=0, previously ran trials are skipped.
+%	opts   - (struct)      Parameter structure.
+% OUTPUTS
+% 	none
 
 global Xtrain Ytrain thr_dist
+
+% time to learn the hash mapping
 train_time  = zeros(1, opts.ntrials);
+% time to update the hash table
 update_time = zeros(1, opts.ntrials);
+% time to update/maintain the reservoir
 reservoir_time = zeros(1, opts.ntrials);
+% number of hash table updates performed
 ht_updates  = zeros(1, opts.ntrials);
+% number of bit flips occured in the hash table, see update_hash_table.m
 bit_flips   = zeros(1, opts.ntrials);
+% number of bit recomputations, generally this equal ht_updates x hashcode length
+% x number of hashed items, see update_hash_table.m 
 bit_recomp  = zeros(1, opts.ntrials);
 
 num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);

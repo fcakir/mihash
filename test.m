@@ -1,6 +1,21 @@
 function test(resfn, res_trial_fn, res_exist, opts)
-% if we're running this function, it means some elements in res_exist is false
-% and we need to compute/recompute the corresponding res_trial_fn's
+% Computes the performance by loading and evaluating the "checkpoint" files
+% saved during training. 
+%
+% INPUTS
+% 	resfn - (string)Path to final results file.
+%res_trial_fn - (cell) 	Cell array containing the paths to individual trial results
+% 			files.
+% res_exist   - (int)   Boolean vector indicating whether the trial results files needed
+% 			to be computed. For example, if opts.override=0 and the
+% 		   	corresponding trial result file is computed (from a previous
+% 			but identical experiment), the testing is skipped for that
+% 			trial.
+%	opts  - (struct)Parameter structure.
+% 
+% OUTPUTS
+%	none
+
 global Xtest Ytest Xtrain Ytrain thr_dist
 
 testX  = Xtest;
@@ -75,39 +90,11 @@ for t = 1:opts.ntrials
             if runtest
                 Htrain = d.H;
 
-                % TODO bring this back when considering tstScenario
-                %{
-                % AdaptHash uses test_osh, currently it doesn't work with the 
-                % 'label arriving strategy' scenario. 
-                if strcmp(caller,'demo_adapthash') 
-                    ind = 1:size(testX_t, 1);
-                else
-                    % We're removing test items in which their labels have
-                    % not been observed. However this can cause huge
-                    % flunctuations in performance at the beginning. For
-                    % instance at very first iteration we've seen only a
-                    % label, thus we remove all items that do not belong to that
-                    % label from the test. Depending on the label, the mAP
-                    % can be very high or low. This should depend on the
-                    % testing scenario, imo, for default and 'smooth'
-                    % mapping simply apply the hash mapping to all test and
-                    % train data -and report the performance.
-                    if opts.tstScenario == 2
-                        ind = ismember(testY, unique(d.seenLabels));
-                    else
-                        ind = 1:size(testX_t, 1);
-                    end
-                end
-                %}
-
                 % test hash table
                 % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
                 %       to compute Htest, to make sure it's computed using the same
                 %       hash mapping as Htrain.
                 Htest = (testX_t * d.W_lastupdate > 0)';
-
-                % TODO bring this back when considering tstScenario
-                %t_res(i) = evaluate(Htrain, Htest, trainY(1:size(Htrain,2)), testY(ind), opts, cateTrainTest);
 
                 % evaluate
                 t_res(i) = evaluate(Htrain, Htest, trainY, testY, opts, cateTrainTest);

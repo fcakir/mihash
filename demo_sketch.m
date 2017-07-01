@@ -1,10 +1,23 @@
 function [resfn, dp] = demo_sketch(ftype, dataset, nbits, varargin)
+% Implementation of the SketchHash method as described in: 
+%
+% C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu
+% "Online Sketching Hashing"
+% Computer Vision and Pattern Recognition (CVPR) 2015
+%
+% INPUTS
+% 	sketchSize - (int) size of the sketch matrix.
+% 	 batchSize - (int) The batch size, i.e. size of the data chunk
+%         methodID - (string) Hard-coded to 'sketch'.  
+% OUTPUTS
+% 	resfn 	- (string) Path to the results file. see demo.m .
+% 	dp 	- (string) Path to the diary which contains the command window text
+
 addpath('sketch');
 
 ip = inputParser;
 ip.addParamValue('sketchSize', 200, @isscalar);
 ip.addParamValue('batchSize', 50, @isscalar);
-%ip.addParamValue('onlyFinal', 0, @isscalar);
 ip.addParameter('methodID', 'sketch');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});

@@ -1,3 +1,4 @@
+% helper function similar to the join method for strings in Python.
 function joined_str = strjoin_fe(in_strings, delimiter)
     assert(iscellstr(in_strings), 'strjoin:cellstr', '1st argument: cell string');
     assert(ischar(delimiter) && (isvector(delimiter) || isempty(delimiter)), ...
