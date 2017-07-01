@@ -175,10 +175,10 @@ Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005
 @demo: 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100: Testing is done.
 ```
 Notice that the performance metric is mAP by default. Other performance measures can be used, please see `get_opts.m` and the `metric` parameter. 
-mAP is evaluate at every checkpoint and for each trial (here there is a single trial). The performance values, and among other information, are stored under the folder specified by  `opts.expdir`. Afterwards, the average mAP and the AUC values of all the trials are reported as `FINAL mAP` and `AUC mAP`, respectively. Notice the std is 0 as there is a single trial. 
+mAP is evaluated at every checkpoint and for each trial (here there is a single trial). The performance values, among other information, are stored under the folder specified by  `opts.expdir`. Afterwards, the average mAP and the AUC values of all the trials are reported as `FINAL mAP` and `AUC mAP`, respectively. Notice the std is 0 as there is a single trial. 
 
 ### Example #2
-Train SketchHash on CIFAR dataset with GIST descriptors. Use 10,000 training instances. Set batch size (data chunk) to 50 and sketch size to 200. 3 trials with 50 test checkpoints. Update the hash table after processing every 100 training instances. Use `/research` as the results directory. Override any past results.
+Train SketchHash on CIFAR dataset with GIST descriptors. Use 10,000 training instances. Set batch size (data chunk) to 50 and sketch size to 200. Do 3 trials with 50 test checkpoints. Update the hash table after processing every 100 training instances. Use `/research` as the results directory. Override any past results.
 ```Matlab 
 >> [result_file_path diary_path] = demo_sketch('cnn','cifar',32,'ntrials',3, 'ntest', 50, 'noTrainingPoints',20000, 'updateInterval', 1e2,'override', 1, 'sketchSize', 200, 'batchSize', 50, 'localdir','/research')
 ```
@@ -188,7 +188,7 @@ Results are stored at: `result_file_path='/research/sketch/01-Jul-2017-cifar-cnn
 Command window log is at: `diary_path='/research/sketch/01-Jul-2017-cifar-cnn-32smooth-Ske200Bat50-U100/20000pts_1epochs_50tests/diary_001.txt'`
 
 ### Example #3
-Train AdaptHash on LabelMe dataset with GIST descriptors. Use 10,000 training instances with 2 epochs (20,000 instances in total). Use 16 bit hash codes. Set performance metrc to prec@N=5. Update hash table at every 500 instances. Do two trials.
+Train AdaptHash on LabelMe dataset with GIST descriptors. Use 10,000 training instances with 2 epochs (20,000 instances in total). Use 16 bit hash codes. Set performance metric to prec@N=5. Update hash table at every 500 instances. Do 2 trials.
 ```Matlab
 >> [result_file_path diary_path] = demo_adapthash('gist','labelme',16,'ntrials',2, 'ntest', 5, 'noTrainingPoints', 10000, 'updateInterval', 5e2, 'override', 1, 'metric','prec_n5', 'alpha', 0.9, 'stepsize', 1e-1, 'epochs', 2)
 ```
