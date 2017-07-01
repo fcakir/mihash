@@ -18,6 +18,7 @@ for more parameters, refer to `get_opts.m`
 Results are cached by default to: `/research/object_detection/cachedir/online-hashing`
 
 If really necessary, change it by setting opts.localdir
+
 ### Example
 In the main folder, initialize runtime:
 ```Matlab
@@ -143,38 +144,43 @@ After printing out the experiment ID (`@get_opts: identifier:01-Jul-2017-cifar-c
 @load_cnn: Dataset "cifar" loaded in 13.72 secs`). 
 Afterwards, the training begins. Two primary information is printed.
 ##### i. When the hash table is updated (only for OSH)
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Trial No.`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Iteration No.`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`# of Bit flips`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Trigger Type`
-`--------------↓-----------------↓----------------------↓----------------------------↓--`
 `@train_osh: [T01] HT Update#7 @600, #BRs=1.3216e+07, bf_all=1.35307, trigger_val=-1(bf)`
-`----↑-----------------↑---------------↑---------------------------------↑--------------`
-`In method`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Hash Table Update No.` `# of Bit Recomputations`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Trigger threshold value`
+
+- `[T01]` indicates the trial number. 
+- `HT Update#7` indicates it is the 7th hash table update. 
+- `@600` the training iteration location of the hash table update. 
+- `#BRs=1.3216e+07` specifies the current number of bit recomputations in the hash table 
+- `bf_all=1.35307` specifies the current number of bit flips in the hash table
+- `trigger_val=-1(bf)` specifies the trigger threshold value in determining whether to perform an update to the hash table and `bf` denote the trigger type `bit flips`.
+
 ##### ii. When a checkpoint (for testing) is reached
-`Trial No.`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Experiment ID`
-`--↓------------------↓---------------------------`
-`[T01] 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100`
+```
+@train_osh: *checkpoint*
+[T01] 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100
+     (1456/2000) W 1.32s, HT 13.59s(15 updates), Res 0.52s
+     total #BRs=2.832e+07, avg #BF=30.9103
+```
+- `[T01]` again indicates the trial number
+- `01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100` denotes the experiment ID
+- `(1456/2000)` is the checkpoint location
+- `W 1.32s` is the training time for the hash method
+- `HT 13.59s(15 updates)` specifies the hash table update time and the number of conducted hash table updates till this checkpoint
+- `Res 0.52s` specifies the reservoir maintainance time
+- `total #BRs=2.832e+07` specifies the current total bit recomputations 
+- `avg #BF=30.9103` specifies the current total bit flips per iteration
 
-`Checkpoint location`&nbsp;&nbsp;&nbsp;&nbsp;`Hash Table Update time` `Reservoir Update time`
-`--↓----------------------↓--------------------↓------`
-`(1456/2000) W 1.32s, HT 13.59s(15 updates), Res 0.52s`
-`-------------↑--------------------↑------------------`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Training time`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Number of Hash Table Updates till this checkpoint`
-`Total Bit recomputations`
-`-------↓-----------------------------`
-`total #BRs=2.832e+07, avg #BF=30.9103`
-`---------------------------↑---------`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Bit Flips per Iteration`
-
-Note that some of the information such as `Bit flips`, `Bit recomputations` and `Trigger Type` are rudimentary and primarily for future release purposes.
+Note that some of the information such as `Bit flips`, `Bit recomputations` and `Trigger Type` are rudimentary and primarily for future release purposes. 
 
 After training the method the testing is done:
-`
-@demo: Testing models...`
-`Trial 1, Checkpoint     1/2000, @evaluate: mAP = 0.17385`
-`Trial 1, Checkpoint   573/2000, @evaluate: mAP = 0.457`
-`Trial 1, Checkpoint   993/2000, @evaluate: mAP = 0.50891`
-`Trial 1, Checkpoint  1456/2000, @evaluate: mAP = 0.53164`
-`Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005`
-`@test:   FINAL mAP: 0.55 +/- 0`
-`@test:     AUC mAP: 0.444 +/- 0`
-`@demo: 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100: Testing is done.`
-
+```
+@demo: Testing models...
+Trial 1, Checkpoint     1/2000, @evaluate: mAP = 0.17385
+Trial 1, Checkpoint   573/2000, @evaluate: mAP = 0.457
+Trial 1, Checkpoint   993/2000, @evaluate: mAP = 0.50891
+Trial 1, Checkpoint  1456/2000, @evaluate: mAP = 0.53164
+Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005
+@test:   FINAL mAP: 0.55 +/- 0
+@test:     AUC mAP: 0.444 +/- 0
+@demo: 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100: Testing is done.
+```
+Notice that mAP is computed at every checkpoint for each trial (here there is a single trial).  These performance values among other information are stored under the folder specified `opts.expdir`. Afterward, the average mAP and the AUC vlaue of all trials are reported as `FINAL mAP` and `AUC mAP`, respectively. Notice the std is 0 as there is a single trial. 
