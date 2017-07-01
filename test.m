@@ -85,7 +85,7 @@ for t = 1:opts.ntrials
 
             iter = Tmodel.test_iters(i);
             d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-            fprintf('Trial %d, Ex %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints*opts.epoch);
+            fprintf('Trial %d, Checkpoint %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints*opts.epoch);
 
             if runtest
                 Htrain = d.H;
