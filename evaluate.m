@@ -56,7 +56,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eval mAP on top N retrieved results
     assert(isfield(opts, 'mAP') & opts.mAP > 0);
     assert(opts.mAP < trainsize);
-    N = sscanf(opts.metric(5:end), '%d');
+    N = opts.mAP; 
     AP = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
@@ -91,16 +91,20 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     res = mean(AP);
     myLogInfo('mAP@(N=%d) = %g', N, res);
 
-elseif ~isempty(strfind(opts.metric, 'preck_'))
+elseif ~isempty(strfind(opts.metric, 'prec_k'))
     % intended for PLACES, large scale
-    K = sscanf(opts.metric(7:end), '%d');
+    K = opts.prec_k; 
     prec_k = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
     ncpu = feature('numcores');
     set_parpool(round(ncpu/2));
-    parfor i = 1:testsize
-        labels = (Ytrain == Ytest(i));
+    for i = 1:testsize
+        if use_cateTrainTest
+            labels = cateTrainTest(:, i);
+        else
+            labels = (Ytrain == Ytest(i));
+	end
         sim_i = sim(:, i);
         [~, I] = sort(sim_i, 'descend');
         I = I(1:K);
@@ -110,8 +114,8 @@ elseif ~isempty(strfind(opts.metric, 'preck_'))
     myLogInfo('Prec@(neighs=%d) = %g', K, res);
 
 
-elseif ~isempty(strfind(opts.metric, 'precn_'))
-    N = sscanf(opts.metric(7:end), '%d');
+elseif ~isempty(strfind(opts.metric, 'prec_n'))
+    N = opts.prec_n; 
     R = opts.nbits;
     prec_n = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
@@ -119,7 +123,7 @@ elseif ~isempty(strfind(opts.metric, 'precn_'))
     % NOTE 'for' has better CPU usage
     for j=1:testsize
         if use_cateTrainTest
-            labels = 2*cateTrainTest(:, j)-1;
+            labels = cateTrainTest(:, j);
         else
             labels = (Ytrain == Ytest(j));
         end

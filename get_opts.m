@@ -44,10 +44,10 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 %      testFrac - (float)  A value between (0, 1]. testFrac = 0.5 results in only
 %			   testing with a random half of the test/query set. For
 % 			   speed purposes. 
-% 	metric  - (string) Choices are 'preck_X', 'precn_X', 'mAP_X' and 'mAP' where
-%			   X is an integer. 'preck_100' evaluates the  precision 
+% 	metric  - (string) Choices are 'prec_kX', 'prec_nX', 'mAP_X' and 'mAP' where
+%			   X is an integer. 'prec_k100' evaluates the  precision 
 % 			   value of the 100 nearest neighbors (average over the 
-% 			   query set). 'precn_3' evaluates the precision value 
+% 			   query set). 'prec_n3' evaluates the precision value 
 % 			   of neighbors returned within a Hamming radius 3 
 % 			   (averaged over the query set). 'mAP_100' evaluates the
 % 			   average precision of the 100 nearest neighbors (average
@@ -123,7 +123,7 @@ ip.addParamValue('localdir', ...
     '/research/object_detection/cachedir/online-hashing', @isstr);
 
 % Reservoir
-ip.addParamValue('reservoirSize', 1000, @isscalar); % reservoir size, set to 0 if reservoir is not used
+ip.addParamValue('reservoirSize', 0, @isscalar); % reservoir size, set to 0 if reservoir is not used
 
 % hash table update
 ip.addParamValue('updateInterval', 100, @isscalar);  % use with baseline
@@ -175,7 +175,7 @@ assert(ismember(opts.tstScenario,[1,2]));
 
 if strcmp(dataset, 'labelme') 
     assert(strcmp(opts.ftype, 'gist'));
-    assert(~strmcpi(opts.methodID,'osh')); % if not empty than its not OSH
+    assert(~strcmpi(opts.methodID,'osh')); % OSH is inapplicable on LabelMe 
     opts.unsupervised = 1;
 else
     opts.unsupervised = 0;

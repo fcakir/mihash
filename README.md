@@ -1,29 +1,20 @@
-# online-hashing
+### Online Hashing Benchmarking
+This repository contains the implementation of several online hashing methods listed below:
+- L. K. Huang, Q. Y. Yang and W. S. Zheng "Online Hashing" International Joint Conference on Artificial Intelligence (IJCAI) 2013
+- F. Cakir, S. Sclaroff "Adaptive Hashing for Fast Similarity Search" International Conference on Computer Vision (ICCV) 2015
+-  F. Cakir, S. A. Bargal, S. Sclaroff  "Online Supervised Hashing"  Computer Vision and Image Understanding (CVIU) 2016
+-  C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu "Online Sketching Hashing" Computer Vision and Pattern Recognition (CVPR) 2015
 
-Online hashing with reservoir sampling
+In addition, we provide a benchmark for these hashing methods where the hash table is continuously updated and the hash method is evaluated at random locations during online learning. Please refer below and the code for implementation details.
 
-by: SAB, FC, KH, (SS)
+### Setup
+The `localdir` parameter must be specified (see get_opts.m) and `load_cnn.m` and `load_gist.m` files must be modified to load data. See the respective files for additional details. 
 
-## running experiments
-
-For example, CIFAR GIST features, 16 bits, smooth mapping (default), 3 random trials, use 5,000 training points, update hash table every 200 iters, and test at 10 checkpoints.
-``` matlab
-demo_osh('gist', 'cifar', 16, 'ntrials', 3, 'noTrainingPoints', 5000, 'updateInterval', 200, 'ntests', 10);
-```
-for more parameters, refer to `get_opts.m`
-
-
-## intermediate results
-
-Results are cached by default to: `/research/object_detection/cachedir/online-hashing`
-
-If really necessary, change it by setting opts.localdir
-
-### Example
 In the main folder, initialize runtime:
 ```Matlab
 >> startup
 ```
+### Example #1
 Run the OSH\* method with 2,000 training instances on the CIFAR dataset. Use 32 bit hash codes and CNN features\*. Do a single trial (`ntrials`) and put 5 checkpoints for testing (`ntest`). Override any previously ran identical experimental results (`override`), use a Hinge-loss formulation (`SGDBoost`). 
 ```Matlab
 >> demo_osh('cnn','cifar',32,'ntrials',1, 'ntest', 5, 'noTrainingPoints',2000, 'updateInterval', 1e2, 'reservoirSize', 0, 'override', 1,'SGDBoost', 0)
@@ -142,36 +133,36 @@ Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005
 
 After printing out the experiment ID (`@get_opts: identifier:01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100`) and the input parameters, the data is loaded (`@demo: Loading data for cifar_cnn...
 @load_cnn: Dataset "cifar" loaded in 13.72 secs`). 
-Afterwards, the training begins. Two primary information is printed.
-##### i. When the hash table is updated (only for OSH)
-`@train_osh: [T01] HT Update#7 @600, #BRs=1.3216e+07, bf_all=1.35307, trigger_val=-1(bf)`
+Afterwards, the training begins. Two primary information are printed during learning.
 
-- `[T01]` indicates the trial number. 
-- `HT Update#7` indicates it is the 7th hash table update. 
-- `@600` the training iteration location of the hash table update. 
-- `#BRs=1.3216e+07` specifies the current number of bit recomputations in the hash table 
-- `bf_all=1.35307` specifies the current number of bit flips in the hash table
-- `trigger_val=-1(bf)` specifies the trigger threshold value in determining whether to perform an update to the hash table and `bf` denote the trigger type `bit flips`.
-
-##### ii. When a checkpoint (for testing) is reached
+##### i. When a checkpoint (for testing) is reached
 ```
 @train_osh: *checkpoint*
 [T01] 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100
      (1456/2000) W 1.32s, HT 13.59s(15 updates), Res 0.52s
      total #BRs=2.832e+07, avg #BF=30.9103
 ```
-- `[T01]` again indicates the trial number
-- `01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100` denotes the experiment ID
-- `(1456/2000)` is the checkpoint location
-- `W 1.32s` is the training time for the hash method
-- `HT 13.59s(15 updates)` specifies the hash table update time and the number of conducted hash table updates till this checkpoint
-- `Res 0.52s` specifies the reservoir maintainance time
-- `total #BRs=2.832e+07` specifies the current total bit recomputations 
-- `avg #BF=30.9103` specifies the current total bit flips per iteration
+- `[T01]` again specifies the trial number.
+- `01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100` denotes the experiment ID.
+- `(1456/2000)` is the checkpoint location.
+- `W 1.32s` specifies the training time for the hash method.
+- `HT 13.59s(15 updates)` specifies the hash table update time and the total number of hash table updates till this checkpoint
+- `Res 0.52s` specifies the reservoir maintainance time.
+- `total #BRs=2.832e+07` specifies the current total amount of bit recomputations.
+- `avg #BF=30.9103` specifies the current total bit flips per iteration.
+##### ii. When the hash table is updated (only for OSH)
+`@train_osh: [T01] HT Update#7 @600, #BRs=1.3216e+07, bf_all=1.35307, trigger_val=-1(bf)`
+
+- `[T01]` indicates the trial number. 
+- `HT Update#7` indicates it is the 7th hash table update. 
+- `@600` specifies the training iteration location for the hash table update. 
+- `#BRs=1.3216e+07` specifies the current total number of bit recomputations in the hash table 
+- `bf_all=1.35307` specifies the current total number of bit flips in the hash table
+- `trigger_val=-1(bf)` specifies the trigger threshold value in determining whether to perform an update to the hash table. `bf` denotes that the trigger type is based on `bit flips`.
 
 Note that some of the information such as `Bit flips`, `Bit recomputations` and `Trigger Type` are rudimentary and primarily for future release purposes. 
 
-After training the method the testing is done:
+After training the method, the performance is evaluated and displayed on the command windows as below:
 ```
 @demo: Testing models...
 Trial 1, Checkpoint     1/2000, @evaluate: mAP = 0.17385
@@ -183,4 +174,35 @@ Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005
 @test:     AUC mAP: 0.444 +/- 0
 @demo: 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100: Testing is done.
 ```
-Notice that mAP is computed at every checkpoint for each trial (here there is a single trial).  These performance values among other information are stored under the folder specified `opts.expdir`. Afterward, the average mAP and the AUC vlaue of all trials are reported as `FINAL mAP` and `AUC mAP`, respectively. Notice the std is 0 as there is a single trial. 
+Notice that the performance metric is mAP by default. Other performance measures can be used, please see `get_opts.m` and the `metric` parameter. 
+mAP is evaluate at every checkpoint and for each trial (here there is a single trial). The performance values, and among other information, are stored under the folder specified by  `opts.expdir`. Afterwards, the average mAP and the AUC values of all the trials are reported as `FINAL mAP` and `AUC mAP`, respectively. Notice the std is 0 as there is a single trial. 
+
+### Example #2
+Train SketchHash on CIFAR dataset with GIST descriptors. Use 10,000 training instances. Set batch size (data chunk) to 50 and sketch size to 200. 3 trials with 50 test checkpoints. Update the hash table after processing every 100 training instances. Use `/research` as the results directory. Override any past results.
+```Matlab 
+>> [result_file_path diary_path] = demo_sketch('cnn','cifar',32,'ntrials',3, 'ntest', 50, 'noTrainingPoints',20000, 'updateInterval', 1e2,'override', 1, 'sketchSize', 200, 'batchSize', 50, 'localdir','/research')
+```
+
+Results are stored at: `result_file_path='/research/sketch/01-Jul-2017-cifar-cnn-32smooth-Ske200Bat50-U100/20000pts_1epochs_50tests/mAP_3trials.mat'`
+
+Command window log is at: `diary_path='/research/sketch/01-Jul-2017-cifar-cnn-32smooth-Ske200Bat50-U100/20000pts_1epochs_50tests/diary_001.txt'`
+
+### Example #3
+Train AdaptHash on LabelMe dataset with GIST descriptors. Use 10,000 training instances with 2 epochs (20,000 instances in total). Use 16 bit hash codes. Set performance metrc to prec@N=5. Update hash table at every 500 instances. Do two trials.
+```Matlab
+>> [result_file_path diary_path] = demo_adapthash('gist','labelme',16,'ntrials',2, 'ntest', 5, 'noTrainingPoints', 10000, 'updateInterval', 5e2, 'override', 1, 'metric','prec_n5', 'alpha', 0.9, 'stepsize', 1e-1, 'epochs', 2)
+```
+Results are stored at: `result_file_path='/research/object_detection/cachedir/online-hashing/adapt/01-Jul-2017-labelme-gist-16smooth-A0.9B0.01S0.1-U500/10000pts_1epochs_5tests/prec_n5_2trials.mat'`
+
+Command window log is at: `diary_path='/research/object_detection/cachedir/online-hashing/adapt/01-Jul-2017-labelme-gist-16smooth-A0.9B0.01S0.1-U500/10000pts_1epochs_5tests/diary_001.txt'`
+
+### Example #4
+Train OKH on LabelMe dataset with GIST descriptors. Use 24 bit hash codes. Single trial. Use 2,000 training instances. Update the hash table at every 200 instances. Set performance metric to prec@K=100.
+```Matlab
+>> [result_file_path diary_path] = demo_okh('gist','labelme',24,'ntrials',1, 'ntest', 10, 'noTrainingPoints',2000, 'updateInterval', 2e2, 'override', 1, 'metric','prec_k100','alpha', 0.7, 'c', 1e-4,'localdir','/research/object_detection/cachedir/online-hashing')
+```
+
+Results are stored at: `result_file_path='/research/object_detection/cachedir/online-hashing/okh/01-Jul-2017-labelme-gist-24smooth-C0.0001A0.7-U200/2000pts_1epochs_10tests/prec_k100_1trials.mat'`
+
+Command window log is at: `diary_path='/research/object_detection/cachedir/online-hashing/okh/01-Jul-2017-labelme-gist-24smooth-C0.0001A0.7-U200/2000pts_1epochs_10tests/diary_001.txt'`
+
