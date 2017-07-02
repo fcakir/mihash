@@ -112,7 +112,7 @@ elseif strcmp(opts.dataset, 'sun')
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
 	ind_train = ind_train(ind_(1:opts.val_size));
     end
-
+	Names = [];
 elseif strcmp(opts.dataset, 'places')
     if opts.windows
         basedir = '\\kraken\object_detection\data';
