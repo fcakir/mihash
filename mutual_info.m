@@ -1,19 +1,23 @@
 function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigmf_p,...
-                                       unsupervised, thr_dist, max_dif, bool_gradient)
-% W             : matrix, contains hash function parameters
-% input.X       : data point
-% input.Y       : label of X, empty if X has no labels
-% reservoir.X   : reservoir data points, reservoir_size x dimensionality
-% reservoir.Y   : reservoir labels corresponding to X, if empty then X does
+                                       unsupervised, thr_dist, bool_gradient)
+% Helper function for train_mutualinfo.m									   
+% INPUTS									   
+% 	 W_last       - matrix, contains hash function parameters
+% 	 input.X      - data point
+% 	 input.Y      - label of X, empty if X has no labels
+% 	reservoir.X   - reservoir data points, reservoir_size x dimensionality
+% 	reservoir.Y   - reservoir labels corresponding to X, if empty then X does
 %                 not have labels 
-% reservoir.H   : reservoir hash table, reservoir_size x nbits
-% reservoir.size: number of items in the reservoir
-% sigmf_p 	: two length numeric vector, e.g., [a c], to be used in sigmf
-% unsupervised  : 1 if neighborhood is defined using thr_dist see below
-% thr_dist      : numeric value for thresholding
-% max_dif       : maximize the separability between the conditionals
-% bool_gradient : return gradient
-
+% 	reservoir.H   - reservoir hash table, reservoir_size x nbits
+% 	reservoir.size- number of items in the reservoir
+% 	sigmf_p       - two length numeric vector, e.g., [a c], to be used in sigmf
+% 	unsupervised  - 1 if neighborhood is defined using thr_dist see below
+% 	thr_dist      - numeric value for thresholding
+% 	bool_gradient - return gradient
+% OUTPUTS
+% 	output 		  - negative mutual information, see Eq. 7 in MIHash paper.
+%   gradient      - gradient matrix, see Eq. 11 in MIHash paper, each column
+% 				    contains the gradients of a single hash function
 
 % compute loss
 % compute distances
@@ -124,27 +128,6 @@ condent = p * prCp + n * prCn;
 assert(Qent-condent >= 0);
 output = -(Qent - condent); % we're minimizing the mutual info.
 
-% generate figs
-%f = figure('visible','off');
-
-%close f;
-
-% ToDO consider max_dif in calculating the objective value
-if max_dif
-	pZ = zeros(1, no_bins+1);
-
-	for z=1:no_bins
-		pZCn1 = circshift(pQCn,-z, 2);
-		pZCn1(end-z+1:end) = 0;
-		pZCn2 = circshift(pQCn, z, 2);
-		pZCn2(1:z) = 0;
-		pZ(z+1) = sum(pZCn1 .* pQCp) + sum(pZCn2 .* pQCp);
-    end
-    pZ(1) = sum(pQCn .* pQCp);
-	output = output - max_dif * sum(bsxfun(@times, pZ, 0:1:no_bins));
-end
-
-
 Hres = Hres'; % nbits x reservoir_size
 % Assumes hash codes are relaxed from {-1, 1} to [-1, 1]
 if bool_gradient
@@ -191,27 +174,6 @@ if bool_gradient
     % Eq. 6 - a vector
 	d_MI_phi = d_H_phi - d_cond_phi; % This is equal to the gradient of negative MI, 
 	
-	% calculate gradient to maximize expected distance between the conditionals pQCp and pQCn
-	if max_dif 
-		d_pZ_phi = zeros(no_bins+1, nbits); 
-		for z = 1:no_bins % original cross correlation requires -inf to +inf, but this gives the same result
-			pZCn1 = circshift(pQCn,-z, 2); % P(d+z|-)
-			pZCn1(end-z+1:end) = 0;
-			pZCn2 = circshift(pQCn, z, 2); % P(d-z|-)
-			pZCn2(1:z) = 0;
-			
-			d_ZCn_phi1 = circshift(d_pQCn_phi, -z, 1); % \delta P(d+z|-)/ \delta \Phi
-			d_ZCn_phi1(:, end-z+1:end) = 0;
-			d_ZCn_phi2 = circshift(d_pQCn_phi, z, 1); % \delta P(d-z|-)/ \delta \Phi
-			d_ZCn_phi2(:, 1:z) = 0;
-
-			d_pZ_phi(z+1, :) = 0*sum(bsxfun(@times, d_ZCn_phi1', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn1)', 1)' + ...
-						sum(bsxfun(@times, d_ZCn_phi2', pQCp)' + bsxfun(@times, d_pQCp_phi', pZCn2)', 1)'; 
-        end
-        d_pZ_phi(1,:) = sum(bsxfun(@times, d_pQCn_phi', pQCp)' + bsxfun(@times, d_pQCp_phi', pQCn)',1)';
-		d_MI_phi = d_MI_phi - max_dif * sum(bsxfun(@times, d_pZ_phi', 0:1:no_bins), 2);
-        
-	end
 	% Since \Phi(x) = [\phi_1(x),...,\phi_b(x)] where \phi_i(x) = \sigma(w_i^t \times x)
     % take gradient of each \phi_i wrt to weight w_i, and multiply the
     % resulting vector with corresponding entry in d_MI_phi
@@ -220,29 +182,6 @@ if bool_gradient
         (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_MI_phi'));
 end
 
-
-%ind_l = ceil(hdist./deltaQ);
-%ind_l(ind_l == 0) = 1;
-%ind_u = ind_l + 1;
-%pQ(ind_l) = mod(hdist, deltaQ)./deltaQ;
-%pQ(ind_u) = 1 - mod(hdist, deltaQ)./deltaQ;
-
-% matlab
-
-%condent = 0;
-%Qent = 0;
-% make this faster
-
-% prob_Q_Cp = histcounts(M, 0:1:nbits);  % raw P(Q|+)
-% prob_Q_Cn = histcounts(NM, 0:1:nbits); % raw P(Q|-)
-% sum_Q_Cp  = sum(prob_Q_Cp);
-% sum_Q_Cn  = sum(prob_Q_Cn);
-% prob_Q    = (prob_Q_Cp + prob_Q_Cn)/(sum_Q_Cp + sum_Q_Cn);
-% prob_Q_Cp = prob_Q_Cp/sum_Q_Cp;
-% prob_Q_Cn = prob_Q_Cn/sum_Q_Cn;
-% prob_Cp   = length(M)/(length(M) + length(NM)); %P(+)
-% prob_Cn   = 1 - prob_Cp; % P(-)
-% keyboard
 end
 
 

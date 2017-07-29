@@ -25,7 +25,7 @@ end
 
 % ----------------------------------------------
 % no reservoir -- use updateInterval
-if opts.reservoirSize <= 0
+if opts.reservoirSize <= 0 || strcmp(opts.trigger,'fix')
     update_table = ~mod(iter*opts.batchSize, opts.updateInterval);
     return;
 end

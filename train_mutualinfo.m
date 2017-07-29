@@ -1,6 +1,38 @@
 function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
     train_mutualinfo(Xtrain, Ytrain, thr_dist,  prefix, test_iters, trialNo, opts)
-
+% Training routine for the MIHash method, see demo_mutualinfo.m .
+%
+% INPUTS
+% 	Xtrain - (float) n x d matrix where n is number of points 
+%       	         and d is the dimensionality 
+%
+% 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
+% 			 might be empty, e.g., LabelMe.
+%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
+%		         value to be used in determining whether two data instance
+% 		         are neighbors. If their distance is smaller, then they are
+% 		         considered neighbors.
+%	       	         Given the standard setup, this threshold value
+%		         is hard-wired to be compute from the 5th percentile 
+% 		         distance value obtain through 2,000 training instance.
+% 			 see load_gist.m . 
+% 	prefix - (string) Prefix of the "checkpoint" files.
+%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
+%   trialNo    - (int)   Trial ID
+%	opts   - (struct)Parameter structure.
+%
+% OUTPUTS
+%  train_time  - (float) elapsed time in learning the hash mapping
+%  update_time - (float) elapsed time in updating the hash table
+%  res_time    - (float) elapsed time in maintaing the reservoir set
+%  ht_updates  - (int)   total number of hash table updates performed
+%  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
+%  bitflips    - (int) total number of bit flips, see update_hash_table.m 
+% 
+% NOTES
+% 	W is d x b where d is the dimensionality 
+%            and b is the bit length / # hash functions
+%   Reservoir is initialized with opts.init_r_size instances
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [n,d] = size(Xtrain);
 if 0
@@ -14,7 +46,6 @@ H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
-stepW = zeros(size(W));  % Gradient accumulation matrix
 
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
@@ -104,14 +135,9 @@ for iter = 1:number_iterations
     input.X = spoint;
     input.Y = slabel;
     % rev_pro implements the NIPS 16 Histogram Loss
-    if ~opts.hloss   
-	    [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-					       opts.unsupervised, thr_dist, opts.max_dif,  1);
-    
-    else
-	    [output, gradient] = rev_pro(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-					       opts.unsupervised, thr_dist, opts.max_dif,  1);
-    end
+	[output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
+					       opts.unsupervised, thr_dist,  1);
+
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
     W = W - lr*gradient;
@@ -123,7 +149,7 @@ for iter = 1:number_iterations
     Hres_new = [];
     if reservoir_size > 0
         [reservoir, update_ind] = update_reservoir(reservoir, ...
-            spoint, slabel, reservoir_size, W, opts.unsupervised);
+            spoint, slabel, reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (reservoir.X * W > 0);
     end
@@ -138,6 +164,7 @@ for iter = 1:number_iterations
     if update_table
         h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
         W_lastupdate(:, h_ind) = W(:, h_ind);
+        W = W_lastupdate;
         update_iters = [update_iters, iter];
 
         % update reservoir hash table

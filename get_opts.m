@@ -12,6 +12,10 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 1 "checkpoint #2"  "checkpoint #4"        "trainingPoints" x "epochs"
 %
 % (checkpoint #1 is on the 1st iteration)
+% 
+% REFERENCES
+% [1] Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff "MIHash: Online Hashing 
+% 	  with Mutual Information", ICCV 2017 (*equal contribution).
 %
 % INPUTS
 % 	ftype	- (string) Choices are 'gist' and 'cnn'. load_gist.m and load_cnn.m
@@ -41,7 +45,7 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   hash methods performance. Must be [2, "trainingPoints"x"epochs"].
 % 			   The performance is evaluated on the first and last 
 %			   iteration, at the least.
-%      testFrac - (float)  A value between (0, 1]. testFrac = 0.5 results in only
+%  testFrac - (float)  A value between (0, 1]. testFrac = 0.5 results in only
 %			   testing with a random half of the test/query set. For
 % 			   speed purposes. 
 % 	metric  - (string) Choices are 'prec_kX', 'prec_nX', 'mAP_X' and 'mAP' where
@@ -56,9 +60,9 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 %	epoch 	- (int)    Number of epochs, [1, inf) 			    
 % 	prefix 	- (string) Prefix for the results folder title, if empty, the 
 % 			   results folder will be prefixes with todays date.
-% 	no_blocks - (int)  Hard-coded to 1. For future release.
-%	randseed - (int)   Random seed for reproducility. 			   
-%	nworkers - (int)   Number of parallel workers. If ntrials > 1, each trial
+% no_blocks - (int)  Hard-coded to 1. For future release.
+%  randseed - (int)   Random seed for reproducility. 			   
+%  nworkers - (int)   Number of parallel workers. If ntrials > 1, each trial
 % 			   is run on a different worker. Testing is done in a 
 % 			   parallel manner as well. 
 % 	override - (int)   {0, 1}. If override=0, then training and/or testing
@@ -66,30 +70,32 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   possible. if override=1, then (re-)runs the experiment
 % 			   no matter what.
 %	val_size - (int)   {0, 1}. Should be kept to 0, for future release purposes.
-%      showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
+%  showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
 % 			   training instances, CPU time and Bit Recomputations. 
 % 			   See test.m .
-%      localdir - (string) Directory path where the results folder will be created.
+%   localdir - (string) Directory path where the results folder will be created.
 % reservoirSize - (int)    The size of the set to be sampled via reservoir sampling 
 % 			   from the data stream. The reservoir can be used to 
 % 			   compute statistical properties of the stream. For future 
 % 			   release purposes.
 % updateInterval - (int)   The hash table is updated after each "updateInterval" 
 %			   number of training instances is processed.
-%	trigger	- (string) Choices are 'bf' only. The type of trigger used to determine 
-% 			   if a hash table update is needed. 'bf' means bit flips.
-% 			   For future release purposes.
-%     flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
+%	trigger	- (string) Choices are 'bf', 'mi' or 'fix' (default) only. 
+% 			   The type of trigger used to determine if a hash table update is 
+% 			   needed. 'bf' means bit flips, 'mi' means mutual information (see 
+% 			   reference [1] above), and 'fix' means no trigger. If 'fix' is selected, then
+% 			   the hash table is updated at every 'updateInterval'.
+% flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
 % 			   exceeds "flipThresh", a hash table update is performed. 
 % 			   Evaluated only after each "updateInterval". If flipThresh=-1
 % 			   the hash table is always updated at each "updateInterval".
 % 			   Hard-coded to 0. For future release.
-%   labelsPerCls - (int)   Hard-coded to 0. For future release.
-%   tstScenario  - (int)   Hard-coded to 1. Corresponds to populating the hash table 
+% labelsPerCls - (int)   Hard-coded to 0. For future release.
+% tstScenario  - (int)   Hard-coded to 1. Corresponds to populating the hash table 
 % 			   with all the data, excluding the test set. Other
 % 			   alternative might be to populate only with the processed/observed
 % 			   training instances. 
-%       pObserve - (float) For multiclass datasets. To generate different data streams
+%  pObserve - (float) For multiclass datasets. To generate different data streams
 % 			   in which a new class appears with pObserve probability. 
 %			   pObserve=0 corresponds to uniform probability, i.e., 
 % 			   see get_ordering.m .
@@ -260,8 +266,10 @@ if opts.reservoirSize > 0
         if opts.flipThresh > 0
             idr = sprintf('%sF%g', idr, opts.flipThresh);
         end
-	else
+    elseif strcmp(opts.trigger, 'mi')
 		idr = sprintf('%s-MI%g', idr, opts.miThresh);
+    else
+        idr = sprintf('%s-FIX_Update', idr);
     end
 else
     % no reservoir (baseline): must use updateInterval
