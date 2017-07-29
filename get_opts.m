@@ -127,7 +127,8 @@ ip.addParamValue('reservoirSize', 0, @isscalar); % reservoir size, set to 0 if r
 
 % hash table update
 ip.addParamValue('updateInterval', 100, @isscalar);  % use with baseline
-ip.addParamValue('trigger', 'bf', @isstr);          % HT update trigger
+ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
+ip.addParamValue('miThresh', 0, @isscalar);       % for trigger=mi
 ip.addParamValue('flipThresh', -1, @isscalar);       % for trigger=bf
 
 % Hack for Places
@@ -259,6 +260,8 @@ if opts.reservoirSize > 0
         if opts.flipThresh > 0
             idr = sprintf('%sF%g', idr, opts.flipThresh);
         end
+	else
+		idr = sprintf('%s-MI%g', idr, opts.miThresh);
     end
 else
     % no reservoir (baseline): must use updateInterval
