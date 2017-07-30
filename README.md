@@ -1,11 +1,14 @@
 ### Online Hashing Benchmarking
-This repository contains the implementation of several online hashing methods listed below:
-- L. K. Huang, Q. Y. Yang and W. S. Zheng "Online Hashing" International Joint Conference on Artificial Intelligence (IJCAI) 2013
-- F. Cakir, S. Sclaroff "Adaptive Hashing for Fast Similarity Search" International Conference on Computer Vision (ICCV) 2015
--  F. Cakir, S. A. Bargal, S. Sclaroff  "Online Supervised Hashing"  Computer Vision and Image Understanding (CVIU) 2016
--  C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu "Online Sketching Hashing" Computer Vision and Pattern Recognition (CVPR) 2015
+This repository contains experimental code used in the below paper:
+- F. Cakir, K. He, S. A. Bargal, S. Sclaroff "MIHash: Online Hashing with Mutual Information" International Conference on Computer Vision (ICCV) 2017 ([details](https://arxiv.org/abs/1703.08919))
 
-In addition, we provide a benchmark for these hashing methods where the hash table is continuously updated and the hash method is evaluated at random locations during online learning. Please refer below and the code for implementation details.
+The implementations of the online hashing methods listed below are also available in this repository:
+- L. K. Huang, Q. Y. Yang and W. S. Zheng "Online Hashing" International Joint Conference on Artificial Intelligence (IJCAI) 2013 ([details](https://www.aaai.org/ocs/index.php/IJCAI/IJCAI13/paper/view/6599))
+- F. Cakir, S. Sclaroff "Adaptive Hashing for Fast Similarity Search" International Conference on Computer Vision (ICCV) 2015 ([details](http://ieeexplore.ieee.org/document/7410482/?reload=true))
+- F. Cakir, S. A. Bargal, S. Sclaroff  "Online Supervised Hashing"  Computer Vision and Image Understanding (CVIU) 2016 ([details](http://www.sciencedirect.com/science/article/pii/S1077314216301606))
+- C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu "Online Sketching Hashing" Computer Vision and Pattern Recognition (CVPR) 2015 ([details](http://ieeexplore.ieee.org/document/7298865/))
+
+The experimental code includes a benchmark for these hashing methods in which the hash table is continuously updated and the hash method is evaluated at random locations during online learning. Please refer below and the code for implementation details. Please cite the respective papers along with our ICCV 2017 paper if any of the code is used.
 
 ### Setup
 The `localdir` parameter must be specified (see get_opts.m) and `load_cnn.m` and `load_gist.m` files must be modified to load data. See the respective files for additional details. 
