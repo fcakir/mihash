@@ -46,21 +46,14 @@ opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 % post-parse processing
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-opts.windows = ~isempty(strfind(computer, 'WIN'));
-if opts.windows
-    opts.localDir = '\\kraken\object_detection\cachedir\deep-hashing';
-    myLogInfo('We are on Window$. localDir set to %s', opts.localDir);
-else
-    %opts.localDir = '/research/object_detection/cachedir/deep-hashing';
-    opts.localDir = './cachedir';  % use symlink on linux
-    if ~exist(opts.localDir, 'file')
-        error('Please make a symlink for cachedir!');
-    end
+opts.localDir = '../cachedir';  % symlink
+if ~exist(opts.localDir, 'file')
+    error('Please make a symlink for cachedir!');
 end
 opts.dataDir = fullfile(opts.localDir, 'data');
 opts.imdbPath = fullfile(opts.dataDir, [opts.dataset '_imdb']);
 
-% expDir: format like .../deep-hashing/deepMI-cifar32-fc
+% expDir: format like [localDir]/deepMI-cifar32-fc
 opts.expDir = fullfile(opts.localDir, opts.methodID);
 if exist(opts.expDir, 'dir') == 0, 
     mkdir(opts.expDir);

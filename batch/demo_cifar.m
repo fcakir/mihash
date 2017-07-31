@@ -11,9 +11,6 @@ ip.addParameter('split', 1);
 ip.addParameter('nbins', nbits);
 
 ip.addParameter('obj', 'mi');  % mi or fastap
-ip.addParameter('maxdif', 0);
-ip.addParameter('minplus', 0);
-ip.addParameter('quant', 0);
 
 ip.addParameter('batchSize', 100);
 ip.addParameter('solver', 'sgd');
@@ -23,7 +20,7 @@ ip.addParameter('lrepoch', 10);
 ip.addParameter('wdecay', 0);
 ip.addParameter('bpdepth', 8);  % up to conv5 for VGG
 %ip.addParameter('momentum', 0.9);
-ip.addParameter('sigmf_p', [40 0]);
+ip.addParameter('sigmf_p', 40);
 
 ip.addParameter('gpus', []);
 ip.addParameter('normalize', true);
@@ -33,16 +30,11 @@ ip.addParameter('plot', false);
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.methodID = sprintf('deep%s-cifar%d-sp%d-%s', upper(opts.obj), nbits, ...
+opts.methodID = sprintf('%s-cifar%d-sp%d-%s', upper(opts.obj), nbits, ...
     opts.split, modelType);
-opts.identifier = sprintf('%dbins-maxdif%g-batch%d-%sLR%gD%gE%d-Sig%d_%d', ...
-    opts.nbins, opts.maxdif, ...
-    opts.batchSize, ...
-    opts.solver, opts.lr, opts.lrdecay, opts.lrepoch, ...
-    opts.sigmf_p(1), opts.sigmf_p(2));
-if opts.minplus > 0
-    opts.identifier = sprintf('%s-minplus%g', opts.identifier, opts.minplus);
-end
+opts.identifier = sprintf('%dbins-batch%d-%sLR%gD%gE%d-Sig%d', ...
+    opts.nbins, opts.batchSize, opts.solver, opts.lr, opts.lrdecay, opts.lrepoch, ...
+    opts.sigmf_p);
 if ismember(modelType, {'alexnet', 'vgg16', 'vggf'})
     opts.normalize = false;
 end
@@ -131,27 +123,4 @@ disp('Evaluating...');
 opts.metric = 'mAP';
 opts.unsupervised = false;
 evaluate_deepMI(Htrain, Htest, Ytrain, Ytest, opts);
-evaluate_fastap(Htrain, Htest, Ytrain, Ytest, opts);
-%evaluate_opti(Htrain, Htest, Ytrain, Ytest, opts);
-%evaluate_pess(Htrain, Htest, Ytrain, Ytest, opts);
-end
-
-% -------------------------------------------------------------------
-% (not used) get solver
-% -------------------------------------------------------------------
-function h = get_solver(solverName)
-switch solverName
-    case 'sgd'
-        h = [];
-    case 'adam'
-        h = @solver.adam;
-    case 'rmsprop'
-        h = @solver.rmsprop;
-    case 'adagrad'
-        h = @solver.adagrad;
-    case 'adadelta'
-        h = @solver.adadelta;
-    otherwise
-        error('unsupported opts.solver');
-end
 end

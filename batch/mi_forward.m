@@ -45,13 +45,6 @@ if onGPU
     pDCn = gpuArray(pDCn);
 end
 
-% first version, loop over example index
-%for i = 1:N
-%    % estimate P(D|+), P(D|-) for this specific Xi
-%    pulse = triPulse(centersD', deltaD, hdist(i, :), onGPU);  % LxN
-%    pDCp(i, :) = pulse * single(Xp(:, i));
-%end
-%
 % new version, better when L<N
 for l = 1:no_bins+1
     pulse = triPulse(hdist, centersD(l), deltaD);  % NxN
@@ -85,33 +78,6 @@ top.aux.prCn = prCn;
 top.aux.pDCp = pDCp;
 top.aux.pDCn = pDCn;
 top.aux.pD   = pD;
-
-% % quantization loss
-% if opts.quant > 0
-%     bits = 2*(X > 0) - 1;
-%     qloss = sum((phi - bits).^2, 1);
-%     %fprintf('qloss=%g(x%g)', mean(qloss), opts.quant);
-%     top.aux.bits = bits;
-% end
-
-% max_dif term
-if opts.maxdif > 0
-    pZ = zeros(N, no_bins+1);  % Zi = Yi - Xi, Yi ~ p(D|-), Xi ~ p(D|+)
-    Zs = -nbits: deltaD: nbits;  % all possible Z values
-    assert(length(Zs) == 2*no_bins+1);
-    % Note: padarray() is gpuArray compatible
-    pp = padarray(pDCp, [0 no_bins], 0, 'pre');  % N x (2L+1)
-    pn = padarray(pDCn, [0 no_bins], 0, 'pre');  % N x (2L+1)
-    for z = -no_bins : no_bins
-        pp_z = circshift(pp, z, 2);
-        pZ(:, z+no_bins+1) = sum(pp_z.*pn, 2);
-    end
-    top.aux.pp = pp;
-    top.aux.pn = pn;
-    % Kun: not adding this term in, so obj is still MI, for direct comparisons
-    % dif = sum(pZ * Zs')/nbits;
-    % top.x = top.x - opts.maxdif * dif;
-end
 end
 
 
@@ -135,25 +101,6 @@ function y = triPulse(D, mid, delta)
 ind = (mid-delta < D) & (D <= mid+delta);
 y   = 1 - abs(D - mid) / delta;
 y   = y .* ind;
-end
-
-
-function y = triPulse_old(D, mid, delta, onGPU)
-% differently vectorized version
-%
-%   D: 1xN row vector of input data
-% mid: Bx1 column vector of bin centers
-%   y: BxN "pulse" matrix
-assert(isvector(mid) & isvector(D));
-if ~iscolumn(mid), mid = mid'; end
-if ~isrow(D), D = D'; end
-
-y = zeros(length(mid), length(D));
-if onGPU, y = gpuArray(y); end
-
-x_minus_mid = bsxfun(@minus, D, mid);
-ind = bsxfun(@gt, D, mid-delta) & bsxfun(@le, D, mid+delta);
-y(ind) = 1 - abs(x_minus_mid(ind))./delta;
 end
 
 

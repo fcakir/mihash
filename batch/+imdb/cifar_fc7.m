@@ -5,6 +5,7 @@ if ~isempty(strfind(computer, 'WIN'))
 else
     basedir = '/research/codebooks/hashing_project/data';
 end
+% TODO put into a single file and give download link
 load([basedir '/cifar-10/descriptors/trainCNN.mat']); % trainCNN
 load([basedir '/cifar-10/descriptors/traininglabelsCNN.mat']); % traininglabels
 load([basedir '/cifar-10/descriptors/testCNN.mat']); % testCNN

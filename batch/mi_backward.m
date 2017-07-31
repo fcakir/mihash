@@ -75,14 +75,12 @@ if onGPU, d_L_phi = gpuArray(d_L_phi); end
 Np = sum(Xp, 2);
 Nn = sum(Xn, 2);
 invalid = (Np==0) | (Nn==0);
-% new vectorization, loop over L instead of N
 for l = 1:no_bins+1
     % NxN matrix of delta_hat(i, j, l) for fixed l
     dpulse = dTriPulse(hdist, centersD(l), deltaD);  % NxN
     ddp = dpulse .* Xp;  % delta_l^+(i, j)
     ddn = dpulse .* Xn;  % delta_l^-(i, j)
 
-    % highly highly vectorized
     alpha_p = d_L_pDCp(:, l)./Np;  alpha_p(invalid) = 0;
     alpha_n = d_L_pDCn(:, l)./Nn;  alpha_n(invalid) = 0;
     alpha_p = diag(alpha_p);
@@ -93,44 +91,11 @@ for l = 1:no_bins+1
     % accumulate gradient
     d_L_phi = d_L_phi - 0.5 * phi * (Ap + An);
 end
-% % 5.1 precompute t_dTPulse tensor 
-% t_dTPulse = zeros(no_bins+1, N, N);
-% if onGPU, t_dTPulse = gpuArray(t_dTPulse); end
-% for l = 1:no_bins + 1
-%     t_dTPulse(l, :, :) = dTriPulse(hdist, centersD(l), deltaD);
-% end
-% 
-% % 5.2 -MI/phi, loop over N
-% d_MI_phi = zeros(nbits, N);
-% if onGPU, d_MI_phi = gpuArray(d_MI_phi); end
-% for i = 1:N
-%     Np = sum(Xp(i, :));
-%     Nn = sum(Xn(i, :));
-%     if Np == 0 || Nn == 0, continue; end
-%     dd = squeeze(t_dTPulse(:, i, :));  % LxN
-%     dd_p = d_L_pDCp(i, :) * dd;  % (1xL)(LxN) -> 1xN
-%     dd_n = d_L_pDCn(i, :) * dd;  % (1xL)(LxN) -> 1xN
-%     dd_p = dd_p .* Xp(i, :);
-%     dd_n = dd_n .* Xn(i, :);
-%     dd_  = -0.5 * (dd_p/Np + dd_n/Nn);
-%     %assert(dot(dd_p, dd_n) == 0);
-%     % gradients for phi(x_j), j != i
-%     G = phi(:, i) * dd_;  % (nbitsx1)(1xN) -> nbitsxN
-%     % gradients for phi(x_i), combine
-%     G(:, i) = phi * dd_';  % (nbitsxN)(Nx1) -> nbitsx1
-%     d_MI_phi = d_MI_phi + G;
-% end
 
 % 6. -MI/x
 sigmoid = (phi+1)/2;
 d_phi_x = 2 .* sigmoid .* (1-sigmoid) * opts.sigmf_p(1);  % nbitsxN
 d_L_x   = d_L_phi .* d_phi_x;
-
-% % 6.1 quantization loss
-% if opts.quant > 0
-%     d_q_x = 2 * (X - top.aux.bits);
-%     d_L_x = d_L_x + opts.quant * d_q_x;
-% end
 
 % 7. final
 bot.dzdx = zeros(size(bot.x), 'single');
