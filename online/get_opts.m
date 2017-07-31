@@ -60,7 +60,6 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 %	epoch 	- (int)    Number of epochs, [1, inf) 			    
 % 	prefix 	- (string) Prefix for the results folder title, if empty, the 
 % 			   results folder will be prefixes with todays date.
-% no_blocks - (int)  Hard-coded to 1. For future release.
 %  randseed - (int)   Random seed for reproducility. 			   
 %  nworkers - (int)   Number of parallel workers. If ntrials > 1, each trial
 % 			   is run on a different worker. Testing is done in a 
@@ -119,14 +118,12 @@ ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('epoch', 1, @isscalar)
 % misc
 ip.addParamValue('prefix','', @isstr);
-ip.addParamValue('no_blocks', 1, @isscalar);
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
 ip.addParamValue('val_size', 0, @isscalar);
 ip.addParamValue('showplots', 0, @isscalar);
-ip.addParamValue('localdir', ...
-    '/research/object_detection/cachedir/online-hashing', @isstr);
+ip.addParamValue('localdir', './cachedir', @isstr);
 
 % Reservoir
 ip.addParamValue('reservoirSize', 0, @isscalar); % reservoir size, set to 0 if reservoir is not used

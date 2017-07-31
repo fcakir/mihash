@@ -1,6 +1,12 @@
 function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
     train_sketch(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
-% Training routine for SketchHash method, see demo_sketch.m .
+% Implementation of the SketchHash method as described in: 
+%
+% C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu
+% "Online Sketching Hashing"
+% Computer Vision and Pattern Recognition (CVPR) 2015
+%
+% Training routine for SketchHash method.
 %
 % INPUTS
 % 	Xtrain - (float) n x d matrix where n is number of points 
@@ -79,7 +85,7 @@ assert(opts.sketchSize <= kInstFeatDimCnt, ...
 
 % initialize hash functions & table
 if 0
-    % original init for SketchHash
+    % original init for SketchHash, which performed worse
     W = rand(kInstFeatDimCnt, bits) - 0.5;
 else
     % LSH init
@@ -118,8 +124,7 @@ batchCnt       = ceil(numUseToTrain/batchsize);
 instCntSeen    = 0;
 instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
 instFeatSkc    = [];
-myLogInfo('%d batches of size %d, sketchSize=%d', ...
-    batchCnt, batchsize, opts.sketchSize);
+myLogInfo('%d batches of size %d, sketchSize=%d', batchCnt, batchsize, opts.sketchSize);
 %%%%%%%%%%%%%%%%%%%%%%% SET UP SketchHash %%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -127,13 +132,10 @@ myLogInfo('%d batches of size %d, sketchSize=%d', ...
 for batchInd = 1 : batchCnt
 
     %%%%%%%%%% LOAD BATCH DATA - BELOW %%%%%%%%%%
-
     ind = (batchInd-1)*batchsize + 1 : min(batchInd*batchsize, numUseToTrain);
     instFeatInBatch = Xtrain(ind, :);
 
     instCntInBatch = size(instFeatInBatch, 1);
-
-    %timeElpsStr.loadBtchData(batchInd) = toc;
     %%%%%%%%%% LOAD BATCH DATA - ABOVE %%%%%%%%%%
 
 
@@ -161,10 +163,6 @@ for batchInd = 1 : batchCnt
     [u, ~, ~] = svd(r, 'econ');
     v = q * u;
 
-    %for ind = 1 : numel(kLoopBitsLst)
-    % obtain the length of hashing code
-    %bits = kLoopBitsLst(ind);
-
     % obtain the original projection matrix
     hashProjMatOrg = v(:, 1 : bits);
 
@@ -172,42 +170,10 @@ for batchInd = 1 : batchCnt
     R = orth(randn(bits));
 
     % update hashing function
-    %hashProjMat{ind} = single(hashProjMatOrg * R);
     W = hashProjMatOrg * R;
-    %end
 
-    %timeElpsStr.updtHashFunc(batchInd) = toc;
     train_time = train_time + toc;
-
     %%%%%%%%%% UPDATE HASHING FUNCTION - ABOVE %%%%%%%%%%
-
-
-
-    %%%%%%%%%% COMPUTE HASHING CODE - BELOW %%%%%%%%%%
-    %tic;
-
-    % compute centered query/database instances
-    %instFeatQryCen = bsxfun(@minus, instFeatQry, instFeatAvePre);
-    %instFeatDtbCen = bsxfun(@minus, instFeatDtb, instFeatAvePre);
-    %instFeatDtbCen = bsxfun(@minus, Xtrain, instFeatAvePre);
-
-    %{
-    % compute hash code for query/database subset
-    for ind = 1 : numel(kLoopBitsLst)
-        bits = kLoopBitsLst(ind);
-
-        %codeQry = (instFeatQryCen * hashProjMat{ind} > 0);
-        %codeDtb = (instFeatDtbCen * hashProjMat{ind} > 0);
-
-        % save hash code for query/database subset
-        codeQryPath = sprintf('%s/codeQry.%d.mat', codeDirCur, bits);
-        codeDtbPath = sprintf('%s/codeDtb.%d.mat', codeDirCur, bits);
-        save(codeQryPath, 'codeQry');
-        save(codeDtbPath, 'codeDtb');
-    end
-    timeElpsStr.calcHashCode(batchInd) = toc;
-    %}
-    %%%%%%%%%% COMPUTE HASHING CODE - ABOVE %%%%%%%%%%
 
 
     % ---- reservoir update & compute new reservoir hash table ----
@@ -225,7 +191,7 @@ for batchInd = 1 : batchCnt
 
     % ---- determine whether to update or not ----
     if batchInd*opts.batchSize <= opts.sketchSize
-        % special: fill sketch matrix first
+        % special for SketchHash: fill sketch matrix first
         update_table = true;
         trigger_val  = 0;
         h_ind = 1:opts.nbits;
@@ -264,13 +230,10 @@ for batchInd = 1 : batchCnt
 
     % ---- cache intermediate model to disk ----
     % CHECKPOINT
-    %if (~opts.onlyfinal && ismember(batchInd, test_batchInds)) || ...
-            %(opts.onlyfinal && batchInd==batchCnt)
     if ismember(batchInd, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, batchInd);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
-        if ~opts.windows, unix(['chmod o-w ' F]); end  % matlab permission bug
 
         myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
@@ -287,8 +250,6 @@ F = [prefix '.mat'];
 save(F, 'instFeatAvePre', 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
     'h_ind_array');
-% fix permission
-if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
 ht_updates = numel(update_iters);
 myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);

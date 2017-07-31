@@ -35,6 +35,6 @@ opts.batchSize  = 2;  % hard-coded; pair supervision
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-[resfn, dp] = demo(opts, @train_adapthash, @test_osh);
+[resfn, dp] = demo(opts, @train_adapthash);
 diary('off');
 end

@@ -1,4 +1,4 @@
-function [resfn, dp] = demo_mutualinfo(ftype, dataset, nbits, varargin)
+function [resfn, dp] = demo_mihash(ftype, dataset, nbits, varargin)
 % Implementation of AdaptHash as described in: 
 %
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff 
@@ -30,7 +30,7 @@ ip.addParamValue('stepsize', 1, @isscalar);
 ip.addParamValue('decay', 0, @isscalar);
 ip.addParamValue('sigmf_p', [1 0], @isnumeric);
 ip.addParamValue('init_r_size', 500, @isscalar); % initial size of reservoir
-ip.addParameter('methodID', 'mutual_info');
+ip.addParameter('methodID', 'mihash');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
@@ -43,6 +43,6 @@ opts.batchSize  = 1;  % hard-coded
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-[resfn, dp] = demo(opts, @train_mutualinfo, @test_osh);
+[resfn, dp] = demo(opts, @train_mihash);
 diary('off');
 end

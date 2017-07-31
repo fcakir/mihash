@@ -33,6 +33,8 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 % 	W is d x b where d is the dimensionality 
 %            and b is the bit length / # hash functions
 %   Reservoir is initialized with opts.init_r_size instances
+
+
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [n,d] = size(Xtrain);
 if 0
@@ -72,11 +74,11 @@ if opts.pObserve > 0
     train_ind = get_ordering(trialNo, Ytrain, opts);
 else
     train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
-	for e = 1:opts.epoch
-		% randomly shuffle training points before taking first noTrainingPoints
-		train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
-			randperm(size(Xtrain, 1), opts.noTrainingPoints);
-	end
+    for e = 1:opts.epoch
+        % randomly shuffle training points before taking first noTrainingPoints
+        train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+            randperm(size(Xtrain, 1), opts.noTrainingPoints);
+    end
 end
 
 % initialize reservoir
@@ -91,12 +93,10 @@ if reservoir_size > 0
     end
     % compute new reservoir hash table (do not update yet)
 end
-
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%% SET UP MUTUALINFO %%%%%%%%%%%%%%%%%%%%%%%
-% for AdaptHash
 code_length = opts.nbits;
 opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 number_iterations = opts.noTrainingPoints;
@@ -119,24 +119,23 @@ res_time    = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-
 for iter = 1:number_iterations
-    
+
     ind = train_ind(iter);
     spoint = Xtrain(ind, :);
     if ~opts.unsupervised
         slabel = Ytrain(ind, :);
     else
-  	slabel = [];
+        slabel = [];
     end    
-    
+
     % hash function update
     t_ = tic;
     input.X = spoint;
     input.Y = slabel;
     % rev_pro implements the NIPS 16 Histogram Loss
-	[output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-					       opts.unsupervised, thr_dist,  1);
+    [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
+        opts.unsupervised, thr_dist,  1);
 
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
@@ -157,7 +156,7 @@ for iter = 1:number_iterations
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(iter, ...
         opts, W_lastupdate, W, reservoir, Hres_new, ...
-		 opts.unsupervised, thr_dist);
+        opts.unsupervised, thr_dist);
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
@@ -174,7 +173,7 @@ for iter = 1:number_iterations
                 bitflips_res = bitflips_res + trigger_val;
             end
         end
-        
+
         % actual hash table update (record time)
         [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
             Xtrain, Ytrain, h_ind, update_iters, opts);
@@ -184,13 +183,11 @@ for iter = 1:number_iterations
     end
 
     % ---- save intermediate model ----
-	% CHECKPOINT
+    % CHECKPOINT
     if ismember(iter, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
-        % fix permission
-        if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
         myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
@@ -208,14 +205,8 @@ F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
     'h_ind_array');
-% fix permission
-if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
 ht_updates = numel(update_iters);
 myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
 myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
-
-
-
-

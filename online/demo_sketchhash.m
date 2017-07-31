@@ -29,6 +29,6 @@ assert(opts.batchSize>=nbits, 'Sketching needs batchSize>=nbits');
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 
 % run demo
-[resfn, dp] = demo(opts, @train_sketch, @test_sketch);
+[resfn, dp] = demo(opts, @train_sketchhash);
 diary('off');
 end

@@ -1,4 +1,4 @@
-function [resfn, diary_path] = demo(opts, trainFunc, testFunc)
+function [resfn, diary_path] = demo(opts, trainFunc)
 % Creates the experimental results files and determines whether it is necessary 
 % to do training and testing. 
 % A result file is created for each trial (see opts.ntrials in get_opts.m)
@@ -95,7 +95,6 @@ myLogInfo('%s: Training is done.', opts.identifier);
 % 4. TESTING: run all _necessary_ trials
 if ~all(res_exist) || ~exist(resfn, 'file')
     myLogInfo('Testing models...');
-    %testFunc(resfn, res_trial_fn, res_exist, opts);
     test(resfn, res_trial_fn, res_exist, opts);
 end
 myLogInfo('%s: Testing is done.', opts.identifier);

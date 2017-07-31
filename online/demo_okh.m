@@ -28,6 +28,6 @@ opts.batchSize  = 2;  % hard-coded; pair supervision
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 
 % run demo
-[resfn, dp] = demo(opts, @train_okh, @test_okh);
+[resfn, dp] = demo(opts, @train_okh);
 diary('off');
 end

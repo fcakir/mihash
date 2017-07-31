@@ -179,8 +179,6 @@ for iter = 1:opts.noTrainingPoints
         F = sprintf('%s_iter%d.mat', prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'seenLabels', 'update_iters');
-        % fix permission
-        if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
         myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
@@ -197,8 +195,6 @@ F = [prefix '.mat'];
 save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
     'seenLabels', 'h_ind_array');
-% fix permission
-if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
 ht_updates = numel(update_iters);
 myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);

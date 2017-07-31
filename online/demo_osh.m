@@ -36,6 +36,6 @@ opts.batchSize  = 1;  % hard-coded
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters
 
 % run demo
-[resfn, dp] = demo(opts, @train_osh, @test_osh);
+[resfn, dp] = demo(opts, @train_osh);
 diary('off');
 end
