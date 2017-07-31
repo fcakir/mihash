@@ -13,7 +13,7 @@ function [resfn, dp] = demo_sketch(ftype, dataset, nbits, varargin)
 % 	resfn 	- (string) Path to the results file. see demo.m .
 % 	dp 	- (string) Path to the diary which contains the command window text
 
-addpath('sketch');
+addpath('SketchHash');
 
 ip = inputParser;
 ip.addParamValue('sketchSize', 200, @isscalar);
