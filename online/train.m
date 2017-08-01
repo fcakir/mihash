@@ -29,7 +29,7 @@ bit_flips   = zeros(1, opts.ntrials);
 bit_recomp  = zeros(1, opts.ntrials);
 
 num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);
-myLogInfo('%s: %d train_iters', opts.identifier, num_iters);
+logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 ncpu = feature('numcores');
 set_parpool(min(5, max(opts.ntrials, round(ncpu/2))));
@@ -38,10 +38,10 @@ for t = 1:opts.ntrials
     %     important for reproducible results
     rng(opts.randseed+t, 'twister');
     if run_trial(t) == 0
-        myLogInfo('Trial %02d not required, skipped', t);
+        logInfo('Trial %02d not required, skipped', t);
         continue;
     end
-    myLogInfo('%s: random trial %d', opts.identifier, t);
+    logInfo('%s: random trial %d', opts.identifier, t);
     
     % randomly set test checkpoints (to better mimic real scenarios)
     test_iters      = zeros(1, opts.ntests);
@@ -60,12 +60,12 @@ for t = 1:opts.ntrials
         trainFunc(Xtrain, Ytrain, thr_dist, prefix, test_iters, t, opts);
 end
 
-myLogInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-myLogInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
-myLogInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
+logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
+logInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
+logInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
 if strcmp(opts.mapping, 'smooth')
-    myLogInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    myLogInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    myLogInfo('             Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+    logInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+    logInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
+    logInfo('             Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end
 end

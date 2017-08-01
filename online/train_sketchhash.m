@@ -43,7 +43,7 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -124,7 +124,7 @@ batchCnt       = ceil(numUseToTrain/batchsize);
 instCntSeen    = 0;
 instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
 instFeatSkc    = [];
-myLogInfo('%d batches of size %d, sketchSize=%d', batchCnt, batchsize, opts.sketchSize);
+logInfo('%d batches of size %d, sketchSize=%d', batchCnt, batchsize, opts.sketchSize);
 %%%%%%%%%%%%%%%%%%%%%%% SET UP SketchHash %%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -235,7 +235,7 @@ for batchInd = 1 : batchCnt
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
 
-        myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
             '     total #BRs=%g, avg #BF=%g'], ...
             trialNo, opts.identifier, batchInd*opts.batchSize, opts.noTrainingPoints, ...
@@ -252,6 +252,6 @@ save(F, 'instFeatAvePre', 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'h_ind_array');
 
 ht_updates = numel(update_iters);
-myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[T%02d] Saved: %s\n', trialNo, F);
 end

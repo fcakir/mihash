@@ -64,7 +64,7 @@ stepW = zeros(size(W));  % Gradient accumulation matrix
 
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -101,7 +101,7 @@ opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 % for AdaptHash
 code_length = opts.nbits;
 number_iterations = opts.noTrainingPoints/2;
-myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
+logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 % bit flips & bits computed
 bitflips          = 0;
@@ -243,7 +243,7 @@ for iter = 1:number_iterations
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
-        myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
             '     total #BRs=%g, avg #BF=%g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
@@ -262,6 +262,6 @@ save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
 ht_updates = numel(update_iters);
-myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[T%02d] Saved: %s\n', trialNo, F);
 end

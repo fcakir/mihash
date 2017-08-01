@@ -51,7 +51,7 @@ W_lastupdate = W;
 
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -100,7 +100,7 @@ end
 code_length = opts.nbits;
 opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 number_iterations = opts.noTrainingPoints;
-myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
+logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 % bit flips & bits computed
 bitflips          = 0;
@@ -189,7 +189,7 @@ for iter = 1:number_iterations
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
 
-        myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
             '     total #BRs=%g, avg #BF=%g obj_val=%g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
@@ -207,6 +207,6 @@ save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'h_ind_array');
 
 ht_updates = numel(update_iters);
-myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[T%02d] Saved: %s\n', trialNo, F);
 end

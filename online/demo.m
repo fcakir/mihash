@@ -72,9 +72,9 @@ end
 global Xtrain Xtest Ytrain Ytest thr_dist Dtype
 Dtype_this = [opts.dataset '_' opts.ftype];
 if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
-    myLogInfo('Dataset already loaded for %s', Dtype_this);
+    logInfo('Dataset already loaded for %s', Dtype_this);
 elseif (any(run_trial) || ~all(res_exist))
-    myLogInfo('Loading data for %s...', Dtype_this);
+    logInfo('Loading data for %s...', Dtype_this);
     if strcmp(opts.methodID, 'sketch')
         eval(['[Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_' opts.ftype '(opts, false);']);
     else
@@ -86,18 +86,18 @@ end
 
 % 3. TRAINING: run all _necessary_ trials (handled by train.m)
 if any(run_trial)
-    myLogInfo('Training models...');
+    logInfo('Training models...');
     train(trainFunc, run_trial, opts);
 end
-myLogInfo('%s: Training is done.', opts.identifier);
+logInfo('%s: Training is done.', opts.identifier);
 
 
 % 4. TESTING: run all _necessary_ trials
 if ~all(res_exist) || ~exist(resfn, 'file')
-    myLogInfo('Testing models...');
+    logInfo('Testing models...');
     test(resfn, res_trial_fn, res_exist, opts);
 end
-myLogInfo('%s: Testing is done.', opts.identifier);
+logInfo('%s: Testing is done.', opts.identifier);
 
 diary_path = opts.diary_name;
 

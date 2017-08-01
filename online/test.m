@@ -27,7 +27,7 @@ caller = st(2).name;
 
 % handle testFrac
 if opts.testFrac < 1
-    myLogInfo('! only testing first %g%%', opts.testFrac*100);
+    logInfo('! only testing first %g%%', opts.testFrac*100);
     idx = 1:round(size(Xtest, 1)*opts.testFrac);
     testX = Xtest(idx, :);
     testY = Ytest(idx, :);
@@ -49,7 +49,7 @@ clear train_iter train_time train_examples
 
 for t = 1:opts.ntrials
     if res_exist(t)
-        myLogInfo('Trial %d: results exist', t);
+        logInfo('Trial %d: results exist', t);
         load(res_trial_fn{t});
     else
         clear t_res t_bits_computed_all t_bitflips
@@ -125,8 +125,8 @@ for t = 1:opts.ntrials
     train_iter(t, :) = t_train_iter;
     train_examples(t, :) = t_train_iter * opts.batchSize;
 end
-myLogInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
-myLogInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
+logInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
+logInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
 
 % save all trials in a single file (for backward compatibility)
 % it may overwrite existing file, but whatever

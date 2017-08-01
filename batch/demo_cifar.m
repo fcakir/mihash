@@ -53,7 +53,7 @@ disp(opts.identifier);
 
 global imdbType imdb
 if ~isempty(imdbType) & strcmp(imdbType, opts.methodID)
-    myLogInfo('IMDB already loaded for %s', imdbType);
+    logInfo('IMDB already loaded for %s', imdbType);
 else
     imdb = get_imdb(opts);
     imdbType = opts.methodID;

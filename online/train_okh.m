@@ -39,7 +39,7 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -85,10 +85,10 @@ para.anchor = Xanchor;
 res_time    = 0;
 update_time = 0;
 train_time  = toc;  
-myLogInfo('Preprocessing took %f sec', train_time);
+logInfo('Preprocessing took %f sec', train_time);
 
 number_iterations = opts.noTrainingPoints/2;
-myLogInfo('[T%02d] %d training iterations', trialNo, number_iterations);
+logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 d = size(KX, 1);
 if 0
@@ -186,7 +186,7 @@ for iter = 1:number_iterations
         % fix permission
         if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
-        myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
             '     total #BRs=%g, avg #BF=%g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
@@ -205,8 +205,8 @@ save(F, 'Xanchor', 'sigma', 'W', 'H', 'bitflips', 'bits_computed_all', ...
 if ~opts.windows, unix(['chmod g+w ' F]); unix(['chmod o-w ' F]); end
 
 ht_updates = numel(update_iters);
-myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 
 
@@ -220,14 +220,14 @@ tic;
 nhalf = floor(size(Xtrain, 1)/2);
 ind = randperm(nhalf, 300);
 Xanchor = Xtrain(ind, :);
-myLogInfo('Randomly selected 300 anchor points');
+logInfo('Randomly selected 300 anchor points');
 
 % estimate sigma for Gaussian kernel using samples from the SECOND HALF
 ind = randperm(nhalf, 2000);
 Xval = Xtrain(nhalf+ind, :);
 Kval = sqdist(Xval', Xanchor');
 sigma = mean(mean(Kval, 2));
-myLogInfo('Estimated sigma = %g', sigma);
+logInfo('Estimated sigma = %g', sigma);
 clear Xval Kval
 
 % preliminary for testing

@@ -42,7 +42,7 @@ W_lastupdate = W;
 
 % are we handling a mult-labeled dataset?
 multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, myLogInfo('Handling multi-labeled dataset'); end
+if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -169,7 +169,7 @@ for iter = 1:opts.noTrainingPoints
         bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
         
-        myLogInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
+        logInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
             trialNo, numel(update_iters), iter, bits_computed_all , bf_all, trigger_val, opts.trigger);
     end
     
@@ -180,7 +180,7 @@ for iter = 1:opts.noTrainingPoints
         save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'seenLabels', 'update_iters');
 
-        myLogInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
             '     total #BRs=%g, avg #BF=%g'], ...
             trialNo, opts.identifier, iter, opts.noTrainingPoints, ...
@@ -197,8 +197,8 @@ save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
     'seenLabels', 'h_ind_array');
 
 ht_updates = numel(update_iters);
-myLogInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-myLogInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[T%02d] Saved: %s\n', trialNo, F);
 end
 
 % -----------------------------------------------------------

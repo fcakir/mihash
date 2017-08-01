@@ -33,7 +33,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_gist(opts, normalizeX)
 % 			   See labelme case below.
 %
 if nargin < 2, normalizeX = 1; end
-if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
+if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 thr_dist = -Inf;
 if opts.windows
     basedir = '\\ivcfs1\codebooks\hashing_project\data';
@@ -59,7 +59,7 @@ if strcmp(opts.dataset, 'cifar')
 
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -80,7 +80,7 @@ elseif strcmp(opts.dataset, 'sun')
 
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -91,13 +91,13 @@ elseif strcmp(opts.dataset, 'nus')
     
     use21FrequentConcepts = 1;
     if use21FrequentConcepts
-    	myLogInfo('Using 21 most frequent concepts, removing rest...');
+    	logInfo('Using 21 most frequent concepts, removing rest...');
 	[~, fi_] = sort(sum(tags, 1), 'descend');
 	tags(:, fi_(22:end)) = [];
 	fi2_ = find(sum(tags, 2) == 0);
 	tags(fi2_,:) = [];
 	gist(fi2_,:) = [];
-	myLogInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
+	logInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
 		size(gist,1), size(gist, 2), size(tags, 2));
     end
     tstperclass = 30;
@@ -111,7 +111,7 @@ elseif strcmp(opts.dataset, 'nus')
         split_train_test_nus(gist, tags, tstperclass, use21FrequentConcepts);
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -128,14 +128,14 @@ elseif strcmp(opts.dataset, 'labelme')
         split_train_test_unsupervised(gist, no_tst);
     if opts.val_size > 0
 	assert(size(Xtrain, 1) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
     end
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest
-myLogInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
+logInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
 end
 
 %---------------------------------------------------------

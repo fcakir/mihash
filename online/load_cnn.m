@@ -27,7 +27,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, Names] = load_cnn(opts, normalizeX)
 %
 % 
 if nargin < 2, normalizeX = 1; end
-if ~normalizeX, myLogInfo('will NOT pre-normalize data'); end
+if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 
 % NOTE: labels are originally [0, L-1], first add 1 to make [1, L]
 %       then multiply by 10 to make [10, L*10]
@@ -71,7 +71,7 @@ if strcmp(opts.dataset, 'cifar')
     
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -106,7 +106,7 @@ elseif strcmp(opts.dataset, 'sun')
 
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -140,7 +140,7 @@ elseif strcmp(opts.dataset, 'places')
     
     if opts.val_size > 0
 	assert(length(Ytrain) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -162,13 +162,13 @@ elseif strcmp(opts.dataset, 'nus')
     Y = load([basedir '/nuswide/AllLabels81.txt']);
     use21FrequentConcepts = 1;
     if use21FrequentConcepts
-    	myLogInfo('Using 21 most frequent concepts, removing rest...');
+    	logInfo('Using 21 most frequent concepts, removing rest...');
 	[~, fi_] = sort(sum(Y, 1), 'descend');
 	Y(:, fi_(22:end)) = [];
 	fi2_ = find(sum(Y, 2) == 0);
 	Y(fi2_,:) = [];
 	FVs(fi2_,:) = [];
-	myLogInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
+	logInfo('No. of points=%g, dimensionality=%g, No. of labels=%g', ...
 		size(FVs,1), size(FVs, 2), size(Y, 2));
     end
     X = double(FVs);  clear FVs
@@ -185,7 +185,7 @@ elseif strcmp(opts.dataset, 'nus')
     Names = [];
     if opts.val_size > 0
 	assert(size(Ytrain, 1) >=  opts.val_size);
-    	myLogInfo('Doing validation!');
+    	logInfo('Doing validation!');
 	ind_ = randperm(length(Ytrain));
 	Xtrain = Xtrain(ind_(1:opts.val_size), :);
 	Ytrain = Ytrain(ind_(1:opts.val_size), :);
@@ -194,7 +194,7 @@ elseif strcmp(opts.dataset, 'nus')
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest
-myLogInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
+logInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
 end
 
 % --------------------------------------------------------

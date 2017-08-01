@@ -38,7 +38,7 @@ if opts.updateInterval>0 && mod(iter*opts.batchSize, opts.updateInterval)==0
         reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
         reservoir.size, nbits, varargin{:});
     update_table = mi_impr > opts.miThresh;
-    myLogInfo('MI improvement = %g, update = %d', mi_impr, update_table);
+    logInfo('MI improvement = %g, update = %d', mi_impr, update_table);
     ret_val = mi_impr;
 end
 end

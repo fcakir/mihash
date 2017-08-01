@@ -161,14 +161,12 @@ opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 assert(ismember(opts.ftype, {'gist', 'cnn'}));
 assert(opts.testFrac > 0);
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
-%assert(~(opts.updateInterval>0 && opts.flipThresh>0), ...
-    %'updateInterval cannot be used with flipThresh');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
 if ~strcmp(opts.mapping,'smooth')
     opts.updateInterval = opts.noTrainingPoints;
-    myLogInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
+    logInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
         '\n setting ntests to 2'])
     opts.ntests = 2;
     assert(strcmpi(opts.methodID,'osh')); % OSH only
@@ -194,7 +192,7 @@ opts.windows = ~isempty(strfind(computer, 'WIN'));
 if opts.windows
     % reset localdir
     opts.localdir = '\\kraken\object_detection\cachedir\online-hashing';
-    myLogInfo('We are on Window$. localdir set to %s', opts.localdir);
+    logInfo('We are on Window$. localdir set to %s', opts.localdir);
 end
 % localdir
 if isfield(opts, 'methodID') && ~isempty(opts.methodID)
@@ -207,7 +205,7 @@ end
 
 % matlabpool handling
 if isempty(gcp('nocreate')) && opts.nworkers > 0
-    myLogInfo('Opening parpool, nworkers = %d', opts.nworkers);
+    logInfo('Opening parpool, nworkers = %d', opts.nworkers);
     delete(gcp('nocreate'))  % clear up zombies
     p = parpool(opts.nworkers);
 end
@@ -221,10 +219,10 @@ if strcmp(opts.dataset, 'places')
     if opts.labelsPerCls > 0
         assert(opts.labelsPerCls >= 500 && opts.labelsPerCls <= 5000, ...
             'please give a reasonable labelsPerCls in [500, 5000]');
-        myLogInfo('Places will use %d labeled examples per class', opts.labelsPerCls);
+        logInfo('Places will use %d labeled examples per class', opts.labelsPerCls);
         opts.dataset = [opts.dataset, 'L', num2str(opts.labelsPerCls)];
     else
-        myLogInfo('Places: fully supervised experiment');
+        logInfo('Places: fully supervised experiment');
     end
 end
 
@@ -291,7 +289,7 @@ if ~exist(expdir_base, 'dir'),
     if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
 end
 if ~exist(opts.expdir, 'dir'),
-    myLogInfo(['creating opts.expdir: ' opts.expdir]);
+    logInfo(['creating opts.expdir: ' opts.expdir]);
     mkdir(opts.expdir);
     if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
 end
@@ -312,6 +310,6 @@ diary(opts.diary_name);
 diary('on');
 
 % FINISHED
-myLogInfo('identifier: %s', opts.identifier);
+logInfo('identifier: %s', opts.identifier);
 disp(opts);
 end

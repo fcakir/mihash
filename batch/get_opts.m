@@ -92,7 +92,7 @@ opts.identifier = [prefix '-' idr];
 % identifier: abcdef-maxdif0.1-......
 opts.expDir = fullfile(opts.expDir, opts.identifier);
 if ~exist(opts.expDir, 'dir'),
-    myLogInfo(['creating opts.expDir: ' opts.expDir]);
+    logInfo(['creating opts.expDir: ' opts.expDir]);
     mkdir(opts.expDir);
     if ~opts.windows, unix(['chmod g+rw ' opts.expDir]); end
 end

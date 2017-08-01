@@ -35,7 +35,7 @@ if strcmp(opts.metric, 'mAP')
     end
     AP = AP(~isnan(AP));
     res = mean(AP);
-    myLogInfo(['mAP = ' num2str(res)]);
+    logInfo(['mAP = ' num2str(res)]);
 
 elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eval mAP on top N retrieved results
@@ -74,7 +74,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     end
     AP = AP(~isnan(AP));
     res = mean(AP);
-    myLogInfo('mAP@(N=%d) = %g', N, res);
+    logInfo('mAP@(N=%d) = %g', N, res);
 
 elseif ~isempty(strfind(opts.metric, 'prec_k'))
     % intended for PLACES, large scale
@@ -92,7 +92,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
         prec_k(i) = mean(labels(I));
     end
     res = mean(prec_k);
-    myLogInfo('Prec@(neighs=%d) = %g', K, res);
+    logInfo('Prec@(neighs=%d) = %g', K, res);
 
 
 elseif ~isempty(strfind(opts.metric, 'prec_n'))
@@ -114,7 +114,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
         end
     end
     res = mean(prec_n);
-    myLogInfo('Prec@(radius=%d) = %g', N, res);
+    logInfo('Prec@(radius=%d) = %g', N, res);
 
 else
     error(['Evaluation metric ' opts.metric ' not implemented']);

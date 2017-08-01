@@ -43,11 +43,11 @@ for i = 2:opts.noTrainingPoints
     exhausted(newLabel) = isempty(labeledExamples{newLabel});
 
     if numel(seenLabInds) == numLabels
-        myLogInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, i, opts.noTrainingPoints);
+        logInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, i, opts.noTrainingPoints);
         break;
     end
     if all(exhausted(seenLabInds))
-        myLogInfo('[T%02d] Seen labels are exhausted @ t=%d/%d', trialNo, i, opts.noTrainingPoints);
+        logInfo('[T%02d] Seen labels are exhausted @ t=%d/%d', trialNo, i, opts.noTrainingPoints);
         break;
     end
 end
@@ -58,7 +58,7 @@ if i < opts.noTrainingPoints
 end
 for j = numLabels:opts.noTrainingPoints
     if numel(unique(labels(ind(1:j)))) == numLabels
-        myLogInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, j, opts.noTrainingPoints);
+        logInfo('[T%02d] All labels are seen @ t=%d/%d\n', trialNo, j, opts.noTrainingPoints);
         break;
     end
 end
