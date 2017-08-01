@@ -39,11 +39,7 @@ if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 
 tic;
 if strcmp(opts.dataset, 'cifar')
-    if opts.windows
-        basedir = '\\ivcfs1\codebooks\hashing_project\data';
-    else
-        basedir = '/research/codebooks/hashing_project/data';
-    end
+    basedir = '/research/codebooks/hashing_project/data';
     load([basedir '/cifar-10/descriptors/trainCNN.mat']); % trainCNN
     load([basedir '/cifar-10/descriptors/traininglabelsCNN.mat']); % traininglabels
     load([basedir '/cifar-10/descriptors/testCNN.mat']); % testCNN
@@ -114,11 +110,7 @@ elseif strcmp(opts.dataset, 'sun')
     end
 	Names = [];
 elseif strcmp(opts.dataset, 'places')
-    if opts.windows
-        basedir = '\\kraken\object_detection\data';
-    else
-        basedir = '/research/object_detection/data';
-    end
+    basedir = '/research/object_detection/data';
     % loads variables: pca_feats, labels, images
     clear pca_feats labels images
     load([basedir '/places/places_alexnet_fc7pca128.mat']);
@@ -153,11 +145,7 @@ elseif strcmp(opts.dataset, 'places')
 
 
 elseif strcmp(opts.dataset, 'nus')
-    if opts.windows
-        basedir = '\\ivcfs1\codebooks\hashing_project\data';
-    else
-        basedir = '/research/codebooks/hashing_project/data';
-    end
+    basedir = '/research/codebooks/hashing_project/data';
     load([basedir '/nuswide/AllNuswide_fc7.mat']);  % FVs
     Y = load([basedir '/nuswide/AllLabels81.txt']);
     use21FrequentConcepts = 1;

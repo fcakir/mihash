@@ -113,10 +113,6 @@ for t = 1:opts.ntrials
         clear Htrain Htest
         save(res_trial_fn{t}, 't_res', 't_bitflips', 't_bits_computed_all', ...
             't_train_iter', 't_train_time');
-        if ~opts.windows, 
-            unix(['chmod g+w ' res_trial_fn{t}]); 
-            unix(['chmod o-w ' res_trial_fn{t}]); 
-        end
     end
     res(t, :) = t_res;
     bitflips(t, :) = t_bitflips;
@@ -132,7 +128,6 @@ logInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(r
 % it may overwrite existing file, but whatever
 save(resfn, 'res', 'bitflips', 'bits_computed_all', 'train_iter', 'train_time', ...
     'train_examples');
-if ~opts.windows, unix(['chmod g+w ' resfn]); unix(['chmod o-w ' resfn]); end
 
 % visualize
 if opts.showplots

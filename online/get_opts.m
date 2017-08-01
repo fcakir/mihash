@@ -187,20 +187,12 @@ end
 % CONFIGS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% are we on window$?
-opts.windows = ~isempty(strfind(computer, 'WIN'));
-if opts.windows
-    % reset localdir
-    opts.localdir = '\\kraken\object_detection\cachedir\online-hashing';
-    logInfo('We are on Window$. localdir set to %s', opts.localdir);
-end
 % localdir
 if isfield(opts, 'methodID') && ~isempty(opts.methodID)
     opts.localdir = fullfile(opts.localdir, opts.methodID);
 end
 if exist(opts.localdir, 'dir') == 0, 
     mkdir(opts.localdir);
-    if ~opts.windows, unix(['chmod g+rw ' opts.localdir]); end
 end
 
 % matlabpool handling
@@ -286,12 +278,10 @@ if opts.tstScenario == 2
 end
 if ~exist(expdir_base, 'dir'),
     mkdir(expdir_base);
-    if ~opts.windows, unix(['chmod g+rw ' expdir_base]); end
 end
 if ~exist(opts.expdir, 'dir'),
     logInfo(['creating opts.expdir: ' opts.expdir]);
     mkdir(opts.expdir);
-    if ~opts.windows, unix(['chmod g+rw ' opts.expdir]); end
 end
 
 % hold a diary -save it to opts.expdir

@@ -35,11 +35,7 @@ function [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_gist(opts, normalizeX)
 if nargin < 2, normalizeX = 1; end
 if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 thr_dist = -Inf;
-if opts.windows
-    basedir = '\\ivcfs1\codebooks\hashing_project\data';
-else
-    basedir = '/research/codebooks/hashing_project/data';
-end
+basedir = '/research/codebooks/hashing_project/data';
 
 tic;
 if strcmp(opts.dataset, 'cifar')
