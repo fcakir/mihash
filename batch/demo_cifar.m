@@ -2,7 +2,7 @@ function demo_cifar(nbits, modelType, varargin)
     
 addpath(fullfile(pwd, '..'));
 addpath(fullfile(pwd, '..', 'util'));
-run ./vlfeat/toolbox/vl_setup
+%run ./vlfeat/toolbox/vl_setup
 run ./matconvnet_gpu/matlab/vl_setupnn
 
 % init opts
@@ -16,10 +16,9 @@ ip.addParameter('batchSize', 100);
 ip.addParameter('solver', 'sgd');
 ip.addParameter('lr', 0.1);
 ip.addParameter('lrdecay', 0);
-ip.addParameter('lrepoch', 10);
-ip.addParameter('wdecay', 0);
-ip.addParameter('bpdepth', 8);  % up to conv5 for VGG
-%ip.addParameter('momentum', 0.9);
+ip.addParameter('lrstep', 10);
+ip.addParameter('wdecay', 0.0005);
+ip.addParameter('bpdepth', Inf);  % default: update all layers
 ip.addParameter('sigmf_p', 40);
 
 ip.addParameter('gpus', []);
@@ -33,16 +32,15 @@ opts = ip.Results;
 opts.methodID = sprintf('%s-cifar%d-sp%d-%s', upper(opts.obj), nbits, ...
     opts.split, modelType);
 opts.identifier = sprintf('%dbins-batch%d-%sLR%gD%gE%d-Sig%d', ...
-    opts.nbins, opts.batchSize, opts.solver, opts.lr, opts.lrdecay, opts.lrepoch, ...
+    opts.nbins, opts.batchSize, opts.solver, opts.lr, opts.lrdecay, opts.lrstep, ...
     opts.sigmf_p);
-if ismember(modelType, {'alexnet', 'vgg16', 'vggf'})
-    opts.normalize = false;
-end
+assert(ismember(modelType, {'fc1', 'vggf'}), 'Supported model types: fc1, vggf');
+opts.normalize = strcmp(modelType, 'fc1');
 if ~opts.normalize
     opts.identifier = [opts.identifier, '-nonorm']; 
 end
 
-opts = opts_deepMI(opts, 'cifar', nbits, modelType, varargin{:})
+opts = get_opts(opts, 'cifar', nbits, modelType, varargin{:})
 opts.unsupervised = false;
 disp(opts.identifier);
 
@@ -62,13 +60,10 @@ end
 % --------------------------------------------------------------------
 %                                                                Train
 % --------------------------------------------------------------------
-if ismember(opts.modelType, {'fc', 'fc1'})
+if strcmp(opts.modelType, 'fc1')
     batchFunc = @batch_fc7;
-elseif strcmp(opts.modelType, 'nin')
-    % NIN on orig images
-    batchFunc = @batch_simplenn;
 else
-    % imagenet model
+    % imagenet model (VGG)
     imgSize = opts.imageSize;
     meanImage = net.meta.normalization.averageImage;
     if isequal(size(meanImage), [1 1 3])
@@ -81,13 +76,15 @@ end
 
 % figure out learning rate vector
 if opts.lrdecay>0 & opts.lrdecay<1
+    % decay by opts.lrdecay every opts.lrstep epochs
     cur_lr = opts.lr;
     lrvec = [];
     while length(lrvec) < opts.epoch
-        lrvec = [lrvec, ones(1, opts.lrepoch)*cur_lr];
+        lrvec = [lrvec, ones(1, opts.lrstep)*cur_lr];
         cur_lr = cur_lr * opts.lrdecay;
     end
 else
+    % no decay
     lrvec = opts.lr;
 end
 [net, info] = cnn_train(net, imdb, batchFunc, ...
@@ -113,14 +110,14 @@ end
 % --------------------------------------------------------------------
 train_id = find(imdb.images.set == 1 | imdb.images.set == 2);
 Ytrain   = imdb.images.labels(train_id)';
-Htrain   = cnn_hash_test(net, batchFunc, imdb, train_id, opts);
+Htrain   = cnn_encode(net, batchFunc, imdb, train_id, opts);
 
 test_id = find(imdb.images.set == 3);
 Ytest   = imdb.images.labels(test_id)';
-Htest   = cnn_hash_test(net, batchFunc, imdb, test_id, opts);
+Htest   = cnn_encode(net, batchFunc, imdb, test_id, opts);
 
 disp('Evaluating...');
 opts.metric = 'mAP';
 opts.unsupervised = false;
-evaluate_deepMI(Htrain, Htest, Ytrain, Ytest, opts);
+evaluate(Htrain, Htest, Ytrain, Ytest, opts);
 end
