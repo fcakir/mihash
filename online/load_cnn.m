@@ -117,7 +117,6 @@ elseif strcmp(opts.dataset, 'places')
     X = pca_feats;
     Y = (labels + 1)*10;
     T = 20;
-    L = opts.labelsPerCls;  % default 2500, range {0}U[500, 5000]
 
     if normalizeX 
         % normalize features
@@ -126,7 +125,7 @@ elseif strcmp(opts.dataset, 'places')
     end
 
     % semi-supervised
-    [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, L);
+    [ind_train, ind_test, Ytrain, Ytest] = split_train_test(X, Y, T, 0);
     Xtrain = X(ind_train, :);
     Xtest  = X(ind_test, :);
     

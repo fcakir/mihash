@@ -14,8 +14,9 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % (checkpoint #1 is on the 1st iteration)
 % 
 % REFERENCES
-% [1] Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff "MIHash: Online Hashing 
-% 	  with Mutual Information", ICCV 2017 (*equal contribution).
+% [1] Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff (*equal contribution)
+%     "MIHash: Online Hashing with Mutual Information", 
+%     International Conference on Computer Vision (ICCV) 2017.
 %
 % INPUTS
 % 	ftype	- (string) Choices are 'gist' and 'cnn'. load_gist.m and load_cnn.m
@@ -63,10 +64,10 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   possible. if override=1, then (re-)runs the experiment
 % 			   no matter what.
 %	val_size - (int)   {0, 1}. Should be kept to 0, for future release purposes.
-%  showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
+%      showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
 % 			   training instances, CPU time and Bit Recomputations. 
 % 			   See test.m .
-%   localdir - (string) Directory path where the results folder will be created.
+%      localdir - (string) Directory path where the results folder will be created.
 % reservoirSize - (int)    The size of the set to be sampled via reservoir sampling 
 % 			   from the data stream. The reservoir can be used to 
 % 			   compute statistical properties of the stream. For future 
@@ -78,16 +79,11 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   needed. 'bf' means bit flips, 'mi' means mutual information (see 
 % 			   reference [1] above), and 'fix' means no trigger. If 'fix' is selected, then
 % 			   the hash table is updated at every 'updateInterval'.
-% flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
+%     flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
 % 			   exceeds "flipThresh", a hash table update is performed. 
 % 			   Evaluated only after each "updateInterval". If flipThresh=-1
 % 			   the hash table is always updated at each "updateInterval".
 % 			   Hard-coded to 0. For future release.
-% labelsPerCls - (int)   Hard-coded to 0. For future release.
-% tstScenario  - (int)   Hard-coded to 1. Corresponds to populating the hash table 
-% 			   with all the data, excluding the test set. Other
-% 			   alternative might be to populate only with the processed/observed
-% 			   training instances. 
 %  pObserve - (float) For multiclass datasets. To generate different data streams
 % 			   in which a new class appears with pObserve probability. 
 %			   pObserve=0 corresponds to uniform probability, i.e., 
@@ -127,13 +123,6 @@ ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
 ip.addParamValue('miThresh', 0, @isscalar);       % for trigger=mi
 ip.addParamValue('flipThresh', -1, @isscalar);       % for trigger=bf
 
-% Hack for Places
-ip.addParamValue('labelsPerCls', 0, @isscalar);
-
-% Testing scenario
-% TODO explain
-ip.addParamValue('tstScenario',1,@isscalar);
-
 % for label arrival strategy: prob. of observing a new label
 % NOTE: if pObserve is too small then it may exhaust examples in some class
 %       before getting a new label
@@ -158,7 +147,6 @@ assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
-assert(ismember(opts.tstScenario,[1,2]));
 
 if strcmp(dataset, 'labelme') 
     assert(strcmp(opts.ftype, 'gist'));
@@ -189,19 +177,6 @@ end
 
 % set randseed -- don't change the randseed if don't have to!
 rng(opts.randseed, 'twister');
-
-% if smoothness not applied set sample reservoir size to the entire reservoir
-% [hack] for places
-if strcmp(opts.dataset, 'places')
-    if opts.labelsPerCls > 0
-        assert(opts.labelsPerCls >= 500 && opts.labelsPerCls <= 5000, ...
-            'please give a reasonable labelsPerCls in [500, 5000]');
-        logInfo('Places will use %d labeled examples per class', opts.labelsPerCls);
-        opts.dataset = [opts.dataset, 'L', num2str(opts.labelsPerCls)];
-    else
-        logInfo('Places: fully supervised experiment');
-    end
-end
 
 % decipher evaluation metric
 if ~isempty(strfind(opts.metric, 'prec_k'))
@@ -257,9 +232,6 @@ opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, opts.noTrainingP
 if opts.pObserve > 0
     assert(opts.pObserve < 1);
     opts.expdir = sprintf('%s_arr%g', opts.expdir, opts.pObserve);
-end
-if opts.tstScenario == 2
-    opts.expdir = sprintf('%s_scenario%d', opts.expdir, opts.tstScenario);
 end
 if ~exist(expdir_base, 'dir'),
     mkdir(expdir_base);
