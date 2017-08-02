@@ -14,7 +14,6 @@ function [resfn, dp] = demo_adapthash(ftype, dataset, nbits, varargin)
 % 			   described in the above papers. SGDBoost=0, corresponds
 % 			   to a hinge loss formulation without the online boosting 
 % 			   approach. SGDBoost=0 typically works better.
-%      methodID - (string) Hard-coded to 'adapt'.
 % OUTPUTS
 % 	resfn 	- (string) Path to the results file. see demo.m .
 % 	dp 	- (string) Path to the diary which contains the command window text
@@ -24,11 +23,11 @@ ip = inputParser;
 ip.addParamValue('alpha', 0.9, @isscalar);
 ip.addParamValue('beta', 1e-2, @isscalar);
 ip.addParamValue('stepsize', 1, @isscalar);
-ip.addParameter('methodID', 'adapt');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('A%gB%gS%g', opts.alpha, opts.beta, opts.stepsize);
+opts.methodID   = 'adapt';
 opts.batchSize  = 2;  % hard-coded; pair supervision
 
 % generic fields

@@ -34,8 +34,7 @@ logInfo('%s: %d train_iters', opts.identifier, num_iters);
 ncpu = feature('numcores');
 set_parpool(min(5, max(opts.ntrials, round(ncpu/2))));
 for t = 1:opts.ntrials
-    % KH: fix random seed in parallel worker
-    %     important for reproducible results
+    % fix random seed in parallel worker for reproducible results
     rng(opts.randseed+t, 'twister');
     if run_trial(t) == 0
         logInfo('Trial %02d not required, skipped', t);
@@ -63,9 +62,8 @@ end
 logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 logInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
 logInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
-if strcmp(opts.mapping, 'smooth')
-    logInfo('    Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    logInfo('    Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-    logInfo('             Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
-end
+logInfo('');
+logInfo('Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+logInfo('Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
+logInfo('         Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
 end

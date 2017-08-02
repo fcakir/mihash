@@ -8,7 +8,6 @@ function [resfn, dp] = demo_okh(ftype, dataset, nbits, varargin)
 % INPUTS
 %	c 	 - (float) Parameter C as in Alg. 1 of OKH. 
 % 	alpha	 - (float) \alpha as in Eq. 3 of OKH
-%       methodID - (string) Hard-coded to 'okh'.
 % OUTPUTS
 % 	resfn 	- (string) Path to the results file. see demo.m .
 % 	dp 	- (string) Path to the diary which contains the command window text
@@ -17,11 +16,11 @@ function [resfn, dp] = demo_okh(ftype, dataset, nbits, varargin)
 ip = inputParser;
 ip.addParamValue('c', 0.1, @isscalar);
 ip.addParamValue('alpha', 0.2, @isscalar);
-ip.addParameter('methodID', 'okh');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('C%gA%g', opts.c, opts.alpha);
+opts.methodID   = 'okh';
 opts.batchSize  = 2;  % hard-coded; pair supervision
 
 % generic fields

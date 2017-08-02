@@ -14,7 +14,6 @@ function [resfn, dp] = demo_mihash(ftype, dataset, nbits, varargin)
 % 					   used as second argument to sigmf.m, see Section 3.2
 %   init_r_size - (int) Initial reservoir size. Must be a positive value. > 500
 % 						is recommended. 
-%   methodID - (string) Hard-coded to 'mutual_info'.
 % OUTPUTS
 % 	resfn 	- (string) Path to the results file. see demo.m .
 % 	dp 	- (string) Path to the diary which contains the command window text
@@ -30,14 +29,13 @@ ip.addParamValue('stepsize', 1, @isscalar);
 ip.addParamValue('decay', 0, @isscalar);
 ip.addParamValue('sigmf_p', [1 0], @isnumeric);
 ip.addParamValue('init_r_size', 500, @isscalar); % initial size of reservoir
-ip.addParameter('methodID', 'mihash');
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
 opts.identifier = sprintf('NoBins%d_StepSize%g_Decay%g_InitRSize%g_SGMFP%g-%g', opts.no_bins, ...
         opts.stepsize, opts.decay, opts.init_r_size, opts.sigmf_p(1), opts.sigmf_p(2));
-	
-opts.batchSize  = 1;  % hard-coded
+opts.methodID  = 'mihash';
+opts.batchSize = 1;  % hard-coded
 
 % get generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters

@@ -88,9 +88,9 @@ if opts.pObserve > 0
 else
     train_ind = zeros(1, opts.epoch*opts.noTrainingPoints);
     for e = 1:opts.epoch
-	    % randomly shuffle training points before taking first noTrainingPoints
-	    train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
-		randperm(size(Xtrain, 1), opts.noTrainingPoints);
+        % randomly shuffle training points before taking first noTrainingPoints
+        train_ind((e-1)*opts.noTrainingPoints+1:e*opts.noTrainingPoints) = ...
+            randperm(size(Xtrain, 1), opts.noTrainingPoints);
     end
 end
 opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
@@ -208,7 +208,7 @@ for iter = 1:number_iterations
     % ---- determine whether to update or not ----
     [update_table, trigger_val, h_ind] = trigger_update(iter, ...
         opts, W_lastupdate, W, reservoir, Hres_new, ...
-		 opts.unsupervised, thr_dist);
+        opts.unsupervised, thr_dist);
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----

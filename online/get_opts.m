@@ -27,13 +27,7 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 %			   Please add/edit  load_gist.m and load_cnn.m for available
 %			   datasets.
 % 	nbits   - (int)    Hash code length
-% 	mapping - (string) Choices are 'smooth' and 'bucket'. 'Smooth' populates
-% 			   the hash table with the hash mapping output. 'bucket'
-% 			   is only applicate for the "Online Supervised Hashing (osh)"
-% 			   method in which the hash table can be populated with 
-% 			   Error Correcting Output Codes of the data items (if their
-%			   label information exists). 'smooth' is the traditional
-% 			   approach in hashing methods. 
+% 	
 % noTrainingPoints - (int) The number of training instances to be process at each
 % 			   epoch. Must be smaller than the available training data.
 % 	ntrials - (int)	   The number of trials. A trial corresponds to a separate
@@ -109,7 +103,6 @@ ip = inputParser;
 ip.addRequired('ftype', @isstr);
 ip.addRequired('dataset', @isstr);
 ip.addRequired('nbits', @isscalar);
-ip.addParamValue('mapping', 'smooth', @isstr);
 ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
 ip.addParamValue('ntrials', 3, @isscalar);
 ip.addParamValue('ntests', 50, @isscalar);
@@ -163,14 +156,6 @@ assert(opts.testFrac > 0);
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
-
-if ~strcmp(opts.mapping,'smooth')
-    opts.updateInterval = opts.noTrainingPoints;
-    logInfo([opts.mapping ' hashing scheme supports ntests = 2 only' ...
-        '\n setting ntests to 2'])
-    opts.ntests = 2;
-    assert(strcmpi(opts.methodID,'osh')); % OSH only
-end
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 assert(ismember(opts.tstScenario,[1,2]));
@@ -237,8 +222,8 @@ end
 % --------------------------------------------
 % identifier string for the current experiment
 % NOTE: opts.identifier is already initialized with method-specific params
-opts.identifier = sprintf('%s-%s-%d%s-%s', opts.dataset, opts.ftype, ...
-    opts.nbits, opts.mapping, opts.identifier);
+opts.identifier = sprintf('%s-%s-%d-%s', opts.dataset, opts.ftype, ...
+    opts.nbits, opts.identifier);
 idr = opts.identifier;
 
 % handle reservoir
