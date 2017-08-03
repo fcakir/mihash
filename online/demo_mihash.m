@@ -32,10 +32,10 @@ ip.addParamValue('initRS', 500, @isscalar); % initial size of reservoir
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
+opts.methodID   = 'mihash';
 opts.identifier = sprintf('Bins%dSig%g_Step%gDecay%g_InitRS%g', opts.no_bins, ...
     opts.sigscale, opts.stepsize, opts.decay, opts.initRS);
-opts.methodID  = 'mihash';
-opts.batchSize = 1;  % hard-coded
+opts.batchSize  = 1;  % hard-coded
 
 % get generic fields
 opts = get_opts(opts, ftype, dataset, nbits, varargin{:});  % set parameters

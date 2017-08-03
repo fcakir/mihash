@@ -20,8 +20,8 @@ ip.addParamValue('batchSize', 50, @isscalar);
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('Ske%dBat%d', opts.sketchSize, opts.batchSize);
 opts.methodID   = 'sketch';
+opts.identifier = sprintf('Ske%dBat%d', opts.sketchSize, opts.batchSize);
 assert(opts.batchSize>=nbits, 'Sketching needs batchSize>=nbits');
 
 % generic fields

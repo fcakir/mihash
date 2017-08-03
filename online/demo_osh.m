@@ -20,15 +20,14 @@ function [resfn, dp] = demo_osh(ftype, dataset, nbits, varargin)
 % 	resfn 	- (string) Path to the results file. see demo.m .
 % 	dp 	- (string) Path to the diary which contains the command window text
 
-% OSH-specific fields 
 ip = inputParser;
 ip.addParamValue('stepsize', 0.1, @isscalar);
 ip.addParamValue('SGDBoost', 1, @isscalar);
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.identifier = sprintf('B%d_S%g', opts.SGDBoost, opts.stepsize);
 opts.methodID   = 'osh';  % hard-coded
+opts.identifier = sprintf('B%d_S%g', opts.SGDBoost, opts.stepsize);
 opts.batchSize  = 1;      % hard-coded
 
 % get generic fields
