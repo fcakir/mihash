@@ -31,7 +31,7 @@ if onGPU
 end
 
 % compute distances from hash codes
-phi = 2*sigmoid(X, opts.sigmf_p) - 1;  % RELAXED hash codes to interval [-1, 1]
+phi = 2*sigmoid(X, opts.sigscale) - 1;  % RELAXED hash codes to interval [-1, 1]
 hdist = phi' * phi;  % NxN pairwise dist matrix
 hdist = (-hdist + nbits)/2;   
 

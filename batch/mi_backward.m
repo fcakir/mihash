@@ -38,37 +38,6 @@ d_Hcond_pDCn = diag(prCn) * deriv_ent(pDCn, minus1s);
 d_L_pDCp = -(d_H_pDCp - d_Hcond_pDCp);
 d_L_pDCn = -(d_H_pDCn - d_Hcond_pDCn);
 
-% 4.1 max_diff term
-if opts.maxdif > 0
-    d_Z_pDCp = zeros(N, no_bins+1);
-    d_Z_pDCn = zeros(N, no_bins+1);
-    if onGPU
-        d_Z_pDCp = gpuArray(d_Z_pDCp);
-        d_Z_pDCn = gpuArray(d_Z_pDCn);
-    end
-    pp = top.aux.pp;
-    pn = top.aux.pn;
-    Zs = -nbits: deltaD: nbits;
-    for l = 0:no_bins
-        % d_p(D|+,l) = \sum_{k=-L}^L z(k)*P(D|-,l+k)
-        % d_p(D|-,l) = \sum_{k=-L}^L z(k)*P(D|+,l-k)
-        % where OOB entries are 0
-        % Note: reuse pp, pn from forward pass
-        pn_l = circshift(pn, -l, 2);  % Nx(2L+1)
-        pp_l = circshift(pp, -l, 2);  % Nx(2L+1)
-        d_Z_pDCp(:, l+1) = pn_l * Zs';  % Nx1
-        d_Z_pDCn(:, l+1) = pp_l * fliplr(Zs)';  % Nx1
-    end
-    d_L_pDCp = d_L_pDCp - opts.maxdif * d_Z_pDCp/nbits;
-    d_L_pDCn = d_L_pDCn - opts.maxdif * d_Z_pDCn/nbits;
-end
-
-% 4.2 min_plus term
-if opts.minplus > 0
-    g = repmat(centersD, [N 1]);
-    d_L_pDCp = d_L_pDCp + opts.minplus * g/nbits;
-end
-
 % 5. precompute dTPulse tensor
 d_L_phi = zeros(nbits, N);
 if onGPU, d_L_phi = gpuArray(d_L_phi); end
@@ -93,8 +62,8 @@ for l = 1:no_bins+1
 end
 
 % 6. -MI/x
-sigmoid = (phi+1)/2;
-d_phi_x = 2 .* sigmoid .* (1-sigmoid) * opts.sigmf_p(1);  % nbitsxN
+sigmoid = (phi + 1) / 2;
+d_phi_x = 2 .* sigmoid .* (1-sigmoid) * opts.sigscale;  % nbitsxN
 d_L_x   = d_L_phi .* d_phi_x;
 
 % 7. final

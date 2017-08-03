@@ -32,18 +32,14 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 % NOTES
 % 	W is d x b where d is the dimensionality 
 %            and b is the bit length / # hash functions
-%   Reservoir is initialized with opts.init_r_size instances
+%   Reservoir is initialized with opts.initRS instances
 
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 [n,d] = size(Xtrain);
-if 0
-    W = rand(d, opts.nbits)-0.5;
-else
-    % LSH init
-    W = randn(d, opts.nbits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-end
+% LSH init
+W = randn(d, opts.nbits);
+W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
@@ -83,15 +79,16 @@ end
 
 % initialize reservoir
 if reservoir_size > 0 
-    ind = randperm(size(Xtrain, 1));
+    ind = randperm(size(Xtrain, 1), opts.initRS);
     if ~isempty(Ytrain)
         [reservoir, update_ind] = update_reservoir(reservoir, ...
-            Xtrain(ind(1:opts.init_r_size),:), Ytrain(ind(1:opts.init_r_size),:), reservoir_size, W, opts.unsupervised);
+            Xtrain(ind, :), Ytrain(ind, :), ...
+            reservoir_size, W, opts.unsupervised);
     else
         [reservoir, update_ind] = update_reservoir(reservoir, ...
-            Xtrain(ind(1:opts.init_r_size),:), [], reservoir_size, W, opts.unsupervised);
+            Xtrain(ind, :), [], ...
+            reservoir_size, W, opts.unsupervised);
     end
-    % compute new reservoir hash table (do not update yet)
 end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -134,8 +131,8 @@ for iter = 1:number_iterations
     input.X = spoint;
     input.Y = slabel;
     % rev_pro implements the NIPS 16 Histogram Loss
-    [output, gradient] = mutual_info(W, input, reservoir, opts.no_bins, opts.sigmf_p, ...
-        opts.unsupervised, thr_dist,  1);
+    [output, gradient] = mutual_info(W, input, reservoir, ...
+        opts.no_bins, opts.sigscale, opts.unsupervised, thr_dist,  1);
 
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));

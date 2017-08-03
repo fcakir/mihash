@@ -13,13 +13,12 @@ ip.addParameter('nbins', nbits);
 ip.addParameter('obj', 'mi');  % mi or fastap
 
 ip.addParameter('batchSize', 100);
-ip.addParameter('solver', 'sgd');
 ip.addParameter('lr', 0.1);
 ip.addParameter('lrdecay', 0);
 ip.addParameter('lrstep', 10);
 ip.addParameter('wdecay', 0.0005);
 ip.addParameter('bpdepth', Inf);  % default: update all layers
-ip.addParameter('sigmf_p', 40);
+ip.addParameter('sigscale', 40);  % 40 was found to work well
 
 ip.addParameter('gpus', []);
 ip.addParameter('normalize', true);
@@ -31,9 +30,8 @@ ip.parse(varargin{:});
 opts = ip.Results;
 opts.methodID = sprintf('%s-cifar%d-sp%d-%s', upper(opts.obj), nbits, ...
     opts.split, modelType);
-opts.identifier = sprintf('%dbins-batch%d-%sLR%gD%gE%d-Sig%d', ...
-    opts.nbins, opts.batchSize, opts.solver, opts.lr, opts.lrdecay, opts.lrstep, ...
-    opts.sigmf_p);
+opts.identifier = sprintf('Bins%dSig%g-Batch%d-LR%gD%gS%d', opts.nbins, ...
+    opts.sigscale, opts.batchSize, opts.lr, opts.lrdecay, opts.lrstep);
 assert(ismember(modelType, {'fc1', 'vggf'}), 'Supported model types: fc1, vggf');
 opts.normalize = strcmp(modelType, 'fc1');
 if ~opts.normalize

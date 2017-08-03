@@ -1,4 +1,4 @@
-function opts = opts_matconvnet(opts, dataset, nbits, modelType, varargin)
+function opts = get_opts(opts, dataset, nbits, modelType, varargin)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Generic

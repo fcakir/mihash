@@ -1,4 +1,4 @@
-function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigmf_p,...
+function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigscale,...
     unsupervised, thr_dist, bool_gradient)
 % Helper function for train_mutualinfo.m									   
 % INPUTS									   
@@ -10,7 +10,7 @@ function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sig
 %                     not have labels 
 %     reservoir.H   - reservoir hash table, reservoir_size x nbits
 %     reservoir.size- number of items in the reservoir
-%     sigmf_p       - two length numeric vector, e.g., [a c], to be used in sigmf
+%     sigscale       - scaling parameter in sigmoid function
 %     unsupervised  - 1 if neighborhood is defined using thr_dist see below
 %     thr_dist      - numeric value for thresholding
 %     bool_gradient - return gradient
@@ -40,11 +40,11 @@ else
 end
 
 % RELAXED hash codes to interval [-1, 1]
-Hres = sigmf(W_last'*reservoir.X', sigmf_p)';
+Hres = sigmoid(W_last'*reservoir.X', sigscale)';
 nbits = size(Hres, 2);
 
 % RELAXED hash input point X
-hashX = sigmf(W_last'*X', sigmf_p)'; % row vector, 1 x nbits
+hashX = sigmoid(W_last'*X', sigscale)'; % row vector, 1 x nbits
 
 % compute distances from hash codes
 hdist = (2*hashX - 1)*(2*Hres - 1)'; % row vector, 1 x reservoir_size
@@ -138,9 +138,9 @@ if bool_gradient
     % Since \Phi(x) = [\phi_1(x),...,\phi_b(x)] where \phi_i(x) = \sigma(w_i^t \times x)
     % take gradient of each \phi_i wrt to weight w_i, and multiply the
     % resulting vector with corresponding entry in d_MI_phi
-    ty = sigmf_p(1) * (W_last'*X' - sigmf_p(2)); % a vector
+    ty = sigscale * (W_last'*X'); % a vector
     gradient = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
-        (sigmf(ty, [1 0]) .* (1 - sigmf(ty, [1 0])) .* sigmf_p(1))'), d_MI_phi'));
+        (sigmoid(ty, 1) .* (1 - sigmoid(ty, 1)) .* sigscale)'), d_MI_phi'));
 end
 
 end
