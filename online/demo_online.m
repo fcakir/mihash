@@ -1,24 +1,25 @@
 function [resPath, diaPath] = demo_online(method, ftype, dataset, nbits, varargin)
-% Implementation of AdaptHash as described in: 
+% Implementation of an online hashing benchmark as described in: 
 %
-% Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff 
-% "MIHash: Online Hashing with Mutual Information", (*equal contribution).
-% International Conference on Computer Vision (ICCV) 2015
+% Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
+% (* equal contribution)
+% "MIHash: Online Hashing with Mutual Information", 
+% International Conference on Computer Vision (ICCV) 2017
 %
 % INPUTS
 %   method   - (string) from {'mihash', 'adapt', 'okh', 'osh', 'sketch'}
-%   ftype    - (string) from {'gist', 'cnn'}
+%   ftype    - (string) feature type, from {'gist', 'cnn'}
 %   dataset  - (string) from {'cifar', 'sun','nus'}
-%   nbits    - (integer) is length of binary code
-%   varargin - see get_opts.m for details
+%   nbits    - (integer) length of binary code, 32 is used in the paper
+%   varargin - key-value pairs, see get_opts.m for details
 % OUTPUTS
-%   resPath - (string) Path to the results file. see demo.m .
-%   diaPath - (string) Path to the diary which contains the command window text
+%   resPath  - (string) Path to the results file
+%   diaPath  - (string) Path to the experimental log
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % get opts
-%
+
 % get method-specific fields first
 ip = inputParser;
 ip.KeepUnmatched = true;
@@ -57,7 +58,7 @@ elseif strcmp(method, 'osh')
     ip.addParamValue('SGDBoost', 1, @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
 
-    opts.identifier = sprintf('B%d_S%g', opts.SGDBoost, opts.stepsize);
+    opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
     opts.batchSize  = 1;      % hard-coded
 
 elseif strcmp(method, 'sketch')
@@ -78,64 +79,60 @@ opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% run demo
-%
-% 0. result files
-Rprefix = sprintf('%s/%s', opts.expdir, opts.metric);
-if opts.testFrac < 1
-    Rprefix = sprintf('%s_frac%g', Rprefix);
-end
-resPath = sprintf('%s_%dtrials.mat', Rprefix, opts.ntrials);
-resPathT = cell(1, opts.ntrials);
-for t = 1:opts.ntrials 
-    resPathT{t} = sprintf('%s_trial%d.mat', Rprefix, t);
-end
-if opts.override
-    res_exist = zeros(1, opts.ntrials);
-else
-    res_exist = cellfun(@(r) exist(r, 'file'), resPathT);
-end
+% run online hashing demo
 
-
-% 1. determine which (training) trials to run
+% 1. determine which trials to run
+resPrefix = fullfile(opts.expdir, opts.metric);
+resPath   = sprintf('%s_%dtrials.mat', resPrefix, opts.ntrials);
+resPathT  = arrayfun(@(t) sprintf('%s_trial%d.mat', resPrefix, t), 1:opts.ntrials, ...
+    'uniform', false);
 if opts.override
+    unix(['rm -fv ', fullfile(opts.expdir, 'diary*')]);
     run_trial = ones(1, opts.ntrials, 'logical');
 else
-    run_trial = cellfun(@(f) exist(f, 'file'), resPathT);
+    run_trial = cellfun(@(f) ~exist(f, 'file'), resPathT);
 end
 
 
 % 2. load data (only if necessary)
 global Xtrain Xtest Ytrain Ytest thr_dist Dtype
-Dtype_this = [opts.dataset '_' opts.ftype];
-if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)
-    logInfo('Dataset already loaded for %s', Dtype_this);
-elseif (any(run_trial) || ~all(res_exist))
-    logInfo('Loading data for %s...', Dtype_this);
-    if strcmp(opts.methodID, 'sketch')
-        eval(['[Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_' opts.ftype '(opts, false);']);
-    else
-        eval(['[Xtrain, Ytrain, Xtest, Ytest, thr_dist] = load_' opts.ftype '(opts);']);
-    end
-    Dtype = Dtype_this;
+Dtype1 = [opts.dataset '_' opts.ftype];
+if ~isempty(Dtype) && strcmp(Dtype1, Dtype)
+    logInfo('Dataset already loaded for %s', Dtype);
+elseif any(run_trial)
+    Dtype = Dtype1;
+    logInfo('Loading data for %s...', Dtype);
+    featureFunc = str2func(['load_' opts.ftype]);
+    [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
+        featureFunc(opts, ~strcmp(opts.methodID, 'sketch'));
 end
 
 
-% 3. TRAINING: run all _necessary_ trials (handled by train.m)
+% hold a diary -save it to opts.expdir
+diaryName = @(x) sprintf('%s/diary_%03d.txt', opts.expdir, x);
+index = 1;
+while exist(diaryName(index), 'file'), index = index + 1; end
+diaPath = diaryName(index);
+
 if any(run_trial)
+    diary(diaPath); diary('on');
+
+    % 3. TRAINING: run all _necessary_ trials
     logInfo('Training models...');
+    trainFunc = str2func(['train_' method]);
     train(trainFunc, run_trial, opts);
-end
-logInfo('%s: Training is done.', opts.identifier);
+    logInfo('%s: Training is done.', opts.identifier);
 
-
-% 4. TESTING: run all _necessary_ trials
-if ~all(res_exist) || ~exist(resPath, 'file')
+    % 4. TESTING: run all _necessary_ trials
     logInfo('Testing models...');
-    test(resPath, resPathT, res_exist, opts);
+    test(resPath, resPathT, run_trial, opts);
+    logInfo('%s: Testing is done.', opts.identifier);
 end
-logInfo('%s: Testing is done.', opts.identifier);
-
-diaPath = opts.diary_name;
+    
+% 5. Done
+logInfo('All done.');
+logInfo('Results file: %s', resPath);
+logInfo('  Diary file: %s', diaPath);
 diary('off');
+
 end

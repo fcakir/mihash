@@ -40,9 +40,6 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   hash methods performance. Must be [2, "trainingPoints"x"epochs"].
 % 			   The performance is evaluated on the first and last 
 %			   iteration, at the least.
-%  testFrac - (float)  A value between (0, 1]. testFrac = 0.5 results in only
-%			   testing with a random half of the test/query set. For
-% 			   speed purposes. 
 % 	metric  - (string) Choices are 'prec_kX', 'prec_nX', 'mAP_X' and 'mAP' where
 %			   X is an integer. 'prec_k100' evaluates the  precision 
 % 			   value of the 100 nearest neighbors (average over the 
@@ -84,10 +81,6 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   Evaluated only after each "updateInterval". If flipThresh=-1
 % 			   the hash table is always updated at each "updateInterval".
 % 			   Hard-coded to 0. For future release.
-%  pObserve - (float) For multiclass datasets. To generate different data streams
-% 			   in which a new class appears with pObserve probability. 
-%			   pObserve=0 corresponds to uniform probability, i.e., 
-% 			   see get_ordering.m .
 % 
 % OUTPUTS
 %	opts	- (struct) struct containing name and values of the inputs, e.g.,
@@ -102,7 +95,6 @@ ip.addRequired('nbits', @isscalar);
 ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
 ip.addParamValue('ntrials', 3, @isscalar);
 ip.addParamValue('ntests', 50, @isscalar);
-ip.addParamValue('testFrac', 1, @isscalar);  % <1 for faster testing
 ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
 ip.addParamValue('epoch', 1, @isscalar)
 % misc
@@ -123,14 +115,6 @@ ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
 ip.addParamValue('miThresh', 0, @isscalar);       % for trigger=mi
 ip.addParamValue('flipThresh', -1, @isscalar);       % for trigger=bf
 
-% for label arrival strategy: prob. of observing a new label
-% NOTE: if pObserve is too small then it may exhaust examples in some class
-%       before getting a new label
-% - For CIFAR  0.002 seems good (observe all labels @~5k)
-% - For PLACES 0.025 (observe all labels @~9k)
-%              0.05  (observe all labels @~5k)
-ip.addParamValue('pObserve', 0, @isscalar);
-
 % parse input
 ip.KeepUnmatched = true;
 ip.parse(ftype, dataset, nbits, varargin{:});
@@ -141,7 +125,6 @@ opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 % ASSERTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 assert(ismember(opts.ftype, {'gist', 'cnn'}));
-assert(opts.testFrac > 0);
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
@@ -229,32 +212,11 @@ opts.identifier = [prefix '-' idr];
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
 opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, opts.noTrainingPoints*opts.epoch, opts.epoch, opts.ntests);
-if opts.pObserve > 0
-    assert(opts.pObserve < 1);
-    opts.expdir = sprintf('%s_arr%g', opts.expdir, opts.pObserve);
-end
-if ~exist(expdir_base, 'dir'),
-    mkdir(expdir_base);
-end
+if ~exist(expdir_base, 'dir'), mkdir(expdir_base); end
 if ~exist(opts.expdir, 'dir'),
     logInfo(['creating opts.expdir: ' opts.expdir]);
     mkdir(opts.expdir);
 end
-
-% hold a diary -save it to opts.expdir
-if opts.override
-    try
-        unix(['rm -f ' opts.expdir '/diary*']);
-    end
-end
-diary_index = 1;
-opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
-while exist(opts.diary_name,'file') % && ~opts.override
-    diary_index = diary_index + 1;
-    opts.diary_name = sprintf('%s/diary_%03d.txt', opts.expdir, diary_index);
-end
-diary(opts.diary_name);
-diary('on');
 
 % FINISHED
 logInfo('identifier: %s', opts.identifier);

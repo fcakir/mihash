@@ -25,13 +25,6 @@ trainY = Ytrain;
 [st, i] = dbstack();
 caller = st(2).name;
 
-% handle testFrac
-if opts.testFrac < 1
-    logInfo('! only testing first %g%%', opts.testFrac*100);
-    idx = 1:round(size(Xtest, 1)*opts.testFrac);
-    testX = Xtest(idx, :);
-    testY = Ytest(idx, :);
-end
 if size(Ytrain, 2) == 1
     trainY = floor(Ytrain/10);
     testY  = floor(Ytest/10);
