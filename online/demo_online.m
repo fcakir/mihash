@@ -12,10 +12,21 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 %   dataset  - (string) from {'cifar', 'sun','nus'}
 %   nbits    - (integer) length of binary code, 32 is used in the paper
 %   varargin - key-value pairs, see get_opts.m for details
+%
 % OUTPUTS
 %   res_path - (string) Path to the results file
 %   dia_path - (string) Path to the experimental log
-
+%
+% A result file is created for each training trial. Such a file has the 
+% 'METRIC_trialX.mat' format, and is saved in the results folder specified by 
+% opts.expdir. METRIC is the performance metric as indicated by opts.metric,
+% and X is the trial number.
+%
+% A final result file with format 'METRIC_Ntrials.mat' is also created, where 
+% N is the total number of trials, equal to opts.ntrials. This file contains the
+% average statistics of the individual trial (see test.m).
+% 
+% TODO License
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % get opts
