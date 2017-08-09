@@ -1,4 +1,4 @@
-function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sigscale,...
+function [obj, grad] = mutual_info(W_last, input, reservoir, no_bins, sigscale,...
     unsupervised, thr_dist, bool_gradient)
 % Helper function for train_mutualinfo.m									   
 % INPUTS									   
@@ -15,8 +15,8 @@ function [output, gradient] = mutual_info(W_last, input, reservoir, no_bins, sig
 %     thr_dist      - numeric value for thresholding
 %     bool_gradient - return gradient
 % OUTPUTS
-%     output 	    - negative mutual information, see Eq. 7 in MIHash paper.
-%     gradient      - gradient matrix, see Eq. 11 in MIHash paper, each column
+%     obj 	    - negative mutual information, see Eq. 7 in MIHash paper.
+%     grad      - gradient matrix, see Eq. 11 in MIHash paper, each column
 % 		      contains the gradients of a single hash function
 
 if exist('unsupervised', 'var') == 0 
@@ -24,7 +24,7 @@ if exist('unsupervised', 'var') == 0
 elseif unsupervised
     assert(exist('thr_dist', 'var') == 1);
 end
-output = []; gradient = [];
+obj = []; grad = [];
 
 X = input.X;
 Y = input.Y;
@@ -87,7 +87,7 @@ n = -sum(pQCn(idx).*log2(pQCn(idx)));
 condent = p * prCp + n * prCn;    
 
 assert(Qent-condent >= 0);
-output = -(Qent - condent); % we're minimizing the mutual info.
+obj = -(Qent - condent); % we're minimizing the mutual info.
 
 Hres = Hres'; % nbits x reservoir_size
 % Assumes hash codes are relaxed from {-1, 1} to [-1, 1]
@@ -139,7 +139,7 @@ if bool_gradient
     % take gradient of each \phi_i wrt to weight w_i, and multiply the
     % resulting vector with corresponding entry in d_MI_phi
     ty = sigscale * (W_last'*X'); % a vector
-    gradient = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
+    grad = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
         (sigmoid(ty, 1) .* (1 - sigmoid(ty, 1)) .* sigscale)'), d_MI_phi'));
 end
 

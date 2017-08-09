@@ -1,4 +1,4 @@
-function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
+function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff)
 % Given the hash codes of the training data (Htrain) and the hash codes of the test
 % data (Htest) evaluates the performance.
 % 
@@ -12,21 +12,21 @@ function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 % 			   datasets such as LabelMe, Ytrain is set to [].
 %   	Ytest  - (int) 	   Testing data labels. 
 %	opts   - (struct)  Parameter structure.
-% cateTrainTest - (logical) Neighbor indicator matrix. trainingsize x testsize. 
+%       Aff    - (logical) Neighbor indicator matrix. trainingsize x testsize. 
 %			   May be empty to save memory. Then the indicator matrix 
 % 			   is computer on-the-fly, see below. 
 %
 % OUTPUTS
 %  	res    - (float) performance value as determined by opts.metric, e.g., mAP value.
 
-if nargin < 6, cateTrainTest = []; end
-use_cateTrainTest = ~isempty(cateTrainTest);
+if nargin < 6, Aff = []; end
+hasAff = ~isempty(Aff);
 
 if ~opts.unsupervised
     trainsize = length(Ytrain);
     testsize  = length(Ytest);
 else
-    [trainsize, testsize] = size(cateTrainTest);
+    [trainsize, testsize] = size(Aff);
 end
 
 if strcmp(opts.metric, 'mAP')
@@ -35,14 +35,14 @@ if strcmp(opts.metric, 'mAP')
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    if use_cateTrainTest
-        parfor j = 1:testsize
-            labels = 2*cateTrainTest(:, j)-1;
+    if hasAff
+        for j = 1:testsize
+            labels = 2*Aff(:, j)-1;
             [~, ~, info] = vl_pr(labels, double(sim(:, j)));
             AP(j) = info.ap;
         end
     else
-        parfor j = 1:testsize
+        for j = 1:testsize
             labels = 2*double(Ytrain==Ytest(j))-1;
             [~, ~, info] = vl_pr(labels, double(sim(:, j)));
             AP(j) = info.ap;
@@ -62,20 +62,20 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    if use_cateTrainTest
-        parfor j = 1:testsize
+    if hasAff
+        for j = 1:testsize
             sim_j = double(sim(:, j));
             idx = [];
             for th = opts.nbits:-1:-opts.nbits
                 idx = [idx; find(sim_j == th)];
                 if length(idx) >= N, break; end
             end
-            labels = 2*cateTrainTest(idx(1:N), j)-1;
+            labels = 2*Aff(idx(1:N), j)-1;
             [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
             AP(j) = info.ap;
         end
     else
-        parfor j = 1:testsize
+        for j = 1:testsize
             sim_j = double(sim(:, j));
             idx = [];
             for th = opts.nbits:-1:-opts.nbits
@@ -100,8 +100,8 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     ncpu = feature('numcores');
     set_parpool(round(ncpu/2));
     for i = 1:testsize
-        if use_cateTrainTest
-            labels = cateTrainTest(:, i);
+        if hasAff
+            labels = Aff(:, i);
         else
             labels = (Ytrain == Ytest(i));
 	end
@@ -120,10 +120,9 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     prec_n = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
-    % NOTE 'for' has better CPU usage
     for j=1:testsize
-        if use_cateTrainTest
-            labels = cateTrainTest(:, j);
+        if hasAff
+            labels = Aff(:, j);
         else
             labels = (Ytrain == Ytest(j));
         end

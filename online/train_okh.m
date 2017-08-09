@@ -1,4 +1,4 @@
-function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
+function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ...
     train_okh(Xtrain, Ytrain, thr_dist,  prefix, test_iters, trialNo, opts)
 % Training routine for OKH method, see demo_okh.m .
 %
@@ -27,7 +27,6 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %  res_time    - (float) elapsed time in maintaing the reservoir set
 %  ht_updates  - (int)   total number of hash table updates performed
 %  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
-%  bitflips    - (int) total number of bit flips, see update_hash_table.m 
 % 
 % NOTES
 % 	W is d x b where d is the dimensionality 
@@ -37,10 +36,6 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 % 	data arrives in pairs
 
 %%%%%%%%%%%%%%%%%%%%%%% GENERIC INIT %%%%%%%%%%%%%%%%%%%%%%%
-% are we handling a mult-labeled dataset?
-multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, logInfo('Handling multi-labeled dataset'); end
-
 % set up reservoir
 reservoir = [];
 reservoir_size = opts.reservoirSize;
@@ -88,7 +83,7 @@ logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 d = size(KX, 1);
 if 0
     % original init for OKH
-    W = rand(d, opts.nbits)-0.5;
+    W = rand(d, opts.nbits) - 0.5;
 else
     % LSH init
     W = randn(d, opts.nbits);
@@ -100,32 +95,27 @@ W_lastupdate = W;
 H = [];
 
 % bit flips & bits computed
-bitflips          = 0;
-bitflips_res      = 0;
 bits_computed_all = 0;
 
 % HT updates
 update_iters = [];
-h_ind_array  = [];
 %%%%%%%%%%%%%%%%%%%%%%% SET UP OKH %%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-%rX = KX(:,idxTrain); %set being search in testing 
-%tX = KX(:,idxTest); %query set in testing
 for iter = 1:number_iterations
     
     if ~opts.unsupervised
-        idx_i = Ytrain(2*iter-1, :); %idxTrain(dataIdx(2*i-1));
-        idx_j = Ytrain(2*iter, :);   %idxTrain(dataIdx(2*i));
+        idx_i = Ytrain(2*iter-1, :);
+        idx_j = Ytrain(2*iter, :);
         s = 2*(idx_i==idx_j)-1;
     else
 	idx_i = [];idx_j = [];
 	s = 2*(pdist([Xtrain(2*iter-1,:);Xtrain(2*iter,:)],'euclidean') <= thr_dist) - 1;
     end
 
-    xi = KX(:, 2*iter-1); %KX(:,idx_i);
-    xj = KX(:, 2*iter);   %X(:,idx_j);
+    xi = KX(:, 2*iter-1);
+    xj = KX(:, 2*iter);
 
     % hash function update
     t_ = tic;
@@ -144,31 +134,25 @@ for iter = 1:number_iterations
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(iter, ...
-        opts, W_lastupdate, W, reservoir, Hres_new, ...
-		 opts.unsupervised, thr_dist);
+    [update_table, trigger_val] = trigger_update(iter, opts, W_lastupdate, W, ...
+        reservoir, Hres_new, opts.unsupervised, thr_dist);
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
-        W_lastupdate(:, h_ind) = W(:, h_ind);
+        W_lastupdate = W;
         update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
             reservoir.H = Hres_new;
-            if strcmpi(opts.trigger, 'bf')
-                bitflips_res = bitflips_res + trigger_val;
-            end
         end
 
         % actual hash table update (record time)
         t_ = tic;
-        [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
-            KX', Ytrain, h_ind, update_iters, opts);
+        [H, bits_computed] = update_hash_table(H, W_lastupdate, ...
+            KX', Ytrain, update_iters, opts);
         bits_computed_all = bits_computed_all + bits_computed;
-        bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
     end
 
@@ -176,24 +160,23 @@ for iter = 1:number_iterations
     % CHECKPOINT
     if ismember(iter, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, iter);
-        save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
+        save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
 
         logInfo(['*checkpoint*\n[T%02d] %s\n' ...
-            '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
-            '     total #BRs=%g, avg #BF=%g'], ...
+            '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
+            '     total BR = %g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), res_time, ...
-            bits_computed_all, bitflips);
+            bits_computed_all);
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc
 F = [prefix '.mat'];
-save(F, 'Xanchor', 'sigma', 'W', 'H', 'bitflips', 'bits_computed_all', ...
-    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
-    'h_ind_array');
+save(F, 'Xanchor', 'sigma', 'W', 'H', 'bits_computed_all', ...
+    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
 
 ht_updates = numel(update_iters);
 logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);

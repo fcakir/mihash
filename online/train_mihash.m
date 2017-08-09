@@ -1,4 +1,4 @@
-function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
+function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ...
     train_mutualinfo(Xtrain, Ytrain, thr_dist,  prefix, test_iters, trialNo, opts)
 % Training routine for the MIHash method, see demo_mutualinfo.m .
 %
@@ -27,7 +27,6 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %  res_time    - (float) elapsed time in maintaing the reservoir set
 %  ht_updates  - (int)   total number of hash table updates performed
 %  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
-%  bitflips    - (int) total number of bit flips, see update_hash_table.m 
 % 
 % NOTES
 % 	W is d x b where d is the dimensionality 
@@ -44,10 +43,6 @@ H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
-
-% are we handling a mult-labeled dataset?
-multi_labeled = (size(Ytrain, 2) > 1);
-if multi_labeled, logInfo('Handling multi-labeled dataset'); end
 
 % set up reservoir
 reservoir = [];
@@ -95,13 +90,10 @@ number_iterations = opts.noTrainingPoints;
 logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
 
 % bit flips & bits computed
-bitflips          = 0;
-bitflips_res      = 0;
 bits_computed_all = 0;
 
 % HT updates
 update_iters = [];
-h_ind_array  = [];
 
 % for recording time
 train_time  = 0;  
@@ -123,15 +115,15 @@ for iter = 1:number_iterations
 
     % hash function update
     t_ = tic;
-    input.X = spoint;
-    input.Y = slabel;
+    inputs.X = spoint;
+    inputs.Y = slabel;
     % rev_pro implements the NIPS 16 Histogram Loss
-    [output, gradient] = mutual_info(W, input, reservoir, ...
+    [obj, grad] = mutual_info(W, inputs, reservoir, ...
         opts.no_bins, opts.sigscale, opts.unsupervised, thr_dist,  1);
 
     % sgd
     lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
-    W = W - lr*gradient;
+    W = W - lr * grad;
     train_time = train_time + toc(t_);
 
 
@@ -146,31 +138,26 @@ for iter = 1:number_iterations
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(iter, ...
+    [update_table, trigger_val] = trigger_update(iter, ...
         opts, W_lastupdate, W, reservoir, Hres_new, ...
         opts.unsupervised, thr_dist);
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
-        W_lastupdate(:, h_ind) = W(:, h_ind);
+        W_lastupdate = W;
         W = W_lastupdate;
         update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
             reservoir.H = Hres_new;
-            if strcmpi(opts.trigger, 'bf')
-                bitflips_res = bitflips_res + trigger_val;
-            end
         end
 
         % actual hash table update (record time)
-        [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
-            Xtrain, Ytrain, h_ind, update_iters, opts);
+        [H, bits_computed] = update_hash_table(H, W_lastupdate, ...
+            Xtrain, Ytrain, update_iters, opts);
         bits_computed_all = bits_computed_all + bits_computed;
-        bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
     end
 
@@ -178,15 +165,15 @@ for iter = 1:number_iterations
     % CHECKPOINT
     if ismember(iter, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, iter);
-        save(F, 'W', 'W_lastupdate', 'H', 'bitflips', 'bits_computed_all', ...
+        save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
 
         logInfo(['*checkpoint*\n[T%02d] %s\n' ...
-            '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
-            '     total #BRs=%g, avg #BF=%g obj_val=%g'], ...
+            '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
+            '     total BR = %g, obj = %g'], ...
             trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), res_time, ...
-            bits_computed_all, bitflips, output);
+            bits_computed_all, obj);
     end
 end
 
@@ -194,9 +181,8 @@ end
 
 % save final model, etc
 F = [prefix '.mat'];
-save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
-    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
-    'h_ind_array');
+save(F, 'W', 'H', 'bits_computed_all', ...
+    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
 
 ht_updates = numel(update_iters);
 logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);

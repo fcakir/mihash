@@ -31,18 +31,16 @@ bit_recomp  = zeros(1, opts.ntrials);
 num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);
 logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
-ncpu = feature('numcores');
-set_parpool(min(5, max(opts.ntrials, round(ncpu/2))));
+% NOTE: you can use parfor to run trials in parallel
 for t = 1:opts.ntrials
-    % fix random seed in parallel worker for reproducible results
-    rng(opts.randseed+t, 'twister');
-    if run_trial(t) == 0
+    rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
+    if ~run_trial(t)
         logInfo('Trial %02d not required, skipped', t);
         continue;
     end
     logInfo('%s: random trial %d', opts.identifier, t);
     
-    % randomly set test checkpoints (to better mimic real scenarios)
+    % randomly set test checkpoints
     test_iters      = zeros(1, opts.ntests);
     test_iters(1)   = 1;
     test_iters(end) = num_iters;

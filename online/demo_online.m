@@ -1,4 +1,4 @@
-function [resPath, diaPath] = demo_online(method, ftype, dataset, nbits, varargin)
+function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varargin)
 % Implementation of an online hashing benchmark as described in: 
 %
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
@@ -13,8 +13,8 @@ function [resPath, diaPath] = demo_online(method, ftype, dataset, nbits, varargi
 %   nbits    - (integer) length of binary code, 32 is used in the paper
 %   varargin - key-value pairs, see get_opts.m for details
 % OUTPUTS
-%   resPath  - (string) Path to the results file
-%   diaPath  - (string) Path to the experimental log
+%   res_path - (string) Path to the results file
+%   dia_path - (string) Path to the experimental log
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,15 +82,15 @@ opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
 % run online hashing demo
 
 % 1. determine which trials to run
-resPrefix = fullfile(opts.expdir, opts.metric);
-resPath   = sprintf('%s_%dtrials.mat', resPrefix, opts.ntrials);
-resPathT  = arrayfun(@(t) sprintf('%s_trial%d.mat', resPrefix, t), 1:opts.ntrials, ...
+prefix = fullfile(opts.expdir, opts.metric);
+res_path = sprintf('%s_%dtrials.mat', prefix, opts.ntrials);
+trial_path = arrayfun(@(t) sprintf('%s_trial%d.mat', prefix, t), 1:opts.ntrials, ...
     'uniform', false);
 if opts.override
     unix(['rm -fv ', fullfile(opts.expdir, 'diary*')]);
     run_trial = ones(1, opts.ntrials, 'logical');
 else
-    run_trial = cellfun(@(f) ~exist(f, 'file'), resPathT);
+    run_trial = cellfun(@(f) ~exist(f, 'file'), trial_path);
 end
 
 
@@ -112,10 +112,10 @@ end
 diaryName = @(x) sprintf('%s/diary_%03d.txt', opts.expdir, x);
 index = 1;
 while exist(diaryName(index), 'file'), index = index + 1; end
-diaPath = diaryName(index);
+dia_path = diaryName(index);
 
 if any(run_trial)
-    diary(diaPath); diary('on');
+    diary(dia_path); diary('on');
 
     % 3. TRAINING: run all _necessary_ trials
     logInfo('Training models...');
@@ -125,14 +125,14 @@ if any(run_trial)
 
     % 4. TESTING: run all _necessary_ trials
     logInfo('Testing models...');
-    test(resPath, resPathT, run_trial, opts);
+    test(res_path, trial_path, run_trial, opts);
     logInfo('%s: Testing is done.', opts.identifier);
 end
     
 % 5. Done
 logInfo('All done.');
-logInfo('Results file: %s', resPath);
-logInfo('  Diary file: %s', diaPath);
+logInfo('Results file: %s', res_path);
+logInfo('  Diary file: %s', dia_path);
 diary('off');
 
 end

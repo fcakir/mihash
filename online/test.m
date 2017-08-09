@@ -1,10 +1,10 @@
-function test(resfn, res_trial_fn, res_exist, opts)
+function test(res_fn, trial_fn, res_exist, opts)
 % Computes the performance by loading and evaluating the "checkpoint" files
 % saved during training. 
 %
 % INPUTS
-% 	resfn - (string)Path to final results file.
-%res_trial_fn - (cell) 	Cell array containing the paths to individual trial results
+% 	res_fn - (string)Path to final results file.
+%   trial_fn - (cell) 	Cell array containing the paths to individual trial results
 % 			files.
 % res_exist   - (int)   Boolean vector indicating whether the trial results files needed
 % 			to be computed. For example, if opts.override=0 and the
@@ -43,7 +43,7 @@ clear train_iter train_time train_examples
 for t = 1:opts.ntrials
     if res_exist(t)
         logInfo('Trial %d: results exist', t);
-        load(res_trial_fn{t});
+        load(trial_fn{t});
     else
         clear t_res t_bits_computed_all t_bitflips
         clear t_train_iter t_train_time
@@ -67,7 +67,6 @@ for t = 1:opts.ntrials
         for i = 1:length(Tmodel.test_iters)
             % determine whether to actually run test or not
             % if there's no HT update since last test, just copy results
-            % THIS SAVES TIME!
             if i == 1
                 runtest = true;
             else
@@ -104,7 +103,7 @@ for t = 1:opts.ntrials
             t_train_iter(i) = iter;
         end
         clear Htrain Htest
-        save(res_trial_fn{t}, 't_res', 't_bitflips', 't_bits_computed_all', ...
+        save(trial_fn{t}, 't_res', 't_bitflips', 't_bits_computed_all', ...
             't_train_iter', 't_train_time');
     end
     res(t, :) = t_res;
@@ -117,19 +116,18 @@ end
 logInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
 logInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
 
-% save all trials in a single file (for backward compatibility)
-% it may overwrite existing file, but whatever
-save(resfn, 'res', 'bitflips', 'bits_computed_all', 'train_iter', 'train_time', ...
+% save all trials in a single file
+save(res_fn, 'res', 'bitflips', 'bits_computed_all', 'train_iter', 'train_time', ...
     'train_examples');
 
 % visualize
 if opts.showplots
     % draw curves, with auto figure saving
-    figname = sprintf('%s_trex.fig', resfn);
+    figname = sprintf('%s_trex.fig', res_fn);
     show_res(figname, res, train_examples, 'Training Examples', opts.identifier, opts.override);
-    figname = sprintf('%s_cpu.fig', resfn);
+    figname = sprintf('%s_cpu.fig', res_fn);
     show_res(figname, res, train_time, 'CPU Time', opts.identifier, opts.override);
-    figname = sprintf('%s_recomp.fig', resfn);
+    figname = sprintf('%s_recomp.fig', res_fn);
     show_res(figname, res, bits_computed_all, 'Bit Recomputations', opts.identifier, opts.override);
     drawnow;
 end

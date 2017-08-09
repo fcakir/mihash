@@ -1,4 +1,4 @@
-function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitflips] = ...
+function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ...
     train_osh(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
 % Training routine for OSH method, see demo_osh.m .
 %
@@ -27,7 +27,6 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all, bitf
 %  res_time    - (float) elapsed time in maintaing the reservoir set
 %  ht_updates  - (int)   total number of hash table updates performed
 %  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
-%  bitflips    - (int) total number of bit flips, see update_hash_table.m 
 % 
 % NOTES
 % 	W is d x b where d is the dimensionality 
@@ -72,13 +71,10 @@ M_ecoc     = [];
 seenLabels = [];
 
 % bit flips & bits computed
-bitflips          = 0;
-bitflips_res      = 0;
 bits_computed_all = 0;
 
 % HT updates
 update_iters = [];
-h_ind_array  = [];
 
 % for recording time
 train_time  = 0;  
@@ -92,6 +88,7 @@ num_unlabeled = 0;
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 for iter = 1:opts.noTrainingPoints
     t_ = tic;
+
     % new training point
     ind = train_ind(iter);
     spoint = Xtrain(ind, :);
@@ -137,59 +134,52 @@ for iter = 1:opts.noTrainingPoints
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val, h_ind] = trigger_update(iter, ...
+    [update_table, trigger_val] = trigger_update(iter, ...
         opts, W_lastupdate, W, reservoir, Hres_new);
     res_time = res_time + toc(t_);
     
     % ---- hash table update, etc ----
     if update_table
-        h_ind_array = [h_ind_array; single(ismember(1:opts.nbits, h_ind))];
-        W_lastupdate(:, h_ind) = W(:, h_ind);  % W_lastupdate: last W used to update hash table
+        W_lastupdate = W;  % W_lastupdate: last W used to update hash table
         update_iters = [update_iters, iter];
 
         % update reservoir hash table
         if reservoir_size > 0
             reservoir.H = Hres_new;
-            if strcmpi(opts.trigger,'bf')
-                bitflips_res = bitflips_res + trigger_val;
-            end
         end
 
         % update actual hash table
         t_ = tic;
-        [H, bf_all, bits_computed] = update_hash_table(H, W_lastupdate, ...
-            Xtrain, Ytrain, h_ind, update_iters, opts, ...
-                multi_labeled, seenLabels, M_ecoc);
+        [H, bits_computed] = update_hash_table(H, W_lastupdate, Xtrain, Ytrain, ... 
+            update_iters, opts);
         bits_computed_all = bits_computed_all + bits_computed;
-        bitflips = bitflips + bf_all;
         update_time = update_time + toc(t_);
         
-        logInfo('[T%02d] HT Update#%d @%d, #BRs=%g, bf_all=%g, trigger_val=%g(%s)', ...
-            trialNo, numel(update_iters), iter, bits_computed_all , bf_all, trigger_val, opts.trigger);
+        logInfo('[T%02d] HT Update#%d @%d, #BRs=%g, trigger_val=%g(%s)', ...
+            trialNo, numel(update_iters), iter, bits_computed_all , trigger_val, opts.trigger);
     end
     
     % ---- cache intermediate model to disk ----
     % CHECKPOINT
     if ismember(iter, test_iters)
         F = sprintf('%s_iter%d.mat', prefix, iter);
-        save(F, 'W', 'W_lastupdate', 'H', 'bitflips','bits_computed_all', ...
+        save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'seenLabels', 'update_iters');
 
         logInfo(['*checkpoint*\n[T%02d] %s\n' ...
-            '     (%d/%d) W %.2fs, HT %.2fs(%d updates), Res %.2fs\n' ...
-            '     total #BRs=%g, avg #BF=%g'], ...
+            '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
+            '     total BR = %g'], ...
             trialNo, opts.identifier, iter, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), res_time, ...
-            bits_computed_all, bitflips);
+            bits_computed_all);
     end
 end % end for iter
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc
 F = [prefix '.mat'];
-save(F, 'W', 'H', 'bitflips', 'bits_computed_all', ...
-    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters', ...
-    'seenLabels', 'h_ind_array');
+save(F, 'W', 'H', 'bits_computed_all', 'train_time', 'update_time', 'res_time', ...
+    'test_iters', 'update_iters', 'seenLabels');
 
 ht_updates = numel(update_iters);
 logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);

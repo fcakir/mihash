@@ -1,5 +1,5 @@
 function [reservoir, update_ind] = update_reservoir(reservoir, ...
-    spoints, slabels, max_reservoir_size, W, unsupervised)
+    points, labels, max_reservoir_size, W, unsupervised)
 % 
 % reservoir sampling, update step, based on random sort
 % inputs:
@@ -9,16 +9,16 @@ function [reservoir, update_ind] = update_reservoir(reservoir, ...
 %
 if nargin < 6, unsupervised = false; end
 assert(isstruct(reservoir));
-assert((~unsupervised && ~isempty(slabels)) || (unsupervised && isempty(slabels)));
-n = size(spoints, 1);
-if ~unsupervised, assert(n == size(slabels, 1)); end;
+assert((~unsupervised && ~isempty(labels)) || (unsupervised && isempty(labels)));
+n = size(points, 1);
+if ~unsupervised, assert(n == size(labels, 1)); end;
 
 if reservoir.size < max_reservoir_size
     % if reservoir not full, append (up to max_reservoir_size)
     n = min(n, max_reservoir_size - reservoir.size);
-    reservoir.X = [reservoir.X; spoints(1:n, :)];
+    reservoir.X = [reservoir.X; points(1:n, :)];
     if ~unsupervised
-        reservoir.Y = [reservoir.Y; slabels(1:n, :)];
+        reservoir.Y = [reservoir.Y; labels(1:n, :)];
     end
     reservoir.PQ = [reservoir.PQ; rand(n, 1)];
     update_ind = reservoir.size + (1:n);
@@ -32,9 +32,9 @@ else
         if maxval > r
             % push into priority queue
             reservoir.PQ(maxind)   = r;
-            reservoir.X(maxind, :) = spoints(i, :);
+            reservoir.X(maxind, :) = points(i, :);
             if ~unsupervised
-                 reservoir.Y(maxind, :) = slabels(i, :);
+                 reservoir.Y(maxind, :) = labels(i, :);
 	    end
             update_ind = [update_ind, maxind];
         end

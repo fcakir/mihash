@@ -1,10 +1,8 @@
-function [update_table, ret_val, h_ind] = trigger_update(iter, opts, ...
+function [update_table, ret_val] = trigger_update(iter, opts, ...
     W_last, W, reservoir, Hres_new, varargin)
 
 update_table = false;
 ret_val = -1;
-nbits = opts.nbits;
-h_ind = 1:nbits;
 
 % ----------------------------------------------
 % update on first iteration
@@ -30,26 +28,28 @@ end
 % ----------------------------------------------
 % using reservoir + MI criterion
 % signal update of hash table, when:
-% 1) we're at an updateInterval, AND
-% 2) MI improvement > threshold
-if opts.updateInterval>0 && mod(iter*opts.batchSize, opts.updateInterval)==0
+%   1) we're at an updateInterval, AND
+%   2) MI improvement > threshold
+if opts.updateInterval > 0  &&  ...
+        mod(iter*opts.batchSize, opts.updateInterval) == 0
+
     assert(strcmp(opts.trigger, 'mi'));
-    mi_impr = trigger_mutualinfo(iter, W, W_last, ...
-        reservoir.X, reservoir.Y, reservoir.H, Hres_new, ...
-        reservoir.size, nbits, varargin{:});
+    mi_impr = trigger_mutualinfo(iter, W, W_last, reservoir.X, reservoir.Y, ...
+        reservoir.H, Hres_new, reservoir.size, varargin{:});
     update_table = mi_impr > opts.miThresh;
     logInfo('MI improvement = %g, update = %d', mi_impr, update_table);
     ret_val = mi_impr;
 end
+
 end
 
 
 % -------------------------------------------------------------------------
 function mi_impr = trigger_mutualinfo(iter, W, W_last, X, Y, ...
-    Hres, Hnew, reservoir_size, nbits, unsupervised, thr_dist)
+    Hres, Hnew, reservoir_size, unsupervised, thr_dist)
 
-% assertions
-assert(isequal(nbits, size(Hnew,2), size(Hres,2)));
+nbits = size(Hres, 2);
+assert(nbits == size(Hnew,2));
 assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
 assert(isequal((W_last'*X' > 0)', Hres));
 assert((~unsupervised && ~isempty(Y)) || (unsupervised && isempty(Y)));
