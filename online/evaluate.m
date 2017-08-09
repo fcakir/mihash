@@ -35,19 +35,20 @@ if strcmp(opts.metric, 'mAP')
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    if hasAff
-        for j = 1:testsize
-            labels = 2*Aff(:, j)-1;
-            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-            AP(j) = info.ap;
-        end
-    else
-        for j = 1:testsize
-            labels = 2*double(Ytrain==Ytest(j))-1;
-            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-            AP(j) = info.ap;
-        end
+    % if hasAff
+    % TODO remove vlfeat
+    for j = 1:testsize
+        labels = 2*Aff(:, j)-1;
+        [~, ~, info] = vl_pr(labels, double(sim(:, j)));
+        AP(j) = info.ap;
     end
+    % else
+    %     for j = 1:testsize
+    %         labels = 2*double(Ytrain==Ytest(j))-1;
+    %         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
+    %         AP(j) = info.ap;
+    %     end
+    % end
     AP = AP(~isnan(AP));
     res = mean(AP);
     logInfo(['mAP = ' num2str(res)]);
@@ -62,31 +63,32 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
 
     ncpu = feature('numcores');
     set_parpool(min(round(ncpu/2), 8));
-    if hasAff
-        for j = 1:testsize
-            sim_j = double(sim(:, j));
-            idx = [];
-            for th = opts.nbits:-1:-opts.nbits
-                idx = [idx; find(sim_j == th)];
-                if length(idx) >= N, break; end
-            end
-            labels = 2*Aff(idx(1:N), j)-1;
-            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-            AP(j) = info.ap;
+    % if hasAff
+    % TODO remove vlfeat
+    for j = 1:testsize
+        sim_j = double(sim(:, j));
+        idx = [];
+        for th = opts.nbits:-1:-opts.nbits
+            idx = [idx; find(sim_j == th)];
+            if length(idx) >= N, break; end
         end
-    else
-        for j = 1:testsize
-            sim_j = double(sim(:, j));
-            idx = [];
-            for th = opts.nbits:-1:-opts.nbits
-                idx = [idx; find(sim_j == th)];
-                if length(idx) >= N, break; end
-            end
-            labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-            AP(j) = info.ap;
-        end
+        labels = 2*Aff(idx(1:N), j)-1;
+        [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
+        AP(j) = info.ap;
     end
+    % else
+    %     for j = 1:testsize
+    %         sim_j = double(sim(:, j));
+    %         idx = [];
+    %         for th = opts.nbits:-1:-opts.nbits
+    %             idx = [idx; find(sim_j == th)];
+    %             if length(idx) >= N, break; end
+    %         end
+    %         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
+    %         [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
+    %         AP(j) = info.ap;
+    %     end
+    % end
     AP = AP(~isnan(AP));
     res = mean(AP);
     logInfo('mAP@(N=%d) = %g', N, res);
@@ -100,11 +102,11 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     ncpu = feature('numcores');
     set_parpool(round(ncpu/2));
     for i = 1:testsize
-        if hasAff
-            labels = Aff(:, i);
-        else
-            labels = (Ytrain == Ytest(i));
-	end
+       %  if hasAff
+        labels = Aff(:, i);
+        % else
+        %     labels = (Ytrain == Ytest(i));
+	% end
         sim_i = sim(:, i);
         [~, I] = sort(sim_i, 'descend');
         I = I(1:K);
@@ -121,11 +123,11 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     sim = compare_hash_tables(Htrain, Htest);
 
     for j=1:testsize
-        if hasAff
-            labels = Aff(:, j);
-        else
-            labels = (Ytrain == Ytest(j));
-        end
+        % if hasAff
+        labels = Aff(:, j);
+       %  else
+       %      labels = (Ytrain == Ytest(j));
+       %  end
         ind = find(R-sim(:,j) <= 2*N);
         if ~isempty(ind)
             prec_n(j) = mean(labels(ind));
@@ -157,21 +159,4 @@ else
     end
     clear Ltest tmp
 end
-end
-
-
-% ----------------------------------------------------------
-function T = binsearch(x, k)
-% x: input vector
-% k: number of largest elements
-% T: threshold
-T = -Inf;
-while numel(x) > k
-    T0 = T;
-    x0 = x;
-    T  = mean(x);
-    x  = x(x>T);
-end
-% for sanity
-if numel(x) < k, T = T0; end
 end

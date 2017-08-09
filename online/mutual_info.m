@@ -1,6 +1,8 @@
 function [obj, grad] = mutual_info(W_last, input, reservoir, no_bins, sigscale,...
     unsupervised, thr_dist, bool_gradient)
-% Helper function for train_mutualinfo.m									   
+%
+% Helper function for train_mihash.m									   
+%
 % INPUTS									   
 %     W_last        - matrix, contains hash function parameters
 %     input.X       - data point
@@ -14,6 +16,7 @@ function [obj, grad] = mutual_info(W_last, input, reservoir, no_bins, sigscale,.
 %     unsupervised  - 1 if neighborhood is defined using thr_dist see below
 %     thr_dist      - numeric value for thresholding
 %     bool_gradient - return gradient
+%
 % OUTPUTS
 %     obj 	    - negative mutual information, see Eq. 7 in MIHash paper.
 %     grad      - gradient matrix, see Eq. 11 in MIHash paper, each column
@@ -104,7 +107,7 @@ if bool_gradient
     end
 
     for i=1:no_bins+1
-        % Eq. 9 in report: \partial p_{D,l}^+ / \partial \Phi(x)
+        % \partial p_{D,l}^+ / \partial \Phi(x)
         % having computed d_delta_phi, we just some the respective columns
         % that correspond to positive neighbors. 
         if length(M) ~= 0, d_pQCp_phi(i,:) = sum(d_delta_phi(:, catePointTrain, i),2)'./length(M); end;%row vector
@@ -112,13 +115,13 @@ if bool_gradient
         % \partial Phi(x)
         if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(d_delta_phi(:, ~catePointTrain, i),2)'./length(NM); end; %row vector        
     end
-    % Eq. 8 \partial p_{D,l} / \partial \Phi(x), computed from Eq. 9
+    % \partial p_{D,l} / \partial \Phi(x)
     d_pQ_phi = d_pQCp_phi*prCp + d_pQCn_phi*prCn;
     t_log = ones(1, no_bins+1);
     idx = find(pQ > 0);
     t_log(idx) = t_log(idx) + log2(pQ(idx));
 
-    % \partial H(D) / \Phi(x), see Eq. 6 and 7
+    % \partial H(D) / \Phi(x)
     d_H_phi = sum(bsxfun(@times, d_pQ_phi, t_log'), 1)'; % column vector, this is equal to negative gradient of entropy -grad H
 
     t_log_p = ones(1, no_bins+1);
@@ -132,7 +135,7 @@ if bool_gradient
     d_cond_phi = prCp * sum(bsxfun(@times, d_pQCp_phi, t_log_p'),1)' + ...
         prCn* sum(bsxfun(@times, d_pQCn_phi, t_log_n'), 1)'; % This is equal to negative gradient of cond entropy -grad H(|)
 
-    % Eq. 6 - a vector
+    % a vector
     d_MI_phi = d_H_phi - d_cond_phi; % This is equal to the gradient of negative MI, 
 
     % Since \Phi(x) = [\phi_1(x),...,\phi_b(x)] where \phi_i(x) = \sigma(w_i^t \times x)
@@ -142,15 +145,8 @@ if bool_gradient
     grad = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
         (sigmoid(ty, 1) .* (1 - sigmoid(ty, 1)) .* sigscale)'), d_MI_phi'));
 end
-
 end
 
-
-function y = triPulseV(a,c,x)
-mid = (a+c) ./ 2;
-y = zeros(length(mid),length(x));
-ind = bsxfun(@gt, x, a) & bsxfun(@le, x, mid);
-end
 
 function y = triPulse(a,c,x)
 % a must be smaller than c
@@ -162,6 +158,7 @@ y(ind) = 1-abs(x(ind)-mid)./(c-mid);
 ind = x > mid & x <= c;
 y(ind) = 1-abs(x(ind)-mid)./(c-mid);
 end
+
 
 function y = dTPulse(a,c,x)
 % a must be smaller than c

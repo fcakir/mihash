@@ -26,6 +26,7 @@ trainY = Ytrain;
 caller = st(2).name;
 
 if size(Ytrain, 2) == 1
+    % TODO remove *10, /10
     trainY = floor(Ytrain/10);
     testY  = floor(Ytest/10);
     cateTrainTest = [];
@@ -37,7 +38,7 @@ else
     error('Ytrain error in test.m');
 end
 
-clear res bitflips bits_computed_all
+clear res bits_computed_all
 clear train_iter train_time train_examples
 
 for t = 1:opts.ntrials
@@ -45,7 +46,7 @@ for t = 1:opts.ntrials
         logInfo('Trial %d: results exist', t);
         load(trial_fn{t});
     else
-        clear t_res t_bits_computed_all t_bitflips
+        clear t_res t_bits_computed_all
         clear t_train_iter t_train_time
 
         Tprefix = sprintf('%s/trial%d', opts.expdir, t);
@@ -90,24 +91,20 @@ for t = 1:opts.ntrials
 
                 % evaluate
                 t_res(i) = evaluate(Htrain, Htest, trainY, testY, opts, cateTrainTest);
-
                 t_bits_computed_all(i) = d.bits_computed_all;
-                t_bitflips(i) = d.bitflips;
             else
                 t_res(i) = t_res(i-1);
                 t_bits_computed_all(i) = t_bits_computed_all(i-1);
-                t_bitflips(i) = t_bitflips(i-1);
                 fprintf(' %g\n', t_res(i));
             end
             t_train_time(i) = d.train_time;
             t_train_iter(i) = iter;
         end
         clear Htrain Htest
-        save(trial_fn{t}, 't_res', 't_bitflips', 't_bits_computed_all', ...
+        save(trial_fn{t}, 't_res', 't_bits_computed_all', ...
             't_train_iter', 't_train_time');
     end
     res(t, :) = t_res;
-    bitflips(t, :) = t_bitflips;
     bits_computed_all(t, :) = t_bits_computed_all;
     train_time(t, :) = t_train_time;
     train_iter(t, :) = t_train_iter;
@@ -117,7 +114,7 @@ logInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,en
 logInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
 
 % save all trials in a single file
-save(res_fn, 'res', 'bitflips', 'bits_computed_all', 'train_iter', 'train_time', ...
+save(res_fn, 'res', 'bits_computed_all', 'train_iter', 'train_time', ...
     'train_examples');
 
 % visualize
