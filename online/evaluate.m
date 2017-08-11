@@ -33,24 +33,13 @@ if strcmp(opts.metric, 'mAP')
     sim = compare_hash_tables(Htrain, Htest);
     AP  = zeros(1, testsize);
 
-    ncpu = feature('numcores');
-    set_parpool(min(round(ncpu/2), 8));
     % if hasAff
-    % TODO remove vlfeat
     for j = 1:testsize
         labels = 2*Aff(:, j)-1;
         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
         AP(j) = info.ap;
     end
-    % else
-    %     for j = 1:testsize
-    %         labels = 2*double(Ytrain==Ytest(j))-1;
-    %         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-    %         AP(j) = info.ap;
-    %     end
-    % end
-    AP = AP(~isnan(AP));
-    res = mean(AP);
+    res = mean(AP(~isnan(AP)));
     logInfo(['mAP = ' num2str(res)]);
 
 elseif ~isempty(strfind(opts.metric, 'mAP_'))
@@ -61,8 +50,6 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     AP = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
-    ncpu = feature('numcores');
-    set_parpool(min(round(ncpu/2), 8));
     % if hasAff
     % TODO remove vlfeat
     for j = 1:testsize
@@ -76,21 +63,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
         [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
         AP(j) = info.ap;
     end
-    % else
-    %     for j = 1:testsize
-    %         sim_j = double(sim(:, j));
-    %         idx = [];
-    %         for th = opts.nbits:-1:-opts.nbits
-    %             idx = [idx; find(sim_j == th)];
-    %             if length(idx) >= N, break; end
-    %         end
-    %         labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-    %         [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-    %         AP(j) = info.ap;
-    %     end
-    % end
-    AP = AP(~isnan(AP));
-    res = mean(AP);
+    res = mean(AP(~isnan(AP)));
     logInfo('mAP@(N=%d) = %g', N, res);
 
 elseif ~isempty(strfind(opts.metric, 'prec_k'))
@@ -99,14 +72,8 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     prec_k = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
-    ncpu = feature('numcores');
-    set_parpool(round(ncpu/2));
     for i = 1:testsize
-       %  if hasAff
         labels = Aff(:, i);
-        % else
-        %     labels = (Ytrain == Ytest(i));
-	% end
         sim_i = sim(:, i);
         [~, I] = sort(sim_i, 'descend');
         I = I(1:K);
@@ -123,11 +90,7 @@ elseif ~isempty(strfind(opts.metric, 'prec_n'))
     sim = compare_hash_tables(Htrain, Htest);
 
     for j=1:testsize
-        % if hasAff
         labels = Aff(:, j);
-       %  else
-       %      labels = (Ytrain == Ytest(j));
-       %  end
         ind = find(R-sim(:,j) <= 2*N);
         if ~isempty(ind)
             prec_n(j) = mean(labels(ind));

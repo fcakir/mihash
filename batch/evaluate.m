@@ -1,4 +1,4 @@
-function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
+function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff)
 % input: 
 %   Htrain - (logical) training binary codes
 %   Htest  - (logical) testing binary codes
@@ -6,109 +6,70 @@ function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, cateTrainTest)
 %   Ytest  - (int32) testing labels
 % output:
 %  mAP - mean Average Precision
-if nargin < 6, cateTrainTest = []; end
-use_cateTrainTest = ~isempty(cateTrainTest);
+if nargin < 6, Aff = []; end
+hasAff = ~isempty(Aff);
 
 if ~opts.unsupervised
     trainsize = length(Ytrain);
     testsize  = length(Ytest);
 else
-    [trainsize, testsize] = size(cateTrainTest);
+    [trainsize, testsize] = size(Aff);
 end
 
 if strcmp(opts.metric, 'mAP')
     sim = compare_hash_tables(Htrain, Htest);
     AP  = zeros(1, testsize);
-
-    if use_cateTrainTest
-        for j = 1:testsize
-            labels = 2*cateTrainTest(:, j)-1;
-            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-            AP(j) = info.ap;
-        end
-    else
-        for j = 1:testsize
-            labels = 2*double(Ytrain==Ytest(j))-1;
-            [~, ~, info] = vl_pr(labels, double(sim(:, j)));
-            AP(j) = info.ap;
-        end
+    for j = 1:testsize
+        labels = 2 * Aff(:, j) - 1;
+        [~, ~, info] = vl_pr(labels, double(sim(:, j)));
+        AP(j) = info.ap;
     end
-    AP = AP(~isnan(AP));
-    res = mean(AP);
+    res = mean(AP(~isnan(AP)));
     logInfo(['mAP = ' num2str(res)]);
 
 elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eval mAP on top N retrieved results
     assert(isfield(opts, 'mAP') & opts.mAP > 0);
     assert(opts.mAP < trainsize);
-    N = opts.mAP;
-    AP = zeros(1, testsize);
+    N   = opts.mAP;
     sim = compare_hash_tables(Htrain, Htest);
-
-    ncpu = feature('numcores');
-    set_parpool(min(round(ncpu/2), 8));
-    if use_cateTrainTest
-        parfor j = 1:testsize
-            sim_j = double(sim(:, j));
-            idx = [];
-            for th = opts.nbits:-1:-opts.nbits
-                idx = [idx; find(sim_j == th)];
-                if length(idx) >= N, break; end
-            end
-            labels = 2*cateTrainTest(idx(1:N), j)-1;
-            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-            AP(j) = info.ap;
+    AP  = zeros(1, testsize);
+    for j = 1:testsize
+        sim_j = double(sim(:, j));
+        idx = [];
+        for th = opts.nbits:-1:-opts.nbits
+            idx = [idx; find(sim_j == th)];
+            if length(idx) >= N, break; end
         end
-    else
-        parfor j = 1:testsize
-            sim_j = double(sim(:, j));
-            idx = [];
-            for th = opts.nbits:-1:-opts.nbits
-                idx = [idx; find(sim_j == th)];
-                if length(idx) >= N, break; end
-            end
-            labels = 2*double(Ytrain(idx(1:N)) == Ytest(j)) - 1;
-            [~, ~, info] = vl_pr(labels, sim_j(idx(1:N)));
-            AP(j) = info.ap;
-        end
+        idx = idx(1:N);
+        labels = 2 * Aff(idx, j) - 1;
+        [~, ~, info] = vl_pr(labels, sim_j(idx));
+        AP(j) = info.ap;
     end
-    AP = AP(~isnan(AP));
-    res = mean(AP);
+    res = mean(AP(~isnan(AP)));
     logInfo('mAP@(N=%d) = %g', N, res);
 
 elseif ~isempty(strfind(opts.metric, 'prec_k'))
     % intended for PLACES, large scale
     K = opts.prec_k;
-    prec_k = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
-
-    ncpu = feature('numcores');
-    set_parpool(round(ncpu/2));
-    parfor i = 1:testsize
-        labels = (Ytrain == Ytest(i));
-        sim_i = sim(:, i);
-        [~, I] = sort(sim_i, 'descend');
-        I = I(1:K);
-        prec_k(i) = mean(labels(I));
+    prec_k = zeros(1, testsize);
+    for j = 1:testsize
+        labels = Aff(:, j);
+        [~, I] = sort(sim(:, j), 'descend');
+        prec_k(i) = mean(labels(I(1:K)));
     end
     res = mean(prec_k);
     logInfo('Prec@(neighs=%d) = %g', K, res);
 
-
 elseif ~isempty(strfind(opts.metric, 'prec_n'))
     N = opts.prec_n;
     R = opts.nbits;
-    prec_n = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
-
-    % NOTE 'for' has better CPU usage
-    for j=1:testsize
-        if use_cateTrainTest
-            labels = 2*cateTrainTest(:, j)-1;
-        else
-            labels = (Ytrain == Ytest(j));
-        end
-        ind = find(R-sim(:,j) <= 2*N);
+    prec_n = zeros(1, testsize);
+    for j = 1:testsize
+        labels = 2 * Aff(:, j) - 1;
+        ind = find(R - sim(:,j) <= 2*N);
         if ~isempty(ind)
             prec_n(j) = mean(labels(ind));
         end

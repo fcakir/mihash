@@ -18,22 +18,12 @@ function test(res_fn, trial_fn, res_exist, opts)
 
 global Xtest Ytest Xtrain Ytrain thr_dist
 
-testX  = Xtest;
-testY  = Ytest;
-trainY = Ytrain;
-
-[st, i] = dbstack();
-caller = st(2).name;
-
-if size(Ytrain, 2) == 1
-    % TODO remove *10, /10
-    trainY = floor(Ytrain/10);
-    testY  = floor(Ytest/10);
-    cateTrainTest = [];
+if isempty(Ytrain)
+    Affinity = pdist2(Xtrain, Xtest, 'euclidean') <= thr_dist; %logical
 elseif size(Ytrain, 2) > 1
-    cateTrainTest = (trainY * testY' > 0);
-elseif isempty(Ytrain)
-    cateTrainTest = pdist2(Xtrain, Xtest, 'euclidean') <= thr_dist; %logical
+    Affinity = (Ytrain * testY' > 0);
+elseif size(Ytrain, 2) == 1
+    Affinity = bsxfun(@eq, Ytrain, testY');
 else
     error('Ytrain error in test.m');
 end
@@ -55,21 +45,20 @@ for t = 1:opts.ntrials
         % handle transformations to X
         if strcmp(opts.methodID, 'okh')
             % do kernel mapping for test data
-            testX_t = exp(-0.5*sqdist(testX', Tmodel.Xanchor')/Tmodel.sigma^2)';
+            testX_t = exp(-0.5*sqdist(Xtest', Tmodel.Xanchor')/Tmodel.sigma^2)';
             testX_t = [testX_t; ones(1,size(testX_t,2))]';
         elseif strcmp(opts.methodID, 'sketch')
             % subtract mean
-            testX_t = bsxfun(@minus, testX, Tmodel.instFeatAvePre);
+            testX_t = bsxfun(@minus, Xtest, Tmodel.instFeatAvePre);
         else
             % OSH, AdaptHash: nothing
-            testX_t = testX;
+            testX_t = Xtest;
         end
 
         for i = 1:length(Tmodel.test_iters)
             % determine whether to actually run test or not
             % if there's no HT update since last test, just copy results
-            if i == 1
-                runtest = true;
+            if i == 1, runtest = true;
             else
                 st = Tmodel.test_iters(i-1);
                 ed = Tmodel.test_iters(i);
@@ -81,16 +70,15 @@ for t = 1:opts.ntrials
             fprintf('Trial %d, Checkpoint %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints*opts.epoch);
 
             if runtest
-                Htrain = d.H;
-
                 % test hash table
                 % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
                 %       to compute Htest, to make sure it's computed using the same
                 %       hash mapping as Htrain.
-                Htest = (testX_t * d.W_lastupdate > 0)';
+                Htest  = (testX_t * d.W_lastupdate > 0)';
+                Htrain = d.H;
 
                 % evaluate
-                t_res(i) = evaluate(Htrain, Htest, trainY, testY, opts, cateTrainTest);
+                t_res(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff);
                 t_bits_computed_all(i) = d.bits_computed_all;
             else
                 t_res(i) = t_res(i-1);
