@@ -173,7 +173,7 @@ if ~isempty(Dtype) && strcmp(Dtype1, Dtype)
 elseif any(run_trial)
     Dtype = Dtype1;
     logInfo('Loading data for %s...', Dtype);
-    featureFunc = str2func(['load_' opts.ftype]);
+    featureFunc = str2func(['data.' opts.ftype]);
     [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
         featureFunc(opts, ~strcmp(opts.methodID, 'sketch'));
 end
