@@ -69,25 +69,9 @@ opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
 
 %%%%%%%%%%%%%%%%%%%%%%% SET UP SketchHash %%%%%%%%%%%%%%%%%%%%%%%
 % convert parameters from opts to internal ones
-kInstFeatDimCnt = size(Xtrain, 2);  % feature dim
-bits = opts.nbits;
-assert(opts.sketchSize <= kInstFeatDimCnt, ...
-    sprintf('Somehow, sketching needs sketchSize<=d(%d)', kInstFeatDimCnt));
-
-% initialize hash functions & table
-if 0
-    % original init for SketchHash, which performed worse
-    W = rand(kInstFeatDimCnt, bits) - 0.5;
-else
-    % LSH init
-    d = kInstFeatDimCnt;
-    W = randn(d, bits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-end
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
 W_lastupdate = W;
-stepW = zeros(size(W));  % Gradient accumulation matrix
 H = [];  % initial hash table
 
 % for recording time
@@ -101,67 +85,12 @@ bits_computed_all = 0;
 % HT updates
 update_iters = [];
 
-% prepare to run online sketching hashing
-if opts.noTrainingPoints > 0
-    numUseToTrain = opts.noTrainingPoints;
-else
-    numUseToTrain = size(Xtrain, 1);
-end
-batchsize      = opts.batchSize;
-batchCnt       = ceil(numUseToTrain/batchsize);
-instCntSeen    = 0;
-instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
-instFeatSkc    = [];
-logInfo('%d batches of size %d, sketchSize=%d', batchCnt, batchsize, opts.sketchSize);
 %%%%%%%%%%%%%%%%%%%%%%% SET UP SketchHash %%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 for batchInd = 1 : batchCnt
 
-    %%%%%%%%%% LOAD BATCH DATA - BELOW %%%%%%%%%%
-    ind = (batchInd-1)*batchsize + 1 : min(batchInd*batchsize, numUseToTrain);
-    instFeatInBatch = Xtrain(ind, :);
-
-    instCntInBatch = size(instFeatInBatch, 1);
-    %%%%%%%%%% LOAD BATCH DATA - ABOVE %%%%%%%%%%
-
-
-    %%%%%%%%%% UPDATE HASHING FUNCTION - BELOW %%%%%%%%%%
-    tic;
-
-    % calculate current mean feature vector
-    instFeatAveCur = mean(instFeatInBatch, 1);
-
-    % sketech current training batch
-    if batchInd == 1
-        instFeatToSkc = bsxfun(@minus, instFeatInBatch, instFeatAveCur);
-    else
-        instFeatCmps = sqrt(instCntSeen * instCntInBatch / (instCntSeen + instCntInBatch)) * (instFeatAveCur - instFeatAvePre);
-        instFeatToSkc = [bsxfun(@minus, instFeatInBatch, instFeatAveCur); instFeatCmps];
-    end
-    instFeatSkc = MatrixSketch_Incr(instFeatSkc, instFeatToSkc, opts.sketchSize);
-
-    % update mean feature vector and instance counter
-    instFeatAvePre = (instFeatAvePre * instCntSeen + instFeatAveCur * instCntInBatch) / (instCntSeen + instCntInBatch);
-    instCntSeen = instCntSeen + instCntInBatch;
-
-    % compute QR decomposition of the sketched matrix
-    [q, r] = qr(instFeatSkc', 0);
-    [u, ~, ~] = svd(r, 'econ');
-    v = q * u;
-
-    % obtain the original projection matrix
-    hashProjMatOrg = v(:, 1 : bits);
-
-    % use random rotation
-    R = orth(randn(bits));
-
-    % update hashing function
-    W = hashProjMatOrg * R;
-
-    train_time = train_time + toc;
-    %%%%%%%%%% UPDATE HASHING FUNCTION - ABOVE %%%%%%%%%%
 
 
     % ---- reservoir update & compute new reservoir hash table ----
@@ -200,6 +129,7 @@ for batchInd = 1 : batchCnt
         end
 
         % actual hash table update (record time)
+        % TODO handle the mean subtraction in unified framework
         t_ = tic;
         X_cent = bsxfun(@minus, Xtrain, instFeatAvePre);  % centering
         [H, bits_computed] = update_hash_table(H, W_lastupdate, ...

@@ -190,8 +190,9 @@ if any(run_trial)
 
     % 3. TRAINING: run all _necessary_ trials
     logInfo('Training models...');
-    trainFunc = str2func(['train_' method]);
-    train(trainFunc, run_trial, opts);
+    %trainFunc = str2func(['train_' method]);
+    eval(sprintf('methodObj = methods.%s()', method));
+    train_online( methodObj, run_trial, opts );
     logInfo('%s: Training is done.', opts.identifier);
 
     % 4. TESTING: run all _necessary_ trials
