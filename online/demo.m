@@ -69,6 +69,7 @@ end
 
 
 % 2. load data (only if necessary)
+% TODO deal with thr_dist elegantly
 global Xtrain Xtest Ytrain Ytest thr_dist Dtype
 Dtype_this = [opts.dataset '_' opts.ftype];
 if ~isempty(Dtype) && strcmp(Dtype_this, Dtype)

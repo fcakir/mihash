@@ -67,7 +67,8 @@ for t = 1:opts.ntrials
 
             iter = Tmodel.test_iters(i);
             d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-            fprintf('Trial %d, Checkpoint %5d/%d, ', t, iter*opts.batchSize, opts.noTrainingPoints*opts.epoch);
+            fprintf('Trial %d, Checkpoint %5d/%d, ', t, iter*opts.batchSize, ...
+                opts.noTrainingPoints*opts.epoch);
 
             if runtest
                 % test hash table
@@ -78,7 +79,7 @@ for t = 1:opts.ntrials
                 Htrain = d.H;
 
                 % evaluate
-                t_res(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff);
+                t_res(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Affinity);
                 t_bits_computed_all(i) = d.bits_computed_all;
             else
                 t_res(i) = t_res(i-1);

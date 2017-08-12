@@ -42,7 +42,6 @@ if strcmp(opts.dataset, 'cifar')
     load([basedir '/cifar-10/descriptors/gist.mat']);
     gist        = [traingist; testgist];
     gistlabels  = [trainlabels+1; testlabels+1];  % NOTE labels are 0 to 9
-    gistlabels = gistlabels .* 10;
     tstperclass = 100;
 
     if normalizeX 
@@ -50,20 +49,11 @@ if strcmp(opts.dataset, 'cifar')
         gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
         gist = normalize(double(gist));  % then scale to unit length
     end
-    [Xtrain, Ytrain, Xtest, Ytest] = ...
-        split_train_test(gist, gistlabels, tstperclass);
+    [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(gist, gistlabels, tstperclass);
 
-    if opts.val_size > 0
-	assert(length(Ytrain) >=  opts.val_size);
-    	logInfo('Doing validation!');
-	ind_ = randperm(length(Ytrain));
-	Xtrain = Xtrain(ind_(1:opts.val_size), :);
-	Ytrain = Ytrain(ind_(1:opts.val_size), :);
-    end
 elseif strcmp(opts.dataset, 'sun')
     load([basedir '/sun397/SUN_gist.mat']);
     gistlabels  = labels+1;  % NOTE labels are 0 to 396
-    gistlabels = gistlabels .* 10;
     tstperclass = 10;
 
     if normalizeX 
@@ -71,16 +61,8 @@ elseif strcmp(opts.dataset, 'sun')
         gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
         gist = normalize(double(gist));  % then scale to unit length
     end
-    [Xtrain, Ytrain, Xtest, Ytest] = ...
-        split_train_test(gist, gistlabels, tstperclass);
+    [Xtrain, Ytrain, Xtest, Ytest] = split_train_test(gist, gistlabels, tstperclass);
 
-    if opts.val_size > 0
-	assert(length(Ytrain) >=  opts.val_size);
-    	logInfo('Doing validation!');
-	ind_ = randperm(length(Ytrain));
-	Xtrain = Xtrain(ind_(1:opts.val_size), :);
-	Ytrain = Ytrain(ind_(1:opts.val_size), :);
-    end
 elseif strcmp(opts.dataset, 'nus')
     gist = load([basedir '/nuswide/BoW_int.dat']);
     tags = load([basedir '/nuswide/AllLabels81.txt']);
@@ -103,15 +85,9 @@ elseif strcmp(opts.dataset, 'nus')
         gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
         gist = normalize(double(gist));  % then scale to unit length
     end
-    [Xtrain, Ytrain, Xtest, Ytest] = ...
-        split_train_test_nus(gist, tags, tstperclass, use21FrequentConcepts);
-    if opts.val_size > 0
-	assert(length(Ytrain) >=  opts.val_size);
-    	logInfo('Doing validation!');
-	ind_ = randperm(length(Ytrain));
-	Xtrain = Xtrain(ind_(1:opts.val_size), :);
-	Ytrain = Ytrain(ind_(1:opts.val_size), :);
-    end
+    [Xtrain, Ytrain, Xtest, Ytest] = split_train_test_nus(gist, tags, ...
+        tstperclass, use21FrequentConcepts);
+
 elseif strcmp(opts.dataset, 'labelme')
     load([basedir '/labelme/LabelMe_gist.mat'],'gist');
     no_tst = 1000;
@@ -120,14 +96,8 @@ elseif strcmp(opts.dataset, 'labelme')
         gist = bsxfun(@minus, gist, mean(gist,1));  % first center at 0
         gist = normalize(double(gist));  % then scale to unit length
     end
-    [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = ...
-        split_train_test_unsupervised(gist, no_tst);
-    if opts.val_size > 0
-	assert(size(Xtrain, 1) >=  opts.val_size);
-    	logInfo('Doing validation!');
-	ind_ = randperm(length(Ytrain));
-	Xtrain = Xtrain(ind_(1:opts.val_size), :);
-    end
+    [Xtrain, Ytrain, Xtest, Ytest, thr_dist] = split_train_test_unsupervised(gist, no_tst);
+
 else, error(['unknown dataset: ' opts.dataset]); end
 
 whos Xtrain Ytrain Xtest Ytest
@@ -188,9 +158,6 @@ Ytrain = Ytrain(ind);
 ind    = randperm(size(Xtest, 1));
 Xtest  = Xtest(ind, :);
 Ytest  = Ytest(ind);
-
-%cateTrainTest = repmat(Ytrain, 1, length(Ytest)) ...
-%== repmat(Ytest, 1, length(Ytrain))';
 end
 
 % --------------------------------------------------------
@@ -203,7 +170,6 @@ gist = normalize(gist);  % then scale to unit length
 
 % construct test and training set
 num_classes = size(tags, 2);
-%num_classes = 81;
 testsize    = num_classes * tstperclass;
 ind         = randperm(size(gist, 1));
 Xtest       = gist(ind(1:testsize), :);
@@ -218,8 +184,4 @@ Ytrain = Ytrain(ind, :);
 ind    = randperm(size(Xtest, 1));
 Xtest  = Xtest(ind, :);
 Ytest  = Ytest(ind, :);
-
-% TODO after eliminating cateTrainTest, get_results will have to deal with
-% the multi-label case explicitly
-%cateTrainTest = (Ytrain * Ytest' > 0);
 end

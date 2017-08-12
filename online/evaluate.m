@@ -13,27 +13,17 @@ function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff)
 %   	Ytest  - (int) 	   Testing data labels. 
 %	opts   - (struct)  Parameter structure.
 %       Aff    - (logical) Neighbor indicator matrix. trainingsize x testsize. 
-%			   May be empty to save memory. Then the indicator matrix 
-% 			   is computer on-the-fly, see below. 
 %
 % OUTPUTS
-%  	res    - (float) performance value as determined by opts.metric, e.g., mAP value.
+%  	res    - (float) performance value as determined by opts.metric
 
-if nargin < 6, Aff = []; end
-hasAff = ~isempty(Aff);
-
-if ~opts.unsupervised
-    trainsize = length(Ytrain);
-    testsize  = length(Ytest);
-else
-    [trainsize, testsize] = size(Aff);
-end
+[trainsize, testsize] = size(Aff);
 
 if strcmp(opts.metric, 'mAP')
-    sim = compare_hash_tables(Htrain, Htest);
+    % eval mAP
     AP  = zeros(1, testsize);
+    sim = compare_hash_tables(Htrain, Htest);
 
-    % if hasAff
     for j = 1:testsize
         labels = 2*Aff(:, j)-1;
         [~, ~, info] = vl_pr(labels, double(sim(:, j)));
@@ -50,8 +40,6 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     AP = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
 
-    % if hasAff
-    % TODO remove vlfeat
     for j = 1:testsize
         sim_j = double(sim(:, j));
         idx = [];
@@ -67,7 +55,7 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     logInfo('mAP@(N=%d) = %g', N, res);
 
 elseif ~isempty(strfind(opts.metric, 'prec_k'))
-    % intended for PLACES, large scale
+    % eval precision @ k (nearest neighbors)
     K = opts.prec_k; 
     prec_k = zeros(1, testsize);
     sim = compare_hash_tables(Htrain, Htest);
@@ -82,8 +70,8 @@ elseif ~isempty(strfind(opts.metric, 'prec_k'))
     res = mean(prec_k);
     logInfo('Prec@(neighs=%d) = %g', K, res);
 
-
 elseif ~isempty(strfind(opts.metric, 'prec_n'))
+    % eval precision @ N (Hamming ball radius)
     N = opts.prec_n; 
     R = opts.nbits;
     prec_n = zeros(1, testsize);
@@ -112,6 +100,7 @@ if trainsize < 100e3
     sim = (2*single(Htrain)-1)'*(2*single(Htest)-1);
     sim = int8(sim);
 else
+    % for large scale data: process in chunks
     Ltest = 2*single(Htest)-1;
     sim = zeros(trainsize, testsize, 'int8');
     chunkSize = ceil(trainsize/10);

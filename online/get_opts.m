@@ -60,7 +60,6 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 			   that correspond to the same experiment, is avoided when
 % 			   possible. if override=1, then (re-)runs the experiment
 % 			   no matter what.
-%	val_size - (int)   {0, 1}. Should be kept to 0, for future release purposes.
 %      showplots - (int)   {0, 1}. If showplots=1, plots the performance curve wrt
 % 			   training instances, CPU time and Bit Recomputations. 
 % 			   See test.m .
@@ -102,7 +101,6 @@ ip.addParamValue('prefix','', @isstr);
 ip.addParamValue('randseed', 12345, @isscalar);
 ip.addParamValue('nworkers', 0, @isscalar);
 ip.addParamValue('override', 0, @isscalar);
-ip.addParamValue('val_size', 0, @isscalar);
 ip.addParamValue('showplots', 0, @isscalar);
 ip.addParamValue('localdir', './cachedir', @isstr);
 
