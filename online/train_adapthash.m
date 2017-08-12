@@ -1,5 +1,5 @@
-function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ...
-    train_adapthash(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
+function info = train_online(Xtrain, Ytrain, thr_dist, prefix, test_iters, trialNo, opts)
+
 % Training routine for AdaptHash method, see demo_adapthash.m .
 %
 % INPUTS
@@ -35,26 +35,8 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ..
 % 	If number_iterations is 1000, this means 2000 points will be processed, 
 % 	data arrives in pairs
 
-
-[n,d]       = size(Xtrain);
-tu          = randperm(n);
-
-% alphaa is the alpha in Eq. 5 in the ICCV paper
-% beta is the lambda in Eq. 7 in the ICCV paper
-% step_size is the step_size of the SGD
-alphaa      = opts.alpha; %0.8;
-beta        = opts.beta; %1e-2;
-step_size   = opts.stepsize; %1e-3;
-
-
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-if 0
-    W = rand(d, opts.nbits)-0.5;
-else
-    % LSH init
-    W = randn(d, opts.nbits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-end
+W = AdaptHash.init(Xtrain, opts);
 H = [];
 % NOTE: W_lastupdate keeps track of the last W used to update the hash table
 %       W_lastupdate is NOT the W from last iteration
@@ -83,101 +65,21 @@ for e = 1:opts.epoch
         randperm(size(Xtrain, 1), opts.noTrainingPoints);
 end
 opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
+
+info = [];
+info.bits_computed_all = 0;
+info.update_iters = [];
+info.train_time  = 0;  
+info.update_time = 0;
+info.res_time    = 0;
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%% SET UP AdaptHash %%%%%%%%%%%%%%%%%%%%%%%
-% for AdaptHash
-code_length = opts.nbits;
-number_iterations = opts.noTrainingPoints/2;
-logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
-
-% bit flips & bits computed
-bits_computed_all = 0;
-
-% HT updates
-update_iters = [];
-
-% for recording time
-train_time  = 0;  
-update_time = 0;
-res_time    = 0;
-%%%%%%%%%%%%%%%%%%%%%%% SET UP AdaptHash %%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
 for iter = 1:number_iterations
     t_ = tic;
-
-    u(1) = train_ind(2*iter-1);
-    u(2) = train_ind(2*iter);
-
-    sample_point1 = Xtrain(u(1),:);
-    sample_point2 = Xtrain(u(2),:);
-    if ~opts.unsupervised
-        sample_label1 = Ytrain(u(1));
-        sample_label2 = Ytrain(u(2));
-        s = 2*isequal(sample_label1, sample_label2)-1;
-    else
-	sample_label1 = [];sample_label2 = [];
-	s = 2*(pdist([sample_point1;sample_point2],'euclidean') <= thr_dist) - 1;
-    end
-
-    k_sample_data = [sample_point1;sample_point2];
-
-    ttY = W'*k_sample_data';
-    tY = single(W'*k_sample_data' > 0);
-    tep = find(tY<=0);
-    tY(tep) = -1;
-
-    Dh = sum(tY(:,1) ~= tY(:,2)); 
-
-    if s <= 0
-        loss = max(0, alphaa*code_length - Dh);
-        ind  = find(tY(:,1) == tY(:,2));
-        cind = find(tY(:,1) ~= tY(:,2));
-    else
-        loss = max(0, Dh - (1 - alphaa)*code_length);
-        ind  = find(tY(:,1) ~= tY(:,2));
-        cind = find(tY(:,1) == tY(:,2));
-    end
-
-
-    if ceil(loss) ~= 0
-
-        [ck,~] = max(abs(ttY),[],2);
-        [~,ci] = sort(ck,'descend');
-        ck = find(ismember(ci,ind) == 1);
-        ind = ci(ck);
-        ri = randperm(length(ind));
-        if length(ind) > 0
-            cind = [cind;ind(ceil(loss/1)+1:length(ind))];
-        end
-
-        v = W' * k_sample_data(1,:)'; % W' * xi
-        u = W' * k_sample_data(2,:)'; % W' * xj
-
-        w = (2 ./ (1 + exp(-v)) - 1) ; % f(W' * xi)
-        z = (2 ./ (1 + exp(-u)) - 1) ; % f(W' * xj)
-
-        M1 = repmat(k_sample_data(1,:)',1,code_length);
-        M2 = repmat(k_sample_data(2,:)',1,code_length);
-
-        t1 = exp(-v) ./ ((1 + exp(-v)).^2) ; % f'(W' * xi)
-        t2 = exp(-u) ./ ((1 + exp(-u)).^2) ; % f'(W' * xj)
-
-        D1 =  diag(2 .* z .* t1);
-        D2 =  diag(2 .* w .* t2);
-
-        M = step_size * (2 * (w' * z - code_length * s) * (M1 * D1 + M2 * D2));
-
-        M(:,cind) = 0;
-        M = M + beta * W*(W'*W - eye(code_length));
-        W = W - M ;
-        W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-
-    end 
-
+    % TODO check input/output
+    [W] = AdaptHash.train1batch(W, Xtrain, Ytrain, train_ind, iter, opts);
     train_time = train_time + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
@@ -239,4 +141,97 @@ save(F, 'W', 'H', 'bits_computed_all', ...
 ht_updates = numel(update_iters);
 logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
 logInfo('[T%02d] Saved: %s\n', trialNo, F);
+end
+
+
+function W = AdaptHash.init(Xtrain, opts)
+% alphaa is the alpha in Eq. 5 in the ICCV paper
+% beta is the lambda in Eq. 7 in the ICCV paper
+% step_size is the step_size of the SGD
+alphaa      = opts.alpha; %0.8;
+beta        = opts.beta; %1e-2;
+step_size   = opts.stepsize; %1e-3;
+[n, d]      = size(Xtrain);
+if 0
+    W = rand(d, opts.nbits)-0.5;
+else
+    % LSH init
+    W = randn(d, opts.nbits);
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+end
+% for AdaptHash
+code_length = opts.nbits;
+number_iterations = opts.noTrainingPoints/2;
+logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
+end
+
+
+function W = AdaptHash.train1batch(W, Xtrain, Ytrain, train_ind, iter, opts)
+u(1) = train_ind(2*iter-1);
+u(2) = train_ind(2*iter);
+
+sample_point1 = Xtrain(u(1),:);
+sample_point2 = Xtrain(u(2),:);
+if ~opts.unsupervised
+    sample_label1 = Ytrain(u(1));
+    sample_label2 = Ytrain(u(2));
+    s = 2*isequal(sample_label1, sample_label2)-1;
+else
+    sample_label1 = [];sample_label2 = [];
+    s = 2*(pdist([sample_point1;sample_point2],'euclidean') <= thr_dist) - 1;
+end
+
+k_sample_data = [sample_point1; sample_point2];
+
+ttY = W' * k_sample_data';
+tY  = single(W' * k_sample_data' > 0);
+tY(tY <= 0) = -1;
+
+Dh = sum(tY(:,1) ~= tY(:,2)); 
+
+if s <= 0
+    loss = max(0, alphaa*code_length - Dh);
+    ind  = find(tY(:,1) == tY(:,2));
+    cind = find(tY(:,1) ~= tY(:,2));
+else
+    loss = max(0, Dh - (1 - alphaa)*code_length);
+    ind  = find(tY(:,1) ~= tY(:,2));
+    cind = find(tY(:,1) == tY(:,2));
+end
+
+
+if ceil(loss) ~= 0
+
+    [ck,~] = max(abs(ttY),[],2);
+    [~,ci] = sort(ck,'descend');
+    ck = find(ismember(ci,ind) == 1);
+    ind = ci(ck);
+    ri = randperm(length(ind));
+    if length(ind) > 0
+        cind = [cind;ind(ceil(loss/1)+1:length(ind))];
+    end
+
+    v = W' * k_sample_data(1,:)'; % W' * xi
+    u = W' * k_sample_data(2,:)'; % W' * xj
+
+    w = (2 ./ (1 + exp(-v)) - 1) ; % f(W' * xi)
+    z = (2 ./ (1 + exp(-u)) - 1) ; % f(W' * xj)
+
+    M1 = repmat(k_sample_data(1,:)',1,code_length);
+    M2 = repmat(k_sample_data(2,:)',1,code_length);
+
+    t1 = exp(-v) ./ ((1 + exp(-v)).^2) ; % f'(W' * xi)
+    t2 = exp(-u) ./ ((1 + exp(-u)).^2) ; % f'(W' * xj)
+
+    D1 =  diag(2 .* z .* t1);
+    D2 =  diag(2 .* w .* t2);
+
+    M = step_size * (2 * (w' * z - code_length * s) * (M1 * D1 + M2 * D2));
+
+    M(:,cind) = 0;
+    M = M + beta * W*(W'*W - eye(code_length));
+    W = W - M ;
+    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+
+end 
 end
