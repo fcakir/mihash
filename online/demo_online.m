@@ -36,6 +36,21 @@ ip = inputParser;
 ip.KeepUnmatched = true;
 
 if strcmp(method, 'mihash')
+    % Implementation of MIHash as described in: 
+    %
+    % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff 
+    % "MIHash: Online Hashing with Mutual Information", (*equal contribution).
+    % International Conference on Computer Vision (ICCV) 2017
+    %
+    % PARAMETERS
+    %	no_bins  - (int in [1, nbits]) specifies the number of bins of the 
+    %	           histogram (K in Section 3.2)
+    % 	stepsize - (float) The learning rate.
+    % 	decay    - (float) Decay parameter for learning rate. 
+    % 	sigscale - (10) Sigmoid function to smooth the sgn of the hash function,
+    % 	           used as second argument to sigmf.m, see Section 3.2
+    %     initRS - (int) Initial reservoir size. Must be a positive value. 
+    %                    >=500 is recommended. 
     ip.addParamValue('no_bins', 16, @isscalar);
     ip.addParamValue('stepsize', 1, @isscalar);
     ip.addParamValue('decay', 0, @isscalar);
@@ -48,6 +63,16 @@ if strcmp(method, 'mihash')
     opts.batchSize  = 1;  % hard-coded
 
 elseif strcmp(method, 'adapt')
+    % Implementation of AdaptHash as described in: 
+    %
+    % F. Cakir, S. Sclaroff
+    % "Adaptive Hashing for Fast Similarity Search"
+    % International Conference on Computer Vision (ICCV) 2015
+    %
+    % PARAMETERS
+    %	alpha 	 - (float) [0, 1] \alpha as in Alg. 1 of AdaptHash. 
+    % 	beta 	 - (float) \lambda as in Alg. 1
+    % 	stepsize - (float) The learning rate. 
     ip.addParamValue('alpha', 0.9, @isscalar);
     ip.addParamValue('beta', 1e-2, @isscalar);
     ip.addParamValue('stepsize', 1, @isscalar);
@@ -57,6 +82,15 @@ elseif strcmp(method, 'adapt')
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
 elseif strcmp(method, 'okh')
+    % Implementation of OKH as described in: 
+    %
+    % L. K. Huang, Q. Y. Yang and W. S. Zheng
+    % "Online Hashing"
+    % International Joint Conference on Artificial Intelligence (IJCAI) 2013
+    %
+    % PARAMETERS
+    %	c 	 - (float) Parameter C as in Alg. 1 of OKH. 
+    % 	alpha	 - (float) \alpha as in Eq. 3 of OKH
     ip.addParamValue('c', 0.1, @isscalar);
     ip.addParamValue('alpha', 0.2, @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
@@ -65,6 +99,23 @@ elseif strcmp(method, 'okh')
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
 elseif strcmp(method, 'osh')
+    % Implementation of the OSH method as described in: 
+    %
+    % F. Cakir, S. Sclaroff
+    % "Online Supervised Hashing"
+    % International Conference on Image Processing (ICIP) 2015
+    %
+    % F. Cakir, S. A. Bargal, S. Sclaroff
+    % "Online Supervised Hashing"
+    % Computer Vision and Image Understanding (CVIU) 2016
+    %
+    % PARAMETERS
+    % 	stepsize - (float) The learning rate.
+    % 	SGDBoost - (int)   Choices are {0, 1}.  SGDBoost=1 corresponds to do the 
+    % 			   online boosting formulation with exponential loss as 
+    % 			   described in the above papers. SGDBoost=0, corresponds
+    % 			   to a hinge loss formulation without the online boosting 
+    % 			   approach. SGDBoost=0 typically works better.
     ip.addParamValue('stepsize', 0.1, @isscalar);
     ip.addParamValue('SGDBoost', 1, @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
@@ -73,6 +124,15 @@ elseif strcmp(method, 'osh')
     opts.batchSize  = 1;      % hard-coded
 
 elseif strcmp(method, 'sketch')
+    % Implementation of the SketchHash method as described in: 
+    %
+    % C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu
+    % "Online Sketching Hashing"
+    % Computer Vision and Pattern Recognition (CVPR) 2015
+    %
+    % PARAMETERS
+    % 	sketchSize - (int) size of the sketch matrix.
+    % 	 batchSize - (int) The batch size, i.e. size of the data chunk
     ip.addParamValue('sketchSize', 200, @isscalar);
     ip.addParamValue('batchSize', 50, @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
