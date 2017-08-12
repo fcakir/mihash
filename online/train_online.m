@@ -1,4 +1,4 @@
-function train(trainFunc, run_trial, opts)
+function train_online(methodObj, run_trial, opts)
 % This is the routine which calls different training subroutines based on the 
 % hashing method. Separate trials are executed here and rudimentary statistics 
 % are computed and displayed. 
@@ -52,11 +52,12 @@ for t = 1:opts.ntrials
     prefix = sprintf('%s/trial%d', opts.expdir, t);
     
     % train hash functions
-    [train_time(t), update_time(t), resservoir_time(t), ...
-        ht_updates(t), bit_recomp(t), bit_flips(t)] = ...
-        trainFunc(Xtrain, Ytrain, thr_dist, prefix, test_iters, t, opts);
+    % TODO train_one_method
+    info = train_one_method(methodObj, Xtrain, Ytrain, thr_dist, ...
+        prefix, test_iters, t, opts);
 end
 
+% TODO use info struct
 logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
 logInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
 logInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));

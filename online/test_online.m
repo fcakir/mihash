@@ -1,4 +1,4 @@
-function test(res_fn, trial_fn, res_exist, opts)
+function test_online(res_fn, trial_fn, res_exist, opts)
 % Computes the performance by loading and evaluating the "checkpoint" files
 % saved during training. 
 %

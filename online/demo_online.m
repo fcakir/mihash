@@ -197,7 +197,7 @@ if any(run_trial)
 
     % 4. TESTING: run all _necessary_ trials
     logInfo('Testing models...');
-    test(res_path, trial_path, run_trial, opts);
+    test_online(res_path, trial_path, run_trial, opts);
     logInfo('%s: Testing is done.', opts.identifier);
 end
     
