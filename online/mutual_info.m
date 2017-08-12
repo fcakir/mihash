@@ -34,12 +34,12 @@ Y = input.Y;
 
 if ~unsupervised     
     if size(reservoir.Y,2) > 1  % if multilabel
-        catePointTrain = (reservoir.Y * Y' > 0);    
+        Aff = (reservoir.Y * Y' > 0);    
     else  % if multiclass
-        catePointTrain = (reservoir.Y == Y);
+        Aff = (reservoir.Y == Y);
     end
 else
-    catePointTrain = pdist2(X, reservoir.X, 'euclidean') <= thr_dist;
+    Aff = pdist2(X, reservoir.X, 'euclidean') <= thr_dist;
 end
 
 % RELAXED hash codes to interval [-1, 1]
@@ -64,7 +64,7 @@ for i=1:no_bins+1
     pQ(i) = sum(triPulse(bordersQ(i) - deltaQ, bordersQ(i) + deltaQ, hdist));
 end
 pQ = pQ ./ sum(pQ);
-M = hdist(catePointTrain); NM = hdist(~catePointTrain);
+M = hdist(Aff); NM = hdist(~Aff);
 pQCp = zeros(1, no_bins+1);
 pQCn = zeros(1, no_bins+1);
 for i=1:no_bins+1
@@ -110,10 +110,10 @@ if bool_gradient
         % \partial p_{D,l}^+ / \partial \Phi(x)
         % having computed d_delta_phi, we just some the respective columns
         % that correspond to positive neighbors. 
-        if length(M) ~= 0, d_pQCp_phi(i,:) = sum(d_delta_phi(:, catePointTrain, i),2)'./length(M); end;%row vector
+        if length(M) ~= 0, d_pQCp_phi(i,:) = sum(d_delta_phi(:, Aff, i),2)'./length(M); end;%row vector
         % similar to above computation but for \partial p_{D,l}^- /
         % \partial Phi(x)
-        if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(d_delta_phi(:, ~catePointTrain, i),2)'./length(NM); end; %row vector        
+        if length(NM) ~= 0, d_pQCn_phi(i,:) = sum(d_delta_phi(:, ~Aff, i),2)'./length(NM); end; %row vector        
     end
     % \partial p_{D,l} / \partial \Phi(x)
     d_pQ_phi = d_pQCp_phi*prCp + d_pQCn_phi*prCn;

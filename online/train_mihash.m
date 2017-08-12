@@ -117,7 +117,6 @@ for iter = 1:number_iterations
     t_ = tic;
     inputs.X = spoint;
     inputs.Y = slabel;
-    % rev_pro implements the NIPS 16 Histogram Loss
     [obj, grad] = mutual_info(W, inputs, reservoir, ...
         opts.no_bins, opts.sigscale, opts.unsupervised, thr_dist,  1);
 

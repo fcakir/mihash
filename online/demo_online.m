@@ -35,7 +35,7 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 ip = inputParser;
 ip.KeepUnmatched = true;
 
-if strcmp(method, 'mihash')
+if strcmp(method, 'MIHash')
     % Implementation of MIHash as described in: 
     %
     % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff 
@@ -62,7 +62,7 @@ if strcmp(method, 'mihash')
         opts.sigscale, opts.stepsize, opts.decay, opts.initRS);
     opts.batchSize  = 1;  % hard-coded
 
-elseif strcmp(method, 'adapt')
+elseif strcmp(method, 'AdaptHash')
     % Implementation of AdaptHash as described in: 
     %
     % F. Cakir, S. Sclaroff
@@ -81,7 +81,7 @@ elseif strcmp(method, 'adapt')
     opts.identifier = sprintf('A%gB%gS%g', opts.alpha, opts.beta, opts.stepsize);
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
-elseif strcmp(method, 'okh')
+elseif strcmp(method, 'OKH')
     % Implementation of OKH as described in: 
     %
     % L. K. Huang, Q. Y. Yang and W. S. Zheng
@@ -98,7 +98,7 @@ elseif strcmp(method, 'okh')
     opts.identifier = sprintf('C%gA%g', opts.c, opts.alpha);
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
-elseif strcmp(method, 'osh')
+elseif strcmp(method, 'OSH')
     % Implementation of the OSH method as described in: 
     %
     % F. Cakir, S. Sclaroff
@@ -123,7 +123,7 @@ elseif strcmp(method, 'osh')
     opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
     opts.batchSize  = 1;      % hard-coded
 
-elseif strcmp(method, 'sketch')
+elseif strcmp(method, 'SketchHash')
     % Implementation of the SketchHash method as described in: 
     %
     % C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu
@@ -141,7 +141,7 @@ elseif strcmp(method, 'sketch')
     assert(opts.batchSize>=nbits, 'Sketching needs batchSize>=nbits');
 
 else
-    error('Implemented methods: {mihash, adapt, okh, osh, sketch}');
+    error('Implemented methods: {MIHash, AdaptHash, OKH, OSH, SketchHash}');
 end
 opts.methodID = method;
 
