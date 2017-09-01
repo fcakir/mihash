@@ -24,7 +24,7 @@ function opts = get_opts(opts, dataset, nbits, varargin)
 %			   datasets.
 % 	nbits   - (int)    Hash code length
 % 	
-% noTrainingPoints - (int) The number of training instances to be process at each
+%      numTrain - (int)    The number of training instances to be processed in each
 % 			   epoch. Must be smaller than the available training data.
 % 	ntrials - (int)	   The number of trials. A trial corresponds to a separate
 % 			   experimental run. The performance results then are average
@@ -48,9 +48,6 @@ function opts = get_opts(opts, dataset, nbits, varargin)
 % 	prefix 	- (string) Prefix for the results folder title, if empty, the 
 % 			   results folder will be prefixes with todays date.
 %  randseed - (int)   Random seed for reproducility. 			   
-%  nworkers - (int)   Number of parallel workers. If ntrials > 1, each trial
-% 			   is run on a different worker. Testing is done in a 
-% 			   parallel manner as well. 
 % 	override - (int)   {0, 1}. If override=0, then training and/or testing
 % 			   that correspond to the same experiment, is avoided when
 % 			   possible. if override=1, then (re-)runs the experiment
@@ -65,16 +62,11 @@ function opts = get_opts(opts, dataset, nbits, varargin)
 % 			   release purposes.
 % updateInterval - (int)   The hash table is updated after each "updateInterval" 
 %			   number of training instances is processed.
-%	trigger	- (string) Choices are 'bf', 'mi' or 'fix' (default) only. 
-% 			   The type of trigger used to determine if a hash table update is 
-% 			   needed. 'bf' means bit flips, 'mi' means mutual information (see 
-% 			   reference [1] above), and 'fix' means no trigger. If 'fix' is selected, then
-% 			   the hash table is updated at every 'updateInterval'.
-%     flipThresh - (int)   If the amount of bit flips in the reservoir hash table 
-% 			   exceeds "flipThresh", a hash table update is performed. 
-% 			   Evaluated only after each "updateInterval". If flipThresh=-1
-% 			   the hash table is always updated at each "updateInterval".
-% 			   Hard-coded to 0. For future release.
+%	trigger	- (string) Choices are 'mi' or 'fix' (default). The type of trigger 
+%	                   used to determine if a hash table update is needed. 
+%	                   'mi' means mutual information (see [1] above). If 'fix' 
+%	                   is selected, then the hash table is updated at every 
+%	                   'updateInterval'.
 % 
 % OUTPUTS
 %	opts	- (struct) struct containing name and values of the inputs, e.g.,
@@ -83,29 +75,26 @@ function opts = get_opts(opts, dataset, nbits, varargin)
 ip = inputParser;
 
 % train/test
-ip.addRequired('dataset', @isstr);
-ip.addRequired('nbits', @isscalar);
-ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
-ip.addParamValue('ntrials', 3, @isscalar);
-ip.addParamValue('ntests', 50, @isscalar);
-ip.addParamValue('metric', 'mAP', @isstr);    % evaluation metric
-ip.addParamValue('epoch', 1, @isscalar)
+ip.addRequired('dataset'    , @isstr);
+ip.addRequired('nbits'      , @isscalar);
+ip.addParamValue('numTrain' , 20e3        , @isscalar);
+ip.addParamValue('ntrials'  , 3           , @isscalar);
+ip.addParamValue('ntests'   , 50          , @isscalar);
+ip.addParamValue('metric'   , 'mAP'       , @isstr);    % evaluation metric
+ip.addParamValue('epoch'    , 1           , @isscalar)
+
+% Reservoir & Trigger Update module
+ip.addParamValue('reservoirSize'  , 0    , @isscalar);  % reservoir size
+ip.addParamValue('updateInterval' , 100  , @isscalar);  % use with baseline
+ip.addParamValue('trigger'        , 'mi' , @isstr);     % update trigger type
+ip.addParamValue('miThresh'       , 0    , @isscalar);  % for trigger=mi
+
 % misc
-ip.addParamValue('prefix','', @isstr);
-ip.addParamValue('randseed', 12345, @isscalar);
-ip.addParamValue('nworkers', 0, @isscalar);
-ip.addParamValue('override', 0, @isscalar);
-ip.addParamValue('showplots', 0, @isscalar);
-ip.addParamValue('localdir', './cachedir', @isstr);
-
-% Reservoir
-ip.addParamValue('reservoirSize', 0, @isscalar); % reservoir size, set to 0 if reservoir is not used
-
-% hash table update
-ip.addParamValue('updateInterval', 100, @isscalar);  % use with baseline
-ip.addParamValue('trigger', 'mi', @isstr);          % HT update trigger
-ip.addParamValue('miThresh', 0, @isscalar);       % for trigger=mi
-ip.addParamValue('flipThresh', -1, @isscalar);       % for trigger=bf
+ip.addParamValue('prefix'    , ''           , @isstr);
+ip.addParamValue('randseed'  , 12345        , @isscalar);
+ip.addParamValue('override'  , 0            , @isscalar);
+ip.addParamValue('showplots' , 0            , @isscalar);
+ip.addParamValue('localdir'  , './cachedir' , @isstr);
 
 % parse input
 ip.KeepUnmatched = true;
@@ -120,13 +109,12 @@ assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
-assert(opts.nworkers>=0 && opts.nworkers<=12);
-
 if strcmp(opts.dataset, 'labelme') 
-    assert(~strcmpi(opts.methodID,'osh')); % OSH is inapplicable on LabelMe 
+    assert(~strcmpi(opts.methodID, 'OSH')); % OSH is inapplicable on LabelMe 
     opts.unsupervised = 1;
     opts.ftype = 'gist';
 else
+    % CIFAR and PLACES
     opts.unsupervised = 0;
     opts.ftype = 'cnn';
 end
@@ -143,14 +131,7 @@ if exist(opts.localdir, 'dir') == 0,
     mkdir(opts.localdir);
 end
 
-% matlabpool handling
-if isempty(gcp('nocreate')) && opts.nworkers > 0
-    logInfo('Opening parpool, nworkers = %d', opts.nworkers);
-    delete(gcp('nocreate'))  % clear up zombies
-    p = parpool(opts.nworkers);
-end
-
-% set randseed -- don't change the randseed if don't have to!
+% set randseed
 rng(opts.randseed, 'twister');
 
 % decipher evaluation metric
@@ -179,31 +160,30 @@ idr = opts.identifier;
 % handle reservoir
 if opts.reservoirSize > 0
     idr = sprintf('%s-RS%d', idr, opts.reservoirSize);
-    % in this order: U, (F, Ada) or (MI)
-    % only possible combinations:  U, U+Ada, F, Ada
     if opts.updateInterval > 0
         idr = sprintf('%sU%d', idr, opts.updateInterval);
     end
-    if strcmp(opts.trigger, 'bf')
-        if opts.flipThresh > 0
-            idr = sprintf('%sF%g', idr, opts.flipThresh);
-        end
-    elseif strcmp(opts.trigger, 'mi')
-		idr = sprintf('%s-MI%g', idr, opts.miThresh);
+    if strcmp(opts.trigger, 'mi')
+        idr = sprintf('%s-MI%g', idr, opts.miThresh);
     else
-        idr = sprintf('%s-FIX_Update', idr);
+        assert(strcmp(opts.trigger, 'fix'), ...
+            'Only [mi] & [fix] are supported for opts.trigger');
+        idr = sprintf('%s-FIX', idr);
     end
 else
     % no reservoir (baseline): must use updateInterval
     assert(opts.updateInterval > 0);
     idr = sprintf('%s-U%d', idr, opts.updateInterval);
 end
-if isempty(opts.prefix), prefix = sprintf('%s',datetime('today','InputFormat','yyyy-MM-dd')); end;
+if isempty(opts.prefix)
+    prefix = sprintf('%s',datetime('today','InputFormat','yyyy-MM-dd')); 
+end;
 opts.identifier = [prefix '-' idr];
 
 % set expdir
 expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, opts.noTrainingPoints*opts.epoch, opts.epoch, opts.ntests);
+opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, ...
+    opts.numTrain, opts.epoch, opts.ntests);
 if ~exist(expdir_base, 'dir'), mkdir(expdir_base); end
 if ~exist(opts.expdir, 'dir'),
     logInfo(['creating opts.expdir: ' opts.expdir]);

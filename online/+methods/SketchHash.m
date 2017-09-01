@@ -43,6 +43,7 @@ end
 
 
 function [W, ind] = train1batch(obj, W, X, Y, I, t, opts)
+    % TODO use I
     batchInd = t;
 
     %%%%%%%%%% LOAD BATCH DATA - BELOW %%%%%%%%%%
