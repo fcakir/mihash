@@ -36,52 +36,52 @@ properties
     reservoir
 end
 
-function W = init(obj, X, opts)
-    [n, d] = size(X);
-    % LSH init
-    W = randn(d, opts.nbits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
+methods
+    function W = init(obj, X, opts)
+        [n, d] = size(X);
+        % LSH init
+        W = randn(d, opts.nbits);
+        W = W ./ repmat(diag(sqrt(W'*W))',d,1);
 
-    % initialize reservoir
-    % TODO hold an internal reservoir
-    if reservoir_size > 0 
-        ind = randperm(size(Xtrain, 1), opts.initRS);
-        if ~isempty(Ytrain)
-            [reservoir, update_ind] = update_reservoir(reservoir, ...
-                Xtrain(ind, :), Ytrain(ind, :), ...
-                reservoir_size, W, opts.unsupervised);
-        else
-            [reservoir, update_ind] = update_reservoir(reservoir, ...
-                Xtrain(ind, :), [], ...
-                reservoir_size, W, opts.unsupervised);
+        % initialize reservoir
+        % TODO hold an internal reservoir
+        if reservoir_size > 0 
+            ind = randperm(size(Xtrain, 1), opts.initRS);
+            if ~isempty(Ytrain)
+                [reservoir, update_ind] = update_reservoir(reservoir, ...
+                    Xtrain(ind, :), Ytrain(ind, :), ...
+                    reservoir_size, W, opts.unsupervised);
+            else
+                [reservoir, update_ind] = update_reservoir(reservoir, ...
+                    Xtrain(ind, :), [], ...
+                    reservoir_size, W, opts.unsupervised);
+            end
         end
     end
 
-    code_length = opts.nbits;
-    opts.noTrainingPoints = opts.noTrainingPoints*opts.epoch;
-    number_iterations = opts.noTrainingPoints;
-    logInfo('[T%02d] %d training iterations', trialNo, number_iterations);
-end
 
+    function W = train1batch(obj, W, X, Y, I, t, opts)
+        ind = I(t);
+        spoint = X(ind, :);
+        if ~opts.unsupervised
+            slabel = Y(ind, :);
+        else
+            slabel = [];
+        end    
 
-function W = train1batch(obj, W, X, Y, I, t, opts)
-    ind = I(t);
-    spoint = X(ind, :);
-    if ~opts.unsupervised
-        slabel = Y(ind, :);
-    else
-        slabel = [];
-    end    
+        % hash function update
+        % TODO make mutual_info member func
+        t_ = tic;
+        inputs.X = spoint;
+        inputs.Y = slabel;
+        [obj, grad] = mutual_info(W, inputs, reservoir, ...
+            opts.no_bins, opts.sigscale, opts.unsupervised, thr_dist,  1);
 
-    % hash function update
-    % TODO make mutual_info member func
-    t_ = tic;
-    inputs.X = spoint;
-    inputs.Y = slabel;
-    [obj, grad] = mutual_info(W, inputs, reservoir, ...
-        opts.no_bins, opts.sigscale, opts.unsupervised, thr_dist,  1);
+        % sgd
+        lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
+        W = W - lr * grad;
+    end
 
-    % sgd
-    lr = opts.stepsize * (1 ./ (1 +opts.decay *iter));
-    W = W - lr * grad;
-end
+end % methods
+
+end % classdef
