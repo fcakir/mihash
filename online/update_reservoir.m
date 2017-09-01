@@ -5,9 +5,9 @@ function [reservoir, update_ind] = update_reservoir(reservoir, ...
 % inputs:
 %   reservoir: struct(X, Y, H, PQ, size)
 % outputs:
-%   update_ind: updated index ([] for no update)
+%   update_ind: indices of updated entries ([] if no update)
 %
-if nargin < 6, unsupervised = false; end
+if ~exist('unsupervised', 'var'), unsupervised = false; end
 assert(isstruct(reservoir));
 assert((~unsupervised && ~isempty(labels)) || (unsupervised && isempty(labels)));
 n = size(points, 1);
@@ -34,8 +34,8 @@ else
             reservoir.PQ(maxind)   = r;
             reservoir.X(maxind, :) = points(i, :);
             if ~unsupervised
-                 reservoir.Y(maxind, :) = labels(i, :);
-	    end
+                reservoir.Y(maxind, :) = labels(i, :);
+            end
             update_ind = [update_ind, maxind];
         end
     end

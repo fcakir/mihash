@@ -1,5 +1,4 @@
-function info = train_one_method(methodObj, Xtrain, Ytrain, thr_dist, prefix, ...
-    test_iters, trialNo, opts)
+function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
 
 % Training routine for AdaptHash method, see demo_adapthash.m .
 %
@@ -19,7 +18,6 @@ function info = train_one_method(methodObj, Xtrain, Ytrain, thr_dist, prefix, ..
 % 			 see load_gist.m . 
 % 	prefix - (string) Prefix of the "checkpoint" files.
 %   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
-%   trialNo    - (int)   Trial ID
 %	opts   - (struct) Parameter structure.
 %
 % OUTPUTS
@@ -37,6 +35,8 @@ function info = train_one_method(methodObj, Xtrain, Ytrain, thr_dist, prefix, ..
 % 	data arrives in pairs
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
+Xtrain = Dataset.Xtrain;
+Ytrain = Dataset.Ytrain;
 
 H = [];  % hash table (mapped binary codes)
 W = methodObj.init(Xtrain, opts);  % hash mapping
@@ -62,12 +62,8 @@ end
 
 % order training examples
 ntrain = size(Xtrain, 1);
-train_ind = [];
-for e = 1:opts.epoch
-    % randomly shuffle training points before taking first noTrainingPoints
-    train_ind = [train_ind, randperm(ntrain, opts.noTrainingPoints)];
-end
-opts.noTrainingPoints = numel(train_ind);
+trainInd = randperm(ntrain, opts.noTrainingPoints);
+opts.noTrainingPoints = numel(trainInd);
 
 info = [];
 info.bits_computed_all = 0;
@@ -79,19 +75,21 @@ info.res_time    = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-for iter = 1:number_iterations
+num_iters = ceil(opts.noTrainingPoints / opts.batchSize);
+logInfo('%s: %d train_iters', opts.identifier, num_iters);
+
+for iter = 1:num_iters
     t_ = tic;
-    % TODO check input/output
-    [W, sampleIdx] = methodObj.train1batch(W, Xtrain, Ytrain, train_ind, iter, opts);
+    [W, batchInd] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
     train_time = train_time + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
     t_ = tic;
     Hres_new = [];
     if reservoir_size > 0
-        Xsample = Xtrain(sampleIdx, :);
-        Ysample = Ytrain(sampleIdx, :);
-        [reservoir, update_ind] = update_reservoir(reservoir, Xsample, Ysample, ...
+        Xbatch = Xtrain(batchInd, :);
+        Ybatch = Ytrain(batchInd, :);
+        [reservoir, update_ind] = update_reservoir(reservoir, Xbatch, Ybatch, ...
             reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
@@ -122,16 +120,16 @@ for iter = 1:number_iterations
     end
 
     % ---- save intermediate model ----
-    % CHECKPOINT
     if ismember(iter, test_iters)
-        F = sprintf('%s_iter%d.mat', prefix, iter);
+        % CHECKPOINT
+        F = sprintf('%s/%s_iter%d.mat', opts.expdir, prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
 
-        logInfo(['*checkpoint*\n[T%02d] %s\n' ...
+        logInfo(['*checkpoint*\n[%s] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
             '     total BR = %g'], ...
-            trialNo, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
+            prefix, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
             train_time, update_time, numel(update_iters), res_time, ...
             bits_computed_all);
     end
@@ -139,11 +137,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model, etc
-F = [prefix '.mat'];
+F = sprintf('%s/%s.mat', opts.expdir, prefix);
 save(F, 'W', 'H', 'bits_computed_all', ...
     'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
 
 ht_updates = numel(update_iters);
 logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-logInfo('[T%02d] Saved: %s\n', trialNo, F);
+logInfo('[%s] Saved: %s\n', prefix, F);
 end

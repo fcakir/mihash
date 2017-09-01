@@ -12,7 +12,7 @@ function train_online(methodObj, run_trial, opts)
 % OUTPUTS
 % 	none
 
-global Xtrain Ytrain thr_dist
+global Dataset
 
 info = struct(...
     'train_time', [], ...      % time to learn the hash mapping
@@ -25,18 +25,16 @@ for n = fieldnames(info)
     info.(n{1}) = zeros(1, opts.ntrials);
 end
 
-num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);
-logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 % NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
 %       to run the trials in parallel
 for t = 1:opts.ntrials
-    rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
     if ~run_trial(t)
         logInfo('Trial %02d not required, skipped', t);
         continue;
     end
     logInfo('%s: random trial %d', opts.identifier, t);
+    rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
     
     % randomly set test checkpoints
     test_iters      = zeros(1, opts.ntests);
@@ -47,12 +45,11 @@ for t = 1:opts.ntrials
         iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
         test_iters(i+1) = iter;
     end
-    prefix = sprintf('%s/trial%d', opts.expdir, t);
+    prefix = sprintf('trial%d', t);
     
     % train hash functions
     % TODO train_one_method
-    info = train_one_method(methodObj, Xtrain, Ytrain, thr_dist, ...
-        prefix, test_iters, t, opts);
+    info = train_one_method(methodObj, Dataset, prefix, test_iters, opts);
 end
 
 % TODO use info struct
