@@ -78,57 +78,60 @@ properties
     para
 end
 
-function W = init(obj, X, opts)
-    % do kernel mapping to Xtrain
-    % KX: each COLUMN is a kernel-mapped training example
-    %
-    assert(size(X, 1) >= 4000);
+methods
+    function W = init(obj, X, opts)
+        % do kernel mapping to Xtrain
+        % KX: each COLUMN is a kernel-mapped training example
+        assert(size(X, 1) >= 4000);
 
-    % sample support samples (300) from the FIRST HALF of training set
-    nhalf = floor(size(X, 1)/2);
-    ind = randperm(nhalf, 300);
-    Xanchor = X(ind, :);
-    logInfo('Randomly selected 300 anchor points');
+        % sample support samples (300) from the FIRST HALF of training set
+        nhalf = floor(size(X, 1)/2);
+        ind = randperm(nhalf, 300);
+        Xanchor = X(ind, :);
+        logInfo('Randomly selected 300 anchor points');
 
-    % estimate sigma for Gaussian kernel using samples from the SECOND HALF
-    ind = randperm(nhalf, 2000);
-    Xval = X(nhalf+ind, :);
-    Kval = sqdist(Xval', Xanchor');
-    sigma = mean(mean(Kval, 2));
-    logInfo('Estimated sigma = %g', sigma);
-    clear Xval Kval
+        % estimate sigma for Gaussian kernel using samples from the SECOND HALF
+        ind = randperm(nhalf, 2000);
+        Xval = X(nhalf+ind, :);
+        Kval = sqdist(Xval', Xanchor');
+        sigma = mean(mean(Kval, 2));
+        logInfo('Estimated sigma = %g', sigma);
+        clear Xval Kval
 
-    % kernel mapping the whole set
-    KX = exp(-0.5*sqdist(X', Xanchor')/sigma^2)';
-    KX = [KX; ones(1,size(KX,2))];
+        % kernel mapping the whole set
+        KX = exp(-0.5*sqdist(X', Xanchor')/sigma^2)';
+        KX = [KX; ones(1,size(KX,2))];
 
-    para.c      = opts.c; %0.1;
-    para.alpha  = opts.alpha; %0.2;
-    para.anchor = Xanchor;
+        para.c      = opts.c; %0.1;
+        para.alpha  = opts.alpha; %0.2;
+        para.anchor = Xanchor;
 
-    % LSH init
-    d = size(KX, 1);
-    W = randn(d, opts.nbits);
-    W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-end
-
-
-function W = train1batch(obj, W, X, Y, I, t, opts)
-    if ~opts.unsupervised
-        idx_i = Y(2*t-1, :);
-        idx_j = Y(2*t, :);
-        s = 2*(idx_i==idx_j)-1;
-    else
-        idx_i = []; 
-        idx_j = [];
-        D = pdist([X(2*iter-1,:); X(2*iter,:)], 'euclidean');
-        s = 2*(D <= thr_dist) - 1;
+        % LSH init
+        d = size(KX, 1);
+        W = randn(d, opts.nbits);
+        W = W ./ repmat(diag(sqrt(W'*W))',d,1);
     end
 
-    xi = obj.KX(:, 2*iter-1);
-    xj = obj.KX(:, 2*iter);
 
-    % hash function update
-    W = OKHlearn(xi, xj, s, W, obj.para);
-end
+    function W = train1batch(obj, W, X, Y, I, t, opts)
+        if ~opts.unsupervised
+            idx_i = Y(2*t-1, :);
+            idx_j = Y(2*t, :);
+            s = 2*(idx_i==idx_j)-1;
+        else
+            idx_i = []; 
+            idx_j = [];
+            D = pdist([X(2*iter-1,:); X(2*iter,:)], 'euclidean');
+            s = 2*(D <= thr_dist) - 1;
+        end
 
+        xi = obj.KX(:, 2*iter-1);
+        xj = obj.KX(:, 2*iter);
+
+        % hash function update
+        W = methods.OKHlearn(xi, xj, s, W, obj.para);
+    end
+
+end % methods
+
+end % classdef
