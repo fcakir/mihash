@@ -100,8 +100,12 @@ end
 
 % order training examples
 ntrain = size(Xtrain, 1);
-trainInd = randperm(ntrain, opts.noTrainingPoints);
-opts.noTrainingPoints = numel(trainInd);
+assert(opts.numTrain<=ntrain, sprintf('opts.numTrain > %d!', ntrain));
+trainInd = [];
+for e = 1:opts.epoch
+    trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
+end
+opts.numTrain = numel(trainInd);
 
 info = [];
 info.bits_computed_all = 0;
@@ -113,7 +117,7 @@ info.res_time    = 0;
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-num_iters = ceil(opts.noTrainingPoints / opts.batchSize);
+num_iters = ceil(opts.numTrain / opts.batchSize);
 logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 for iter = 1:num_iters
@@ -125,9 +129,9 @@ for iter = 1:num_iters
     t_ = tic;
     Hres_new = [];
     if reservoir_size > 0
-        Xbatch = Xtrain(batchInd, :);
-        Ybatch = Ytrain(batchInd, :);
-        [reservoir, update_ind] = update_reservoir(reservoir, Xbatch, Ybatch, ...
+        % update reservoir
+        [reservoir, update_ind] = update_reservoir(reservoir, ...
+            Xtrain(batchInd, :), Ytrain(batchInd, :), ...
             reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
@@ -167,7 +171,7 @@ for iter = 1:num_iters
         logInfo(['*checkpoint*\n[%s] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
             '     total BR = %g'], ...
-            prefix, opts.identifier, iter*opts.batchSize, opts.noTrainingPoints, ...
+            prefix, opts.identifier, iter*opts.batchSize, opts.numTrain, ...
             train_time, update_time, numel(update_iters), res_time, ...
             bits_computed_all);
     end
