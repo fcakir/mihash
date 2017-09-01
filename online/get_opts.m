@@ -1,4 +1,4 @@
-function opts = get_opts(opts, ftype, dataset, nbits, varargin)
+function opts = get_opts(opts, dataset, nbits, varargin)
 % Sets up data stream settings.
 % The data stream constitutes "trainingPoints" x "epochs" training instances, i.e., the
 % online learning is continued until "trainingPoints" x "epochs" examples are processed
@@ -19,11 +19,6 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 %     International Conference on Computer Vision (ICCV) 2017.
 %
 % INPUTS
-% 	ftype	- (string) Choices are 'gist' and 'cnn'. load_gist.m and load_cnn.m
-%			   function are called. 'gist' and 'cnn' correspond to
-% 			   GIST and CNN descriptors, respectively.% 			   
-% 			   Please inspect/edit load_gist.m and load_cnn.m for
-% 			   further information. 
 % 	dataset - (string) A string denoting the dataset to be used. 
 %			   Please add/edit  load_gist.m and load_cnn.m for available
 %			   datasets.
@@ -83,12 +78,11 @@ function opts = get_opts(opts, ftype, dataset, nbits, varargin)
 % 
 % OUTPUTS
 %	opts	- (struct) struct containing name and values of the inputs, e.g.,
-%			   opts.ftype, opts.dataset, opts.nbits, ... .
+%			   opts.dataset, opts.nbits, ... .
 
 ip = inputParser;
 
 % train/test
-ip.addRequired('ftype', @isstr);
 ip.addRequired('dataset', @isstr);
 ip.addRequired('nbits', @isscalar);
 ip.addParamValue('noTrainingPoints', 20e3, @isscalar);
@@ -115,26 +109,26 @@ ip.addParamValue('flipThresh', -1, @isscalar);       % for trigger=bf
 
 % parse input
 ip.KeepUnmatched = true;
-ip.parse(ftype, dataset, nbits, varargin{:});
+ip.parse(lower(dataset), nbits, varargin{:});
 opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ASSERTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-assert(ismember(opts.ftype, {'gist', 'cnn'}));
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 
 assert(opts.nworkers>=0 && opts.nworkers<=12);
 
-if strcmp(dataset, 'labelme') 
-    assert(strcmp(opts.ftype, 'gist'));
+if strcmp(opts.dataset, 'labelme') 
     assert(~strcmpi(opts.methodID,'osh')); % OSH is inapplicable on LabelMe 
     opts.unsupervised = 1;
+    opts.ftype = 'gist';
 else
     opts.unsupervised = 0;
+    opts.ftype = 'cnn';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

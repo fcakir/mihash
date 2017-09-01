@@ -37,15 +37,17 @@ function W = init(obj, X, opts)
     instCntSeen    = 0;
     instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
     instFeatSkc    = [];
-    logInfo('%d batches of size %d, sketchSize=%d', batchCnt, batchsize, opts.sketchSize);
+    logInfo('%d batches of size %d, sketchSize=%d', ...
+        batchCnt, batchsize, opts.sketchSize);
 end
 
 
-function W = train1batch(obj, W, X, Y, I, t, opts)
+function [W, ind] = train1batch(obj, W, X, Y, I, t, opts)
     batchInd = t;
 
     %%%%%%%%%% LOAD BATCH DATA - BELOW %%%%%%%%%%
     ind = (batchInd-1)*batchsize + 1 : min(batchInd*batchsize, numUseToTrain);
+    ind = I(ind);
     instFeatInBatch = X(ind, :);
 
     instCntInBatch = size(instFeatInBatch, 1);

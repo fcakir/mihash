@@ -14,24 +14,22 @@ function train_online(methodObj, run_trial, opts)
 
 global Xtrain Ytrain thr_dist
 
-% time to learn the hash mapping
-train_time  = zeros(1, opts.ntrials);
-% time to update the hash table
-update_time = zeros(1, opts.ntrials);
-% time to update/maintain the reservoir
-reservoir_time = zeros(1, opts.ntrials);
-% number of hash table updates performed
-ht_updates  = zeros(1, opts.ntrials);
-% number of bit flips occured in the hash table, see update_hash_table.m
-bit_flips   = zeros(1, opts.ntrials);
-% number of bit recomputations, generally this equal ht_updates x hashcode length
-% x number of hashed items, see update_hash_table.m 
-bit_recomp  = zeros(1, opts.ntrials);
+info = struct(...
+    'train_time', [], ...      % time to learn the hash mapping
+    'update_time', [], ...     % time to update the hash table
+    'reservoir_time', [], ...  % time to update/maintain the reservoir
+    'ht_updates', [], ...      % number of hash table updates performed
+    'bit_recomp', []           % number of bit recomputations
+    );
+for n = fieldnames(info)
+    info.(n{1}) = zeros(1, opts.ntrials);
+end
 
 num_iters = ceil(opts.noTrainingPoints*opts.epoch/opts.batchSize);
 logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
-% NOTE: you can use parfor to run trials in parallel
+% NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
+%       to run the trials in parallel
 for t = 1:opts.ntrials
     rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
     if ~run_trial(t)
@@ -59,10 +57,13 @@ end
 
 % TODO use info struct
 logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-logInfo('HT_update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
+logInfo('HT update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
 logInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
 logInfo('');
 logInfo('Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
 logInfo('Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-logInfo('         Bit flips (per): %.4g +/- %.4g', mean(bit_flips), std(bit_flips));
+end
+
+
+function train_one_method()
 end
