@@ -28,7 +28,7 @@ if nargin < 2, normalizeX = 1; end
 if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 
 tic;
-load(fullfile(opts.datadir, 'PLACES205_AlexNet_fc7_PCA128.mat'), ...
+load(fullfile(opts.datadir, 'Places205_AlexNet_fc7_PCA128.mat'), ...
     'pca_feats', 'labels');
 X = pca_feats;
 Y = labels + 1;
