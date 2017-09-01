@@ -2,7 +2,7 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 % Implementation of an online hashing benchmark as described in: 
 %
 % "MIHash: Online Hashing with Mutual Information", 
-% Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
+% Fatih Cakir*, Kun He*, Sarah A. Bargal, Stan Sclaroff
 % (* equal contribution)
 % International Conference on Computer Vision (ICCV) 2017
 %
@@ -191,21 +191,49 @@ end
 
 
 % ---------------------------------------------------------------------
-% 3. TRAINING: run all _necessary_ trials
+% 3. TRAINING
 % ---------------------------------------------------------------------
-logInfo('Training ...');
+logInfo('%s: Training ...', opts.identifier);
 methodFunc = str2func(['methods.' method]);
 methodObj  = methodFunc();
-train_online(methodObj, run_trial, opts);
+% NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
+%       to run the trials in parallel
+for t = 1:opts.ntrials
+    logInfo('%s: random trial %d', opts.identifier, t);
+    if ~run_trial(t), logInfo('Skipped'); continue; end
+    rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
+    
+    % randomly set test checkpoints
+    test_iters = zeros(1, opts.ntests-2);
+    interval   = round(num_iters/(opts.ntests-1));
+    for i = 1:opts.ntests-2
+        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
+        test_iters(i) = iter;
+    end
+    test_iters = [1, test_iters, num_iters];  % always include 1st & last
+    
+    % train hashing method
+    % TODO info
+    prefix = sprintf('trial%d', t);
+    info = train_online(methodObj, Dataset, prefix, test_iters, opts);
+end
 logInfo('%s: Training is done.', opts.identifier);
+if any(run_trial)
+    % TODO info
+    logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
+    logInfo('HT update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
+    logInfo('Reservoir time (total): %.2f +/- %.2f', mean(reservoir_time), std(reservoir_time));
+    logInfo('');
+    logInfo('Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
+    logInfo('Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
+end
 
 
 % ---------------------------------------------------------------------
-% 4. TESTING
+% 4. TESTING: see test_online
 % ---------------------------------------------------------------------
-logInfo('Testing ...');
+logInfo('%s: Testing ...', opts.identifier);
 test_online(res_path, trial_path, run_trial, opts);
-logInfo('%s: Testing is done.', opts.identifier);
 
 
 % ---------------------------------------------------------------------

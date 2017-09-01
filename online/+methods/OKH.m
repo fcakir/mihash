@@ -76,6 +76,7 @@ methods
 
 
     function W = train1batch(obj, W, X, Y, I, t, opts)
+        % TODO affinity
         if ~opts.unsupervised
             idx_i = Y(2*t-1, :);
             idx_j = Y(2*t, :);

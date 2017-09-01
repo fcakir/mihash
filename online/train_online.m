@@ -1,66 +1,151 @@
-function train_online(methodObj, run_trial, opts)
-% This is the routine which calls different training subroutines based on the 
-% hashing method. Separate trials are executed here and rudimentary statistics 
-% are computed and displayed. 
+function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
+
+% Training routine for AdaptHash method, see demo_adapthash.m .
 %
 % INPUTS
-%    trainFunc - (func handle) Function handle determining which training routine
-% 			       to call
-%    run_trial - (vector)      Boolean vector specifying which trials to run.
-% 			       if opts.override=0, previously ran trials are skipped.
-%	opts   - (struct)      Parameter structure.
+% 	Xtrain - (float) n x d matrix where n is number of points 
+%       	         and d is the dimensionality 
+%
+% 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
+% 			 might be empty, e.g., LabelMe.
+%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
+%		         value to be used in determining whether two data instance
+% 		         are neighbors. If their distance is smaller, then they are
+% 		         considered neighbors.
+%	       	         Given the standard setup, this threshold value
+%		         is hard-wired to be compute from the 5th percentile 
+% 		         distance value obtain through 2,000 training instance.
+% 			 see load_gist.m . 
+% 	prefix - (string) Prefix of the "checkpoint" files.
+%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
+%	opts   - (struct) Parameter structure.
+%
 % OUTPUTS
-% 	none
+%  train_time  - (float) elapsed time in learning the hash mapping
+%  update_time - (float) elapsed time in updating the hash table
+%  res_time    - (float) elapsed time in maintaing the reservoir set
+%  ht_updates  - (int)   total number of hash table updates performed
+%  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
+% 
+% NOTES
+% 	W is d x b where d is the dimensionality 
+%            and b is the bit length / # hash functions
+%
+% 	If number_iterations is 1000, this means 2000 points will be processed, 
+% 	data arrives in pairs
 
-global Dataset
+%%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
+Xtrain = Dataset.Xtrain;
+Ytrain = Dataset.Ytrain;
 
-info = struct(...
-    'train_time', [], ...      % time to learn the hash mapping
-    'update_time', [], ...     % time to update the hash table
-    'reservoir_time', [], ...  % time to update/maintain the reservoir
-    'ht_updates', [], ...      % number of hash table updates performed
-    'bit_recomp', []           % number of bit recomputations
-    );
-for n = fieldnames(info)
-    info.(n{1}) = zeros(1, opts.ntrials);
-end
+H = [];  % hash table (mapped binary codes)
+W = methodObj.init(Xtrain, opts);  % hash mapping
 
+% keep track of the last W used to update the hash table
+% NOTE: W_lastupdate is NOT the W from last iteration
+W_lastupdate = W;  
 
-% NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
-%       to run the trials in parallel
-for t = 1:opts.ntrials
-    if ~run_trial(t)
-        logInfo('Trial %02d not required, skipped', t);
-        continue;
+% set up reservoir
+reservoir = [];
+reservoir_size = opts.reservoirSize;
+if reservoir_size > 0
+    reservoir.size = 0;
+    reservoir.PQ   = [];
+    reservoir.H    = [];  % hash table for the reservoir
+    reservoir.X    = zeros(0, size(Xtrain, 2));
+    if opts.unsupervised
+	reservoir.Y = [];
+    else
+        reservoir.Y = zeros(0, size(Ytrain, 2));
     end
-    logInfo('%s: random trial %d', opts.identifier, t);
-    rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
-    
-    % randomly set test checkpoints
-    test_iters      = zeros(1, opts.ntests);
-    test_iters(1)   = 1;
-    test_iters(end) = num_iters;
-    interval = round(num_iters/(opts.ntests-1));
-    for i = 1:opts.ntests-2
-        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-        test_iters(i+1) = iter;
+end
+
+% order training examples
+ntrain = size(Xtrain, 1);
+assert(opts.numTrain<=ntrain, sprintf('opts.numTrain > %d!', ntrain));
+trainInd = [];
+for e = 1:opts.epoch
+    trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
+end
+opts.numTrain = numel(trainInd);
+
+info = [];
+info.bits_computed_all = 0;
+info.update_iters = [];
+info.train_time  = 0;  
+info.update_time = 0;
+info.res_time    = 0;
+%%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
+num_iters = ceil(opts.numTrain / opts.batchSize);
+logInfo('%s: %d train_iters', opts.identifier, num_iters);
+
+for iter = 1:num_iters
+    t_ = tic;
+    [W, batchInd] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
+    train_time = train_time + toc(t_);
+
+    % ---- reservoir update & compute new reservoir hash table ----
+    t_ = tic;
+    Hres_new = [];
+    if reservoir_size > 0
+        % update reservoir
+        [reservoir, update_ind] = update_reservoir(reservoir, ...
+            Xtrain(batchInd, :), Ytrain(batchInd, :), ...
+            reservoir_size, W_lastupdate, opts.unsupervised);
+        % compute new reservoir hash table (do not update yet)
+        Hres_new = (W' * reservoir.X' > 0)';
     end
-    prefix = sprintf('trial%d', t);
-    
-    % train hash functions
-    % TODO train_one_method
-    info = train_one_method(methodObj, Dataset, prefix, test_iters, opts);
+
+    % ---- determine whether to update or not ----
+    [update_table, trigger_val] = trigger_update(iter, ...
+        opts, W_lastupdate, W, reservoir, Hres_new, ...
+        opts.unsupervised, thr_dist);
+    res_time = res_time + toc(t_);
+
+    % ---- hash table update, etc ----
+    if update_table
+        W_lastupdate = W;
+        update_iters = [update_iters, iter];
+
+        % update reservoir hash table
+        if reservoir_size > 0
+            reservoir.H = Hres_new;
+        end
+
+        % actual hash table update (record time)
+        t_ = tic;
+        H  = (Xtrain * W_lastupdate)' > 0;
+        bits_computed = prod(size(H));
+        bits_computed_all = bits_computed_all + bits_computed;
+        update_time = update_time + toc(t_);
+    end
+
+    % ---- save intermediate model ----
+    if ismember(iter, test_iters)
+        % CHECKPOINT
+        F = sprintf('%s/%s_iter%d.mat', opts.expdir, prefix, iter);
+        save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
+            'train_time', 'update_time', 'res_time', 'update_iters');
+
+        logInfo(['*checkpoint*\n[%s] %s\n' ...
+            '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
+            '     total BR = %g'], ...
+            prefix, opts.identifier, iter*opts.batchSize, opts.numTrain, ...
+            train_time, update_time, numel(update_iters), res_time, ...
+            bits_computed_all);
+    end
 end
+%%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
-% TODO use info struct
-logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-logInfo('HT update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
-logInfo('Reservoir time (total): %.2f +/- %.2f', mean(resservoir_time), std(resservoir_time));
-logInfo('');
-logInfo('Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-logInfo('Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-end
+% save final model, etc
+F = sprintf('%s/%s.mat', opts.expdir, prefix);
+save(F, 'W', 'H', 'bits_computed_all', ...
+    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
 
-
-function train_one_method()
+ht_updates = numel(update_iters);
+logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
+logInfo('[%s] Saved: %s\n', prefix, F);
 end
