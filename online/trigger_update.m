@@ -1,8 +1,7 @@
-function [update_table, ret_val] = trigger_update(iter, opts, ...
-    W_last, W, reservoir, Hres_new, varargin)
+function update_table = trigger_update(iter, W_last, W, reservoir, ...
+    Hres_new, opts)
 
 update_table = false;
-ret_val = -1;
 
 % ----------------------------------------------
 % update on first iteration
@@ -19,53 +18,32 @@ if sum(abs(W_last(:) - W(:))) < 1e-6
 end
 
 % ----------------------------------------------
-% no reservoir -- use updateInterval
-if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
-    update_table = ~mod(iter*opts.batchSize, opts.updateInterval);
-    return;
+% at an update interval
+if ~mod(iter*opts.batchSize, opts.updateInterval)
+
+    if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
+        % no reservoir or 'fix' -- update
+        update_table = true;
+
+    elseif opts.reservoirSize > 0 && opts.updateInterval > 0
+        % using reservoir + MI criterion
+        % signal update of hash table, if MI improvement > threshold
+        assert(strcmp(opts.trigger, 'mi'));
+
+        % affinity matrix
+        Aff = affinity(reservoir.X, reservoir.Y, opts);
+
+        % MI improvement
+        mi_old  = eval_mutualinfo(reservoir.H, Aff);
+        mi_new  = eval_mutualinfo(Hres_new, Aff);
+        mi_impr = mi_new - mi_old;
+
+        % update?
+        update_table = mi_impr > opts.miThresh;
+        logInfo('MI improvement = %g, update = %d', mi_impr, update_table);
+    end
 end
 
-% ----------------------------------------------
-% using reservoir + MI criterion
-% signal update of hash table, when:
-%   1) we're at an updateInterval, AND
-%   2) MI improvement > threshold
-if opts.updateInterval > 0  &&  ...
-        mod(iter*opts.batchSize, opts.updateInterval) == 0
-
-    assert(strcmp(opts.trigger, 'mi'));
-    mi_impr = trigger_mutualinfo(iter, W, W_last, reservoir.X, reservoir.Y, ...
-        reservoir.H, Hres_new, reservoir.size, varargin{:});
-    update_table = mi_impr > opts.miThresh;
-    logInfo('MI improvement = %g, update = %d', mi_impr, update_table);
-    ret_val = mi_impr;
-end
-
-end
-
-
-% -------------------------------------------------------------------------
-function mi_impr = trigger_mutualinfo(iter, W, W_last, X, Y, ...
-    Hres, Hnew, reservoir_size, unsupervised, thr_dist)
-
-nbits = size(Hres, 2);
-assert(nbits == size(Hnew,2));
-assert(isequal(reservoir_size, size(Hres,1), size(Hnew,1)));
-assert(isequal((W_last'*X' > 0)', Hres));
-assert((~unsupervised && ~isempty(Y)) || (unsupervised && isempty(Y)));
-
-% affinity matrix
-if exist('unsupervised', 'var') == 0 
-    unsupervised = false; 
-    Aff = (repmat(Y,1,length(Y)) == repmat(Y,1,length(Y))');
-elseif unsupervised
-    assert(exist('thr_dist', 'var') == 1);
-    Aff = squareform(pdist(X, 'euclidean')) <= thr_dist;
-end
-
-mi_old  = eval_mutualinfo(Hres, Aff);
-mi_new  = eval_mutualinfo(Hnew, Aff);
-mi_impr = mi_new - mi_old;
 end
 
 
