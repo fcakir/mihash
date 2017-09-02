@@ -42,25 +42,15 @@ function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
 % hashing method. Separate trials are executed here and rudimentary statistics 
 % are computed and displayed. 
 %
-% Training routine for AdaptHash method, see demo_adapthash.m .
+% Training routine for online hashing
+>>>>>>> simplified trigger_update
 %
 % INPUTS
-% 	Xtrain - (float) n x d matrix where n is number of points 
-%       	         and d is the dimensionality 
-%
-% 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
-% 			 might be empty, e.g., LabelMe.
-%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
-%		         value to be used in determining whether two data instance
-% 		         are neighbors. If their distance is smaller, then they are
-% 		         considered neighbors.
-%	       	         Given the standard setup, this threshold value
-%		         is hard-wired to be compute from the 5th percentile 
-% 		         distance value obtain through 2,000 training instance.
-% 			 see load_gist.m . 
+%    methodObj - (object)
+%      Dataset - (struct) 
 % 	prefix - (string) Prefix of the "checkpoint" files.
-%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
-%	opts   - (struct) Parameter structure.
+%   test_iters - (int)    A vector specifiying the checkpoints, see train.m .
+%         opts - (struct) Parameter structure.
 %
 % OUTPUTS
 %  train_time  - (float) elapsed time in learning the hash mapping
@@ -69,12 +59,6 @@ function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
 %  ht_updates  - (int)   total number of hash table updates performed
 %  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
 % 
-% NOTES
-% 	W is d x b where d is the dimensionality 
-%            and b is the bit length / # hash functions
-%
-% 	If number_iterations is 1000, this means 2000 points will be processed, 
-% 	data arrives in pairs
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 Xtrain = Dataset.Xtrain;
@@ -142,22 +126,19 @@ for iter = 1:num_iters
     end
 
     % ---- determine whether to update or not ----
-    [update_table, trigger_val] = trigger_update(iter, ...
-        opts, W_lastupdate, W, reservoir, Hres_new, ...
-        opts.unsupervised, thr_dist);
+    update_table = trigger_update(iter, W_lastupdate, W, reservoir, ...
+        Hres_new, opts);
     res_time = res_time + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
         W_lastupdate = W;
         update_iters = [update_iters, iter];
-
-        % update reservoir hash table
         if reservoir_size > 0
             reservoir.H = Hres_new;
         end
 
-        % actual hash table update (record time)
+        % actual hash table update
         t_ = tic;
         H  = (Xtrain * W_lastupdate)' > 0;
         bits_computed = prod(size(H));
@@ -165,9 +146,8 @@ for iter = 1:num_iters
         update_time = update_time + toc(t_);
     end
 
-    % ---- save intermediate model ----
+    % ---- CHECKPOINT: save intermediate model ----
     if ismember(iter, test_iters)
-        % CHECKPOINT
         F = sprintf('%s/%s_iter%d.mat', opts.expdir, prefix, iter);
         save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
             'train_time', 'update_time', 'res_time', 'update_iters');
@@ -182,7 +162,7 @@ for iter = 1:num_iters
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
-% save final model, etc
+% save final model
 F = sprintf('%s/%s.mat', opts.expdir, prefix);
 save(F, 'W', 'H', 'bits_computed_all', ...
     'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
