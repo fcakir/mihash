@@ -1,4 +1,4 @@
-function test_online(res_fn, trial_fn, res_exist, opts)
+function info = test_online(Dataset, trial, opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -42,136 +42,77 @@ function test_online(res_fn, trial_fn, res_exist, opts)
 % saved during training. 
 %
 % INPUTS
-% 	res_fn - (string)Path to final results file.
-%   trial_fn - (cell) 	Cell array containing the paths to individual trial results
-% 			files.
-% res_exist   - (int)   Boolean vector indicating whether the trial results files needed
-% 			to be computed. For example, if opts.override=0 and the
-% 		   	corresponding trial result file is computed (from a previous
-% 			but identical experiment), the testing is skipped for that
-% 			trial.
-%	opts  - (struct)Parameter structure.
+%       paths (struct)
+%               result - (string) final result path
+%               diary  - (string) exp log path
+%               trials - (cell, string) paths of result for each trial
+%	opts  (struct) 
 % 
 % OUTPUTS
 %	none
 
-global Xtest Ytest Xtrain Ytrain thr_dist
 
-if isempty(Ytrain)
-    Affinity = pdist2(Xtrain, Xtest, 'euclidean') <= thr_dist; %logical
-elseif size(Ytrain, 2) > 1
-    Affinity = (Ytrain * testY' > 0);
-elseif size(Ytrain, 2) == 1
-    Affinity = bsxfun(@eq, Ytrain, testY');
+Xtrain = Dataset.Xtrain;
+Ytrain = Dataset.Ytrain;
+Xtest  = Dataset.Xtest;
+Ytest  = Dataset.Ytest;
+Aff    = affinity(Xtrain, Xtest, Ytrain, Ytest, opts);
+
+prefix = sprintf('%s/trial%d', opts.expdir, trial);
+model  = load([prefix '.mat']);
+
+% handle transformations to X
+if strcmp(opts.methodID, 'okh')
+    % do kernel mapping for test data
+    testX_t = exp(-0.5*sqdist(Xtest', model.Xanchor')/model.sigma^2)';
+    testX_t = [testX_t; ones(1,size(testX_t,2))]';
+elseif strcmp(opts.methodID, 'sketch')
+    % subtract mean
+    testX_t = bsxfun(@minus, Xtest, model.instFeatAvePre);
 else
-    error('Ytrain error in test.m');
+    % OSH, AdaptHash: nothing
+    testX_t = Xtest;
 end
 
-clear res bits_computed_all
-clear train_iter train_time train_examples
+info = struct(...
+    'metric'         , [] , ...
+    'train_time'     , [] , ...
+    'train_iter'     , [] , ...
+    'train_examples' , [] , ...
+    'bits_computed'  , [] );
 
-for t = 1:opts.ntrials
-    if res_exist(t)
-        logInfo('Trial %d: results exist', t);
-        load(trial_fn{t});
+for i = 1:length(model.test_iters)
+    iter = model.test_iters(i);
+    fprintf('Trial %d, Checkpoint %5d/%d, ', trial, iter*opts.batchSize, ...
+        opts.numTrain*opts.epoch);
+
+    % determine whether to actually run test or not
+    % if there's no HT update since last test, just copy results
+    if i == 1
+        runtest = true;
     else
-        clear t_res t_bits_computed_all
-        clear t_train_iter t_train_time
-
-        Tprefix = sprintf('%s/trial%d', opts.expdir, t);
-        Tmodel = load(sprintf('%s.mat', Tprefix));
-
-        % handle transformations to X
-        if strcmp(opts.methodID, 'okh')
-            % do kernel mapping for test data
-            testX_t = exp(-0.5*sqdist(Xtest', Tmodel.Xanchor')/Tmodel.sigma^2)';
-            testX_t = [testX_t; ones(1,size(testX_t,2))]';
-        elseif strcmp(opts.methodID, 'sketch')
-            % subtract mean
-            testX_t = bsxfun(@minus, Xtest, Tmodel.instFeatAvePre);
-        else
-            % OSH, AdaptHash: nothing
-            testX_t = Xtest;
-        end
-
-        for i = 1:length(Tmodel.test_iters)
-            % determine whether to actually run test or not
-            % if there's no HT update since last test, just copy results
-            if i == 1
-                runtest = true;
-            else
-                st = Tmodel.test_iters(i-1);
-                ed = Tmodel.test_iters(i);
-                runtest = any(Tmodel.update_iters>st & Tmodel.update_iters<=ed);
-            end
-
-            iter = Tmodel.test_iters(i);
-            d = load(sprintf('%s_iter%d.mat', Tprefix, iter));
-            fprintf('Trial %d, Checkpoint %5d/%d, ', t, iter*opts.batchSize, ...
-                opts.noTrainingPoints*opts.epoch);
-
-            if runtest
-                % test hash table
-                % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
-                %       to compute Htest, to make sure it's computed using the same
-                %       hash mapping as Htrain.
-                Htest  = (testX_t * d.W_lastupdate > 0)';
-                Htrain = d.H;
-
-                % evaluate
-                t_res(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Affinity);
-                t_bits_computed_all(i) = d.bits_computed_all;
-            else
-                t_res(i) = t_res(i-1);
-                t_bits_computed_all(i) = t_bits_computed_all(i-1);
-                fprintf(' %g\n', t_res(i));
-            end
-            t_train_time(i) = d.train_time;
-            t_train_iter(i) = iter;
-        end
-        clear Htrain Htest
-        save(trial_fn{t}, 't_res', 't_bits_computed_all', ...
-            't_train_iter', 't_train_time');
+        st = model.test_iters(i-1);
+        ed = model.test_iters(i);
+        runtest = any(model.update_iters>st & model.update_iters<=ed);
     end
-    res(t, :) = t_res;
-    bits_computed_all(t, :) = t_bits_computed_all;
-    train_time(t, :) = t_train_time;
-    train_iter(t, :) = t_train_iter;
-    train_examples(t, :) = t_train_iter * opts.batchSize;
-end
-logInfo('  FINAL %s: %.3g +/- %.3g', opts.metric, mean(res(:,end)), std(res(:,end)));
-logInfo('    AUC %s: %.3g +/- %.3g', opts.metric, mean(mean(res, 2)), std(mean(res, 2)));
 
-% save all trials in a single file
-save(res_fn, 'res', 'bits_computed_all', 'train_iter', 'train_time', ...
-    'train_examples');
-
-% visualize
-if opts.showplots
-    % draw curves, with auto figure saving
-    figname = sprintf('%s_trex.fig', res_fn);
-    show_res(figname, res, train_examples, 'Training Examples', opts.identifier, opts.override);
-    figname = sprintf('%s_cpu.fig', res_fn);
-    show_res(figname, res, train_time, 'CPU Time', opts.identifier, opts.override);
-    figname = sprintf('%s_recomp.fig', res_fn);
-    show_res(figname, res, bits_computed_all, 'Bit Recomputations', opts.identifier, opts.override);
-    drawnow;
-end
-end
-
-% -----------------------------------------------------------
-function show_res(figname, Y, X, xlb, ttl, override)
-try 
-    assert(~override);
-    openfig(figname);
-catch
-    [px, py] = avg_curve(Y, X);
-    figure, if length(px) == 1, plot(px, py, '+'), else plot(px, py), end
-    grid, title(ttl), xlabel(xlb), ylabel('res')
-    saveas(gcf, figname);
-    if isempty(strfind(computer, 'WIN'))
-        unix(['chmod g+w ', figname]); 
-        unix(['chmod o-w ', figname]); 
+    d = load(sprintf('%s_iter%d.mat', prefix, iter));
+    if runtest
+        % NOTE: for intermediate iters, need to use W_lastupdate (not W!)
+        %       to compute Htest, to make sure it's computed using the same
+        %       hash mapping as Htrain.
+        Htest  = (testX_t * d.W_lastupdate > 0)';
+        Htrain = d.H;
+        metric(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff);
+        info.bits_computed(i) = d.bits_computed;
+    else
+        info.metric(i) = info.metric(i-1);
+        info.bits_computed(i) = info.bits_computed(i-1);
+        fprintf(' %g\n', info.metric(i));
     end
+    info.train_time(i) = d.train_time;
+    info.train_iter(i) = iter;
+    info.train_examples(i) = iter * opts.batchSize;
 end
+
 end

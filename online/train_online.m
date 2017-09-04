@@ -1,4 +1,5 @@
-function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
+function info = train_one_method(methodObj, Dataset, res_file, trial, ...
+    test_iters, opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -48,16 +49,17 @@ function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
 % INPUTS
 %    methodObj - (object)
 %      Dataset - (struct) 
-% 	prefix - (string) Prefix of the "checkpoint" files.
-%   test_iters - (int)    A vector specifiying the checkpoints, see train.m .
+%     res_file - (string) path to result file
+% 	 trial - (int) trial number
+%   test_iters - (int) A vector specifiying the checkpoints, see train.m .
 %         opts - (struct) Parameter structure.
 %
 % OUTPUTS
 %  train_time  - (float) elapsed time in learning the hash mapping
 %  update_time - (float) elapsed time in updating the hash table
-%  res_time    - (float) elapsed time in maintaing the reservoir set
+%  reserv_time - (float) elapsed time in maintaing the reservoir set
 %  ht_updates  - (int)   total number of hash table updates performed
-%  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
+%  bits_computed - (int) total number of bit recomputations, see update_hash_table.m
 % 
 
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
@@ -96,11 +98,14 @@ end
 opts.numTrain = numel(trainInd);
 
 info = [];
-info.bits_computed_all = 0;
+info.H            = [];
+info.W            = [];
+info.W_lastupdate = [];
 info.update_iters = [];
-info.train_time  = 0;  
-info.update_time = 0;
-info.res_time    = 0;
+info.bit_recomp   = 0;
+info.time_train   = 0;
+info.time_update  = 0;
+info.time_reserv  = 0;
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -110,8 +115,8 @@ logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
 for iter = 1:num_iters
     t_ = tic;
-    [W, batchInd] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
-    train_time = train_time + toc(t_);
+    [W, batch] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
+    info.time_train = info.time_train + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
     t_ = tic;
@@ -119,7 +124,7 @@ for iter = 1:num_iters
     if reservoir_size > 0
         % update reservoir
         [reservoir, update_ind] = update_reservoir(reservoir, ...
-            Xtrain(batchInd, :), Ytrain(batchInd, :), ...
+            Xtrain(batch, :), Ytrain(batch, :), ...
             reservoir_size, W_lastupdate, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (W' * reservoir.X' > 0)';
@@ -128,46 +133,56 @@ for iter = 1:num_iters
     % ---- determine whether to update or not ----
     update_table = trigger_update(iter, W_lastupdate, W, reservoir, ...
         Hres_new, opts);
-    res_time = res_time + toc(t_);
+    info.time_reserv = info.time_reserv + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        W_lastupdate = W;
-        update_iters = [update_iters, iter];
+        W_lastupdate = W;  % update snapshot
+        info.update_iters = [info.update_iters, iter];
         if reservoir_size > 0
             reservoir.H = Hres_new;
         end
 
-        % actual hash table update
+        % recompute hash table
+        % NOTE: We only record time for matrix multiplication here as the data 
+        %       (Xtrain) is completely loaded in memory. This is not necessarily 
+        %       the case with large databases, where disk I/O would probably be 
+        %       involved in the hash table recomputation.
         t_ = tic;
         H  = (Xtrain * W_lastupdate)' > 0;
-        bits_computed = prod(size(H));
-        bits_computed_all = bits_computed_all + bits_computed;
-        update_time = update_time + toc(t_);
+        info.bit_recomp  = info.bit_recomp + prod(size(H));
+        info.time_update = info.time_update + toc(t_);
     end
 
     % ---- CHECKPOINT: save intermediate model ----
     if ismember(iter, test_iters)
-        F = sprintf('%s/%s_iter%d.mat', opts.expdir, prefix, iter);
-        save(F, 'W', 'W_lastupdate', 'H', 'bits_computed_all', ...
-            'train_time', 'update_time', 'res_time', 'update_iters');
+        info.W_lastupdate = W_lastupdate;
+        info.W = W;
+        info.H = H;
+        F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, trial, iter);
+        save(F, '-struct', 'info');
 
-        logInfo(['*checkpoint*\n[%s] %s\n' ...
+        logInfo(['*checkpoint*\n[Trial %d] %s\n' ...
             '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
             '     total BR = %g'], ...
-            prefix, opts.identifier, iter*opts.batchSize, opts.numTrain, ...
-            train_time, update_time, numel(update_iters), res_time, ...
-            bits_computed_all);
+            trial, opts.identifier, iter*opts.batchSize, opts.numTrain, ...
+            info.time_train, info.time_update, numel(info.update_iters), ...
+            info.time_reserv, info.bit_recomp);
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
 % save final model
-F = sprintf('%s/%s.mat', opts.expdir, prefix);
-save(F, 'W', 'H', 'bits_computed_all', ...
-    'train_time', 'update_time', 'res_time', 'test_iters', 'update_iters');
+info.ht_updates = numel(info.update_iters);
+info.test_iters = test_iters;
+info = rmfield(info, 'W_lastupdate');
 
-ht_updates = numel(update_iters);
-logInfo('%d Hash Table updates, bits computed: %g', ht_updates, bits_computed_all);
-logInfo('[%s] Saved: %s\n', prefix, F);
+save(res_file, '-struct', 'info');
+logInfo('HT updates: %d, bits computed: %d', info.ht_updates, info.bit_recomp);
+logInfo('[Trial %d] Saved: %s\n', trial, res_file);
+
+% rm W/H when returning as stats
+info = rmfield(info, 'W');
+info = rmfield(info, 'H');
+
 end

@@ -1,4 +1,4 @@
-function record_diary(opts)
+function path = record_diary(opts, record)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -43,6 +43,11 @@ ind = 1;
 while exist(diary_path(ind), 'file')
     ind = ind + 1;
 end
-diary(diary_path(ind));
-diary('on');
+if record
+    path = diary_path(ind);
+    diary(path);
+    diary('on');
+else
+    path = diary_path(ind-1);
+end
 end

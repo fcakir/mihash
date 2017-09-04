@@ -1,8 +1,8 @@
-function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varargin)
+function paths = demo_online(method, dataset, nbits, varargin)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
-% If used for academic purposes please cite the below paper:
+% Implementation of an online hashing benchmark as described in: 
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah A. Bargal, Stan Sclaroff
@@ -39,15 +39,16 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 %
 %------------------------------------------------------------------------------
 % INPUTS
-%   method   - (string) from {'mihash', 'adapt', 'okh', 'osh', 'sketch'}
-%   ftype    - (string) feature type, from {'gist', 'cnn'}
-%   dataset  - (string) from {'cifar', 'sun','nus'}
-%   nbits    - (integer) length of binary code, 32 is used in the paper
+%   method   - (string) in {'MIHash', 'AdaptHash', 'OKH', 'OSH', 'SketchHash'}
+%   dataset  - (string) in {'cifar', 'places', 'labelme'}
+%   nbits    - (int) length of binary code, 32 is used in the paper
 %   varargin - key-value pairs, see get_opts.m for details
 %
 % OUTPUTS
-%   res_path - (string) Path to the results file
-%   dia_path - (string) Path to the experimental log
+%   paths (struct)
+%       result - (string) Path to the results file
+%       diary  - (string) Path to the experimental log
+%       trials - (cell, string) Result files for each trial
 %
 % A result file is created for each training trial. Such a file has the 
 % 'METRIC_trialX.mat' format, and is saved in the results folder specified by 
@@ -83,12 +84,12 @@ if strcmp(method, 'MIHash')
     % 	           used as second argument to sigmf.m, see Section 3.2
     %     initRS - (int) Initial reservoir size. Must be a positive value. 
     %                    >=500 is recommended. 
-    ip.addParamValue('normalize', true, @islogical);
-    ip.addParamValue('no_bins', 16, @isscalar);
-    ip.addParamValue('stepsize', 1, @isscalar);
-    ip.addParamValue('decay', 0, @isscalar);
-    ip.addParamValue('sigscale', 10, @isscalar);
-    ip.addParamValue('initRS', 500, @isscalar); % initial size of reservoir
+    ip.addParamValue('normalize' , true , @islogical);
+    ip.addParamValue('no_bins'   , 16   , @isscalar);
+    ip.addParamValue('stepsize'  , 1    , @isscalar);
+    ip.addParamValue('decay'     , 0    , @isscalar);
+    ip.addParamValue('sigscale'  , 10   , @isscalar);
+    ip.addParamValue('initRS'    , 500  , @isscalar); % initial reservoir size
     ip.parse(varargin{:}); opts = ip.Results;
 
     opts.identifier = sprintf('Bins%dSig%g_Step%gDecay%g_InitRS%g', opts.no_bins, ...
@@ -106,10 +107,10 @@ elseif strcmp(method, 'AdaptHash')
     %	alpha 	 - (float) [0, 1] \alpha as in Alg. 1 of AdaptHash. 
     % 	beta 	 - (float) \lambda as in Alg. 1
     % 	stepsize - (float) The learning rate. 
-    ip.addParamValue('normalize', true, @islogical);
-    ip.addParamValue('alpha', 0.9, @isscalar);
-    ip.addParamValue('beta', 1e-2, @isscalar);
-    ip.addParamValue('stepsize', 1, @isscalar);
+    ip.addParamValue('normalize' , true , @islogical);
+    ip.addParamValue('alpha'     , 0.9  , @isscalar);
+    ip.addParamValue('beta'      , 1e-2 , @isscalar);
+    ip.addParamValue('stepsize'  , 1    , @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
 
     opts.identifier = sprintf('A%gB%gS%g', opts.alpha, opts.beta, opts.stepsize);
@@ -125,9 +126,9 @@ elseif strcmp(method, 'OKH')
     % PARAMETERS
     %	c 	 - (float) Parameter C as in Alg. 1 of OKH. 
     % 	alpha	 - (float) \alpha as in Eq. 3 of OKH
-    ip.addParamValue('normalize', true, @islogical);
-    ip.addParamValue('c', 0.1, @isscalar);
-    ip.addParamValue('alpha', 0.2, @isscalar);
+    ip.addParamValue('normalize' , true , @islogical);
+    ip.addParamValue('c'         , 0.1  , @isscalar);
+    ip.addParamValue('alpha'     , 0.2  , @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
 
     opts.identifier = sprintf('C%gA%g', opts.c, opts.alpha);
@@ -151,9 +152,9 @@ elseif strcmp(method, 'OSH')
     % 			   described in the above papers. SGDBoost=0, corresponds
     % 			   to a hinge loss formulation without the online boosting 
     % 			   approach. SGDBoost=0 typically works better.
-    ip.addParamValue('normalize', true, @islogical);
-    ip.addParamValue('stepsize', 0.1, @isscalar);
-    ip.addParamValue('SGDBoost', 1, @isscalar);
+    ip.addParamValue('normalize' , true , @islogical);
+    ip.addParamValue('stepsize'  , 0.1  , @isscalar);
+    ip.addParamValue('SGDBoost'  , 1    , @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
 
     opts.identifier = sprintf('B%dS%g', opts.SGDBoost, opts.stepsize);
@@ -169,9 +170,9 @@ elseif strcmp(method, 'SketchHash')
     % PARAMETERS
     % 	sketchSize - (int) size of the sketch matrix.
     % 	 batchSize - (int) The batch size, i.e. size of the data chunk
-    ip.addParamValue('normalize', false, @islogical);
-    ip.addParamValue('sketchSize', 200, @isscalar);
-    ip.addParamValue('batchSize', 50, @isscalar);
+    ip.addParamValue('normalize'  , false , @islogical);
+    ip.addParamValue('sketchSize' , 200   , @isscalar);
+    ip.addParamValue('batchSize'  , 50    , @isscalar);
     ip.parse(varargin{:}); opts = ip.Results;
 
     opts.identifier = sprintf('Ske%dBat%d', opts.sketchSize, opts.batchSize);
@@ -183,28 +184,28 @@ end
 opts.methodID = method;
 
 % get generic fields + necessary preparation
-opts = get_opts(opts, ftype, dataset, nbits, varargin{:});
+opts = get_opts(opts, dataset, nbits, varargin{:});
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % online hashing demo
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+if opts.override  % will purge expdir, use with care
+    logInfo('OVERRIDE: deleting existing results!');
+    unix(['rm -fv ', fullfile(opts.expdir, '*')]);
+end
 
 % ---------------------------------------------------------------------
-% 1. determine which trials to run
+% 1. Set up paths
 % ---------------------------------------------------------------------
 prefix = fullfile(opts.expdir, opts.metric);
-res_path = sprintf('%s_%dtrials.mat', prefix, opts.ntrials);
-trial_path = arrayfun(@(t) sprintf('%s_trial%d.mat', prefix, t), ...
+paths  = [];
+paths.result = sprintf('%s_%dtrials.mat', prefix, opts.ntrials);
+paths.trials = arrayfun(@(t) sprintf('%s_trial%d.mat', prefix, t), ...
     1:opts.ntrials, 'uniform', false);
-if opts.override
-    unix(['rm -fv ', fullfile(opts.expdir, 'diary*')]);
-    run_trial = ones(1, opts.ntrials, 'logical');
-else
-    run_trial = cellfun(@(f) ~exist(f, 'file'), trial_path);
-end
-if any(run_trial), record_diary(opts); end
+res_exist    = cellfun(@(f) exist(f, 'file'), paths.trials);
+paths.diary  = record_diary(opts, ~all(res_exist));
 
 
 % ---------------------------------------------------------------------
@@ -213,10 +214,12 @@ if any(run_trial), record_diary(opts); end
 global Dataset
 if isfield(Dataset, 'name') && strcmp(Dataset.name, opts.dataset)
     logInfo('Dataset [%s] already loaded', Dataset.name);
-elseif any(run_trial)
+elseif ~all(res_exist)
     datasetFunc  = str2func(['datasets.' opts.dataset]);
     Dataset      = datasetFunc(opts);
     Dataset.name = opts.dataset;
+    % thr_dist may be used in computing affinity matrices
+    opts.thr_dist = Dataset.thr_dist;
 end
 
 
@@ -226,52 +229,75 @@ end
 logInfo('%s: Training ...', opts.identifier);
 methodFunc = str2func(['methods.' method]);
 methodObj  = methodFunc();
+
 % NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
 %       to run the trials in parallel
+info_all = [];
 for t = 1:opts.ntrials
     logInfo('%s: random trial %d', opts.identifier, t);
-    if ~run_trial(t), logInfo('Skipped'); continue; end
     rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
-    
-    % randomly set test checkpoints
-    test_iters = zeros(1, opts.ntests-2);
-    interval   = round(num_iters/(opts.ntests-1));
-    for i = 1:opts.ntests-2
-        iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
-        test_iters(i) = iter;
+
+    if res_exist(t)
+        info = load(paths.trials{t}, 'ht_updates', 'bit_recomp', ...
+            'time_train', 'time_update', 'time_reserv');
+        logInfo('Results exist');
+    else
+        % randomly set test checkpoints
+        test_iters = zeros(1, opts.ntests-2);
+        interval   = round(num_iters/(opts.ntests-1));
+        for i = 1:opts.ntests-2
+            iter = interval*i + randi([1 round(interval/3)]) - round(interval/6);
+            test_iters(i) = iter;
+        end
+        test_iters = [1, test_iters, num_iters];  % always include 1st & last
+        
+        % train hashing method
+        info = train_online(methodObj, Dataset, paths.trials{t}, t, ...
+            test_iters, opts);
     end
-    test_iters = [1, test_iters, num_iters];  % always include 1st & last
-    
-    % train hashing method
-    % TODO info
-    prefix = sprintf('trial%d', t);
-    info = train_online(methodObj, Dataset, prefix, test_iters, opts);
+    info_all = [info_all, info];
 end
 logInfo('%s: Training is done.', opts.identifier);
-if any(run_trial)
-    % TODO info
-    logInfo(' Training time (total): %.2f +/- %.2f', mean(train_time), std(train_time));
-    logInfo('HT update time (total): %.2f +/- %.2f', mean(update_time), std(update_time));
-    logInfo('Reservoir time (total): %.2f +/- %.2f', mean(reservoir_time), std(reservoir_time));
-    logInfo('');
-    logInfo('Hash Table Updates (per): %.4g +/- %.4g', mean(ht_updates), std(ht_updates));
-    logInfo('Bit Recomputations (per): %.4g +/- %.4g', mean(bit_recomp), std(bit_recomp));
-end
+
+reportStat = @(field, str, fmt) logInfo(['%s: ' fmt ' +/- ' fmt], str, ...
+    mean(arrayfun(@(x), x.(field)(end), info_all)), ...
+    std (arrayfun(@(x), x.(field)(end), info_all)));
+
+reportStat('time_train' , '     Training Time', '%.2f');
+reportStat('time_update', '    HT update time', '%.2f');
+reportStat('time_reserv', '    Reservoir time', '%.2f');
+logInfo('');
+reportStat('ht_updates' , 'Hash Table Updates', '%.4g');
+reportStat('bit_recomp' , 'Bit Recomputations', '%.3d');
 
 
 % ---------------------------------------------------------------------
 % 4. TESTING: see test_online
 % ---------------------------------------------------------------------
 logInfo('%s: Testing ...', opts.identifier);
-test_online(res_path, trial_path, run_trial, opts);
+try
+    info_all = load(paths.result);
+catch
+    info_all = [];
+    for t = 1:opts.ntrials
+        info = test_online(Dataset, t, opts);
+        info_all = [info_all, info];
+    end
+    save(paths.result, '-struct', 'info_all');
+end
+auc   = arrayfun(@(x) mean(x.metric), info_all);
+final = arrayfun(@(x) x.metric(end) , info_all);
+logInfo('');
+logInfo('  AUC %s: %.3g +/- %.3g', opts.metric, mean(auc), std(auc));
+logInfo('FINAL %s: %.3g +/- %.3g', opts.metric, mean(final), std(final));
 
 
 % ---------------------------------------------------------------------
 % 5. Done
 % ---------------------------------------------------------------------
 logInfo('All done.');
-logInfo('Results file: %s', res_path);
-logInfo('  Diary file: %s', dia_path);
+logInfo('Results file: %s', paths.result);
+logInfo('  Diary file: %s', paths.diary);
 diary('off');
 
 end
