@@ -2,7 +2,7 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
-% If used for please cite the below paper:
+% If used for academic purposes please cite the below paper:
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
