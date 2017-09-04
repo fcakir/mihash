@@ -12,7 +12,7 @@ function [train_time, update_time, res_time, ht_updates, bits_computed_all] = ..
 % 
 % Usage of code from authors not listed above might be subject
 % to different licensing. Please check with the corresponding authors for
-% information.
+% additional information.
 %
 % Redistribution and use in source and binary forms, with or without
 % modification, are permitted provided that the following conditions are met:

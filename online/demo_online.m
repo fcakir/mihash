@@ -11,7 +11,7 @@ function [res_path, dia_path] = demo_online(method, ftype, dataset, nbits, varar
 % 
 % Usage of code from authors not listed above might be subject
 % to different licensing. Please check with the corresponding authors (see below)
-% for information.
+% for additional information.
 %
 % Redistribution and use in source and binary forms, with or without
 % modification, are permitted provided that the following conditions are met:

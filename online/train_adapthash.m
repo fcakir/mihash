@@ -11,7 +11,7 @@ function info = train_one_method(methodObj, Dataset, prefix, test_iters, opts)
 % 
 % Usage of code from authors not listed above might be subject
 % to different licensing. Please check with the corresponding authors for
-% information.
+% additional information.
 %
 % Redistribution and use in source and binary forms, with or without
 % modification, are permitted provided that the following conditions are met:
