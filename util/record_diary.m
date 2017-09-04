@@ -1,9 +1,14 @@
-function record_diary(opts)
+function path = record_diary(opts, record)
 diary_path = @(i) sprintf('%s/diary_%03d.txt', opts.expdir, i);
 ind = 1;
 while exist(diary_path(ind), 'file')
     ind = ind + 1;
 end
-diary(diary_path(ind));
-diary('on');
+if record
+    path = diary_path(ind);
+    diary(path);
+    diary('on');
+else
+    path = diary_path(ind-1);
+end
 end

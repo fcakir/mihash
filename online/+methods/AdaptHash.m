@@ -55,7 +55,7 @@ methods
         Xsample = X(sampleIdx, :);
 
         % TODO affinity
-        s = 2*affinity(Xsample, [], opts) - 1;
+        s = 2*affinity(Xsample, Xsample, [], [], opts) - 1;
         if ~opts.unsupervised
             s = 2*isequal(Y(sampleIdx(1)), Y(sampleIdx(2))) - 1;
         else
