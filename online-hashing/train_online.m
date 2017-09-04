@@ -1,4 +1,4 @@
-function info = train_one_method(methodObj, Dataset, trial, test_iters, opts)
+function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
