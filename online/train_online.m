@@ -1,5 +1,4 @@
-function info = train_one_method(methodObj, Dataset, res_file, trial, ...
-    test_iters, opts)
+function info = train_one_method(methodObj, Dataset, trial, test_iters, opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -44,12 +43,10 @@ function info = train_one_method(methodObj, Dataset, res_file, trial, ...
 % are computed and displayed. 
 %
 % Training routine for online hashing
->>>>>>> simplified trigger_update
 %
 % INPUTS
 %    methodObj - (object)
 %      Dataset - (struct) 
-%     res_file - (string) path to result file
 % 	 trial - (int) trial number
 %   test_iters - (int) A vector specifiying the checkpoints, see train.m .
 %         opts - (struct) Parameter structure.
@@ -172,17 +169,15 @@ for iter = 1:num_iters
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
 
-% save final model
+% finalize info
 info.ht_updates = numel(info.update_iters);
 info.test_iters = test_iters;
-info = rmfield(info, 'W_lastupdate');
-
-save(res_file, '-struct', 'info');
-logInfo('HT updates: %d, bits computed: %d', info.ht_updates, info.bit_recomp);
-logInfo('[Trial %d] Saved: %s\n', trial, res_file);
 
 % rm W/H when returning as stats
+info = rmfield(info, 'W_lastupdate');
 info = rmfield(info, 'W');
 info = rmfield(info, 'H');
+
+logInfo('HT updates: %d, bits computed: %d', info.ht_updates, info.bit_recomp);
 
 end

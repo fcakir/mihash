@@ -252,8 +252,9 @@ for t = 1:opts.ntrials
         test_iters = [1, test_iters, num_iters];  % always include 1st & last
         
         % train hashing method
-        info = train_online(methodObj, Dataset, paths.trials{t}, t, ...
-            test_iters, opts);
+        info = train_online(methodObj, Dataset, t, test_iters, opts);
+        save(paths.trials{t}, '-struct', 'info');
+        logInfo('[Trial %d] Saved: %s\n', t, paths.trials{t});
     end
     info_all = [info_all, info];
 end
