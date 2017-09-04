@@ -1,4 +1,4 @@
-function info = train_one_method(methodObj, Dataset, trial, test_iters, opts)
+function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 
 % Training routine for online hashing
 %
