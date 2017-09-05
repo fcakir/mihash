@@ -93,5 +93,5 @@ DS.Ytrain = [];
 DS.Ytest  = [];
 DS.thr_dist = prctile(pdist(Xtrain(1:2000,:), 'Euclidean'), 5); 
 
-logInfo('[LABELME_GIST] loaded in %.2f secs', toc);
+logInfo('[LabelMe_GIST] loaded in %.2f secs', toc);
 end

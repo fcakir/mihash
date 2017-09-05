@@ -1,4 +1,4 @@
-function [ind_train, ind_test] = split_dataset(X, Y, T)
+function [itrain, itest] = split_dataset(X, Y, T)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 

@@ -41,46 +41,40 @@ function update_table = trigger_update(iter, W_last, W, reservoir, ...
 %------------------------------------------------------------------------------
 
 update_table = false;
-
-% ----------------------------------------------
-% update on first iteration
-if (iter == 1)
-    update_table = true;  
-    return;
-end
+logInfo('Iteration %d', iter);
 
 % ----------------------------------------------
 % no update if hash mapping has not changed
 if sum(abs(W_last(:) - W(:))) < 1e-6
     update_table = false;
+    logInfo('W did not change, update = 0');
     return;
 end
 
 % ----------------------------------------------
 % at an update interval
-if ~mod(iter*opts.batchSize, opts.updateInterval)
 
-    if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
-        % no reservoir or 'fix' -- update
-        update_table = true;
+if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
+    % no reservoir or 'fix' -- update
+    update_table = true;
+    logInfo('[Fix] update = 1');
 
-    elseif opts.reservoirSize > 0 && opts.updateInterval > 0
-        % using reservoir + MI criterion
-        % signal update of hash table, if MI improvement > threshold
-        assert(strcmp(opts.trigger, 'mi'));
+elseif opts.reservoirSize > 0 && opts.updateInterval > 0
+    % using reservoir + MI criterion
+    % signal update of hash table, if MI improvement > threshold
+    assert(strcmp(opts.trigger, 'mi'));
 
-        % affinity matrix
-        Aff = affinity(reservoir.X, reservoir.Y, opts);
+    % affinity matrix
+    Aff = affinity(reservoir.X, reservoir.X, reservoir.Y, reservoir.Y, opts);
 
-        % MI improvement
-        mi_old  = eval_mutualinfo(reservoir.H, Aff);
-        mi_new  = eval_mutualinfo(Hres_new, Aff);
-        mi_impr = mi_new - mi_old;
+    % MI improvement
+    mi_old  = eval_mutualinfo(reservoir.H, Aff);
+    mi_new  = eval_mutualinfo(Hres_new, Aff);
+    mi_impr = mi_new - mi_old;
 
-        % update?
-        update_table = mi_impr > opts.miThresh;
-        logInfo('MI improvement = %g, update = %d', mi_impr, update_table);
-    end
+    % update?
+    update_table = mi_impr > opts.miThresh;
+    logInfo('[MI] improvement = %g, update = %d', mi_impr, update_table);
 end
 
 end

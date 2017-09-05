@@ -88,5 +88,5 @@ DS.Xtest  = X(itest, :);
 DS.Ytest  = Y(itest);
 DS.thr_dist = -Inf;
 
-logInfo('Dataset "%s" loaded in %.2f secs', opts.dataset, toc);
+logInfo('[Places205_CNN] loaded in %.2f secs', toc);
 end

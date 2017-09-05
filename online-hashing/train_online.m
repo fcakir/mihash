@@ -63,12 +63,11 @@ function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 Xtrain = Dataset.Xtrain;
 Ytrain = Dataset.Ytrain;
 
-H = [];  % hash table (mapped binary codes)
 W = methodObj.init(Xtrain, opts);  % hash mapping
+H = (Xtrain * W)' > 0;  % hash table (mapped binary codes)
 
 % keep track of the last W used to update the hash table
-% NOTE: W_lastupdate is NOT the W from last iteration
-W_lastupdate = W;  
+W_snapshot = W;  
 
 % set up reservoir
 reservoir = [];
@@ -92,24 +91,28 @@ trainInd = [];
 for e = 1:opts.epoch
     trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
 end
-opts.numTrain = numel(trainInd);
+numTrainTotal = numel(trainInd);
 
 info = [];
 info.H            = [];
 info.W            = [];
-info.W_lastupdate = [];
+info.W_snapshot   = [];
 info.update_iters = [];
 info.bit_recomp   = 0;
 info.time_train   = 0;
 info.time_update  = 0;
 info.time_reserv  = 0;
+
+iterdir = fullfile(opts.expdir, sprintf('trial%d_iter', trial));
+if ~exist(iterdir), mkdir(iterdir); end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-num_iters = ceil(opts.numTrain / opts.batchSize);
+num_iters = ceil(numTrainTotal / opts.batchSize);
 logInfo('%s: %d train_iters', opts.identifier, num_iters);
 
+update_table = false;
 for iter = 1:num_iters
     t_ = tic;
     [W, batch] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
@@ -122,19 +125,21 @@ for iter = 1:num_iters
         % update reservoir
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             Xtrain(batch, :), Ytrain(batch, :), ...
-            reservoir_size, W_lastupdate, opts.unsupervised);
+            reservoir_size, W_snapshot, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
-        Hres_new = (W' * reservoir.X' > 0)';
+        Hres_new = (reservoir.X * W)' > 0;
     end
 
     % ---- determine whether to update or not ----
-    update_table = trigger_update(iter, W_lastupdate, W, reservoir, ...
-        Hres_new, opts);
+    if ~mod(iter*opts.batchSize, opts.updateInterval)
+        update_table = trigger_update(iter, W_snapshot, W, reservoir, ...
+            Hres_new, opts);
+    end
     info.time_reserv = info.time_reserv + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        W_lastupdate = W;  % update snapshot
+        W_snapshot = W;  % update snapshot
         info.update_iters = [info.update_iters, iter];
         if reservoir_size > 0
             reservoir.H = Hres_new;
@@ -146,25 +151,27 @@ for iter = 1:num_iters
         %       the case with large databases, where disk I/O would probably be 
         %       involved in the hash table recomputation.
         t_ = tic;
-        H  = (Xtrain * W_lastupdate)' > 0;
+        H  = (Xtrain * W_snapshot)' > 0;
         info.bit_recomp  = info.bit_recomp + prod(size(H));
         info.time_update = info.time_update + toc(t_);
+        update_table = false;
     end
 
     % ---- CHECKPOINT: save intermediate model ----
     if ismember(iter, test_iters)
-        info.W_lastupdate = W_lastupdate;
+        info.W_snapshot = W_snapshot;
         info.W = W;
         info.H = H;
-        F = sprintf('%s/trial%d_iter%d.mat', opts.expdir, trial, iter);
+        F = sprintf('%s/%d.mat', iterdir, iter);
         save(F, '-struct', 'info');
 
-        logInfo(['*checkpoint*\n[Trial %d] %s\n' ...
-            '     (%d/%d) W %.2fs, HT %.2fs (%d updates), Res %.2fs\n' ...
-            '     total BR = %g'], ...
-            trial, opts.identifier, iter*opts.batchSize, opts.numTrain, ...
+        logInfo('');
+        logInfo('[%s][T%d] %s', opts.methodID, trial, opts.identifier);
+        logInfo('CHECKPOINT @ iter %d/%d', iter*opts.batchSize, numTrainTotal);
+        logInfo('W %.2fs, HT %.2fs (%d updates), Res %.2fs. #BR: %d', ...
             info.time_train, info.time_update, numel(info.update_iters), ...
             info.time_reserv, info.bit_recomp);
+        logInfo('');
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING ENDED! %%%%%%%%%%%%%%%%%%%%%%%
@@ -174,7 +181,7 @@ info.ht_updates = numel(info.update_iters);
 info.test_iters = test_iters;
 
 % rm W/H when returning as stats
-info = rmfield(info, 'W_lastupdate');
+info = rmfield(info, 'W_snapshot');
 info = rmfield(info, 'W');
 info = rmfield(info, 'H');
 
