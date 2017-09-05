@@ -163,7 +163,7 @@ opts = get_opts(opts, dataset, nbits, varargin{:});
 
 if opts.override  % will purge expdir, use with care
     logInfo('OVERRIDE: deleting existing results!');
-    unix(['rm -fv ', fullfile(opts.expdir, '*')]);
+    unix(['rm -rfv ', fullfile(opts.expdir, '*')]);
 end
 
 % ---------------------------------------------------------------------
@@ -172,7 +172,7 @@ end
 prefix = fullfile(opts.expdir, opts.metric);
 paths  = [];
 paths.result = sprintf('%s_%dtrials.mat', prefix, opts.ntrials);
-paths.trials = arrayfun(@(t) sprintf('%s_trial%d.mat', prefix, t), ...
+paths.trials = arrayfun(@(t) sprintf('%s/trial%d.mat', opts.expdir, t), ...
     1:opts.ntrials, 'uniform', false);
 res_exist    = cellfun(@(f) exist(f, 'file'), paths.trials);
 paths.diary  = record_diary(opts, ~all(res_exist));
@@ -188,9 +188,9 @@ elseif ~all(res_exist)
     datasetFunc  = str2func(['datasets.' opts.dataset]);
     Dataset      = datasetFunc(opts);
     Dataset.name = opts.dataset;
-    % thr_dist may be used in computing affinity matrices
-    opts.thr_dist = Dataset.thr_dist;
 end
+% thr_dist may be used in computing affinity matrices
+opts.thr_dist = Dataset.thr_dist;
 
 
 % ---------------------------------------------------------------------
@@ -213,6 +213,7 @@ for t = 1:opts.ntrials
         logInfo('Results exist');
     else
         % randomly set test checkpoints
+        num_iters  = ceil(opts.numTrain*opts.epoch/opts.batchSize);
         test_iters = zeros(1, opts.ntests-2);
         interval   = round(num_iters/(opts.ntests-1));
         for i = 1:opts.ntests-2
@@ -231,8 +232,8 @@ end
 logInfo('%s: Training is done.', opts.identifier);
 
 reportStat = @(field, str, fmt) logInfo(['%s: ' fmt ' +/- ' fmt], str, ...
-    mean(arrayfun(@(x), x.(field)(end), info_all)), ...
-    std (arrayfun(@(x), x.(field)(end), info_all)));
+    mean(arrayfun(@(x) x.(field)(end), info_all)), ...
+    std (arrayfun(@(x) x.(field)(end), info_all)));
 
 reportStat('time_train' , '     Training Time', '%.2f');
 reportStat('time_update', '    HT update time', '%.2f');

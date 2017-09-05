@@ -130,6 +130,7 @@ end
 if exist(opts.localdir, 'dir') == 0, 
     mkdir(opts.localdir);
 end
+opts.datadir = fullfile(pwd, '..', 'data');
 
 % set randseed
 rng(opts.randseed, 'twister');
@@ -176,7 +177,7 @@ else
     idr = sprintf('%s-U%d', idr, opts.updateInterval);
 end
 if isempty(opts.prefix)
-    prefix = sprintf('%s',datetime('today','InputFormat','yyyy-MM-dd')); 
+    prefix = sprintf('%s',datetime('today','Format','yyyyMMdd')); 
 end;
 opts.identifier = [prefix '-' idr];
 

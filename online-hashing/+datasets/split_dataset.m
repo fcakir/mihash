@@ -1,4 +1,4 @@
-function [ind_train, ind_test] = split_dataset(X, Y, T)
+function [itrain, itest] = split_dataset(X, Y, T)
 % X: original features
 % Y: original labels
 % T: # test points per class

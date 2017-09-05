@@ -35,13 +35,14 @@ properties
 end
 
 methods
-    function init(obj, X, opts)
+    function W = init(obj, X, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD
         obj.alpha       = opts.alpha;
         obj.beta        = opts.beta;
         obj.step_size   = opts.stepsize;
+        disp(obj)
 
         % LSH init
         [n, d] = size(X);
@@ -53,14 +54,9 @@ methods
     function [W, sampleIdx] = train1batch(obj, W, X, Y, I, t, opts)
         sampleIdx = I(2*t-1: 2*t);
         Xsample = X(sampleIdx, :);
+        Ysample = Y(sampleIdx, :);
 
-        % TODO affinity
-        s = 2*affinity(Xsample, Xsample, [], [], opts) - 1;
-        if ~opts.unsupervised
-            s = 2*isequal(Y(sampleIdx(1)), Y(sampleIdx(2))) - 1;
-        else
-            s = 2*(pdist(Xsample, 'Euclidean') <= thr_dist) - 1;
-        end
+        s = 2*affinity(Xsample, Xsample, Ysample, Ysample, opts) - 1;
 
         ttY = W' * Xsample';
         tY  = single(ttY > 0);
@@ -105,7 +101,7 @@ methods
             M = step_size * (2 * (w' * z - opts.nbits * s) * (M1 * D1 + M2 * D2));
 
             M(:,cind) = 0;
-            M = M + beta * W*(W'*W - eye(opts.nbits));
+            M = M + obj.beta * W*(W'*W - eye(opts.nbits));
             W = W - M ;
             W = W ./ repmat(diag(sqrt(W'*W))',d,1);
         end 

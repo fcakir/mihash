@@ -43,7 +43,7 @@ if normalizeX
 end
 
 % split
-[itrain, itest] = datasets.split_dataset(X, Y, T, 0);
+[itrain, itest] = datasets.split_dataset(X, Y, T);
 
 DS = [];
 DS.Xtrain = X(itrain, :);
@@ -52,5 +52,5 @@ DS.Xtest  = X(itest, :);
 DS.Ytest  = Y(itest);
 DS.thr_dist = -Inf;
 
-logInfo('[CIFAR_CNN] loaded in %.2f secs', toc);
+logInfo('[CIFAR10_CNN] loaded in %.2f secs', toc);
 end
