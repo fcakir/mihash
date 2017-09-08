@@ -65,7 +65,7 @@ if nargin < 2, normalizeX = 1; end
 if ~normalizeX, logInfo('will NOT pre-normalize data'); end
     
 tic;
-load(fullfile(opts.datadir, 'CIFAR10_VGG16_fc7.mat'), ...
+load(fullfile(opts.dirs.data, 'CIFAR10_VGG16_fc7.mat'), ...
     'trainCNN', 'testCNN', 'trainLabels', 'testLabels');
 X = [trainCNN; testCNN];
 Y = [trainLabels; testLabels] + 1;

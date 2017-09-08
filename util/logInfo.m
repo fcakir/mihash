@@ -48,5 +48,5 @@ if nargin > 1
 end 
 [st, i] = dbstack();
 caller = st(2).name;
-fprintf('@%s: %s\n', caller, str);
+fprintf('%s: %s\n', caller, str);
 end

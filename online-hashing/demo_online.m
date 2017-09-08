@@ -52,7 +52,7 @@ function paths = demo_online(method, dataset, nbits, varargin)
 %
 % A result file is created for each training trial. Such a file has the 
 % 'METRIC_trialX.mat' format, and is saved in the results folder specified by 
-% opts.expdir. METRIC is the performance metric as indicated by opts.metric,
+% opts.dirs.exp. METRIC is the performance metric as indicated by opts.metric,
 % and X is the trial number.
 %
 % A final result file with format 'METRIC_Ntrials.mat' is also created, where 
@@ -193,19 +193,19 @@ opts = get_opts(opts, dataset, nbits, varargin{:});
 
 if opts.override  % will purge expdir, use with care
     logInfo('OVERRIDE: deleting existing results!');
-    unix(['rm -rfv ', fullfile(opts.expdir, '*')]);
+    unix(['rm -rfv ', fullfile(opts.dirs.exp, '*')]);
 end
 
 % ---------------------------------------------------------------------
 % 1. Set up paths
 % ---------------------------------------------------------------------
-prefix = fullfile(opts.expdir, opts.metric);
+prefix = fullfile(opts.dirs.exp, opts.metric);
 paths  = [];
 paths.result = sprintf('%s_%dtrials.mat', prefix, opts.ntrials);
-paths.trials = arrayfun(@(t) sprintf('%s/trial%d.mat', opts.expdir, t), ...
+paths.trials = arrayfun(@(t) sprintf('%s/trial%d.mat', opts.dirs.exp, t), ...
     1:opts.ntrials, 'uniform', false);
 res_exist    = cellfun(@(f) exist(f, 'file'), paths.trials);
-paths.diary  = record_diary(opts, ~all(res_exist));
+paths.diary  = record_diary(opts.dirs.exp, ~all(res_exist));
 
 
 % ---------------------------------------------------------------------
@@ -261,16 +261,18 @@ for t = 1:opts.ntrials
 end
 logInfo('%s: Training is done.', opts.identifier);
 
-reportStat = @(field, str, fmt) logInfo(['%s: ' fmt ' +/- ' fmt], str, ...
+reportStat = @(field, str, fmt) fprintf(['%s: ' fmt ' +/- ' fmt '\n'], str, ...
     mean(arrayfun(@(x) x.(field)(end), info_all)), ...
     std (arrayfun(@(x) x.(field)(end), info_all)));
 
-reportStat('time_train' , '     Training Time', '%.2f');
-reportStat('time_update', '    HT update time', '%.2f');
-reportStat('time_reserv', '    Reservoir time', '%.2f');
-logInfo('');
-reportStat('ht_updates' , 'Hash Table Updates', '%.4g');
-reportStat('bit_recomp' , 'Bit Recomputations', '%.3d');
+fprintf('================================================\n');
+reportStat('time_train' , '       Training Time', '%.2f');
+reportStat('time_update', '      HT update time', '%.2f');
+reportStat('time_reserv', '      Reservoir time', '%.2f');
+fprintf('\n');
+reportStat('ht_updates' , '  Hash Table Updates', '%.4g');
+reportStat('bit_recomp' , '  Bit Recomputations', '%.3d');
+fprintf('================================================\n');
 
 
 % ---------------------------------------------------------------------

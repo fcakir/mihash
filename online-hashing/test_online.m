@@ -101,7 +101,7 @@ for i = 1:length(model.test_iters)
         % NOTE: for intermediate iters, need to use W_snapshot (not W!)
         %       to compute Htest, to make sure it's computed using the same
         %       hash mapping as Htrain.
-        Htest  = (testX_t * d.W_snapshot > 0)';
+        Htest  = (testX_t * d.W_snapshot) > 0;
         Htrain = d.H;
         metric(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff);
         info.bits_computed(i) = d.bits_computed;
