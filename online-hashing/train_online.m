@@ -21,8 +21,8 @@ function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 Xtrain = Dataset.Xtrain;
 Ytrain = Dataset.Ytrain;
 
-W = methodObj.init(Xtrain, opts);  % hash mapping
-H = (Xtrain * W)' > 0;  % hash table (mapped binary codes)
+[W, methodObj] = methodObj.init(Xtrain, opts);  % hash mapping
+H = (Xtrain * W) > 0;  % hash table (mapped binary codes)
 
 % keep track of the last W used to update the hash table
 W_snapshot = W;  
@@ -61,7 +61,7 @@ info.time_train   = 0;
 info.time_update  = 0;
 info.time_reserv  = 0;
 
-iterdir = fullfile(opts.expdir, sprintf('trial%d_iter', trial));
+iterdir = fullfile(opts.dirs.exp, sprintf('trial%d_iter', trial));
 if ~exist(iterdir), mkdir(iterdir); end
 %%%%%%%%%%%%%%%%%%%%%%% INIT %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -85,7 +85,7 @@ for iter = 1:num_iters
             Xtrain(batch, :), Ytrain(batch, :), ...
             reservoir_size, W_snapshot, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
-        Hres_new = (reservoir.X * W)' > 0;
+        Hres_new = (reservoir.X * W) > 0;
     end
 
     % ---- determine whether to update or not ----
@@ -109,7 +109,7 @@ for iter = 1:num_iters
         %       the case with large databases, where disk I/O would probably be 
         %       involved in the hash table recomputation.
         t_ = tic;
-        H  = (Xtrain * W_snapshot)' > 0;
+        H  = (Xtrain * W_snapshot) > 0;
         info.bit_recomp  = info.bit_recomp + prod(size(H));
         info.time_update = info.time_update + toc(t_);
         update_table = false;
@@ -124,9 +124,10 @@ for iter = 1:num_iters
         save(F, '-struct', 'info');
 
         logInfo('');
-        logInfo('[%s][T%d] %s', opts.methodID, trial, opts.identifier);
-        logInfo('CHECKPOINT @ iter %d/%d', iter*opts.batchSize, numTrainTotal);
-        logInfo('W %.2fs, HT %.2fs (%d updates), Res %.2fs. #BR: %d', ...
+        logInfo('[T%d] CHECKPOINT @ iter %d/%d (batchSize %d)', trial, iter, ...
+            num_iters, opts.batchSize);
+        logInfo('[%s] %s', opts.methodID, opts.identifier);
+        logInfo('W %.2fs, HT %.2fs (%d updates), Res %.2fs. #BR: %.3g', ...
             info.time_train, info.time_update, numel(info.update_iters), ...
             info.time_reserv, info.bit_recomp);
         logInfo('');

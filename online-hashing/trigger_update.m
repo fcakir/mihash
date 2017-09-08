@@ -2,13 +2,12 @@ function update_table = trigger_update(iter, W_last, W, reservoir, ...
     Hres_new, opts)
 
 update_table = false;
-logInfo('Iteration %d', iter);
 
 % ----------------------------------------------
 % no update if hash mapping has not changed
 if sum(abs(W_last(:) - W(:))) < 1e-6
     update_table = false;
-    logInfo('W did not change, update = 0');
+    logInfo('[W no change] iter %d, update = 0', iter);
     return;
 end
 
@@ -18,7 +17,7 @@ end
 if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
     % no reservoir or 'fix' -- update
     update_table = true;
-    logInfo('[Fix] update = 1');
+    logInfo('[Fix] iter %d, update = 1', iter);
 
 elseif opts.reservoirSize > 0 && opts.updateInterval > 0
     % using reservoir + MI criterion
@@ -35,7 +34,7 @@ elseif opts.reservoirSize > 0 && opts.updateInterval > 0
 
     % update?
     update_table = mi_impr > opts.miThresh;
-    logInfo('[MI] improvement = %g, update = %d', mi_impr, update_table);
+    logInfo('[MI] iter %d, improvement = %g, update = %d', iter, mi_impr, update_table);
 end
 
 end
@@ -44,10 +43,9 @@ end
 % --------------------------------------------------------------------
 function mi = eval_mutualinfo(H, affinity)
 % distance
-num   = size(H, 1);
-nbits = size(H, 2);
+[num, nbits] = size(H);
 hdist = (2*H - 1) * (2*H - 1)';
-hdist = (-hdist + nbits)./2;   
+hdist = (nbits - hdist) / 2;   
 
 % let Q be the Hamming distance
 % estimate P(Q|+), P(Q|-) & P(Q)

@@ -35,7 +35,7 @@ properties
 end
 
 methods
-    function W = init(obj, X, opts)
+    function [W, obj] = init(obj, X, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD
@@ -52,28 +52,31 @@ methods
 
 
     function [W, sampleIdx] = train1batch(obj, W, X, Y, I, t, opts)
+        [n, d] = size(X);
         sampleIdx = I(2*t-1: 2*t);
         Xsample = X(sampleIdx, :);
-        Ysample = Y(sampleIdx, :);
-
-        s = 2*affinity(Xsample, Xsample, Ysample, Ysample, opts) - 1;
 
         ttY = W' * Xsample';
-        tY  = single(ttY > 0);
-        tY(tY <= 0) = -1;
+        tY  = 2 * single(ttY > 0) - 1;
+        Dh  = sum(tY(:,1) ~= tY(:,2));
 
-        Dh = sum(tY(:,1) ~= tY(:,2)); 
-        if s <= 0
-            loss = max(0, obj.alpha*opts.nbits - Dh);
-            ind  = find(tY(:,1) == tY(:,2));
-            cind = find(tY(:,1) ~= tY(:,2));
+        if opts.unsupervised
+            s = affinity(Xsample(1, :), Xsample(2, :), [], [], opts);
         else
+            s = affinity([], [], Y(sampleIdx(1), :), Y(sampleIdx(2), :), opts);
+        end
+        s = 2 * s - 1;
+        if s > 0
             loss = max(0, Dh - (1 - obj.alpha)*opts.nbits);
             ind  = find(tY(:,1) ~= tY(:,2));
             cind = find(tY(:,1) == tY(:,2));
+        else
+            loss = max(0, obj.alpha*opts.nbits - Dh);
+            ind  = find(tY(:,1) == tY(:,2));
+            cind = find(tY(:,1) ~= tY(:,2));
         end
 
-        if ceil(loss) ~= 0
+        if loss > 0
             [ck,~] = max(abs(ttY),[],2);
             [~,ci] = sort(ck,'descend');
             ck = find(ismember(ci,ind) == 1);
@@ -98,9 +101,8 @@ methods
             D1 =  diag(2 .* z .* t1);
             D2 =  diag(2 .* w .* t2);
 
-            M = step_size * (2 * (w' * z - opts.nbits * s) * (M1 * D1 + M2 * D2));
-
-            M(:,cind) = 0;
+            M = obj.step_size * (2 * (w' * z - opts.nbits * s) * (M1 * D1 + M2 * D2));
+            M(:, cind) = 0;
             M = M + obj.beta * W*(W'*W - eye(opts.nbits));
             W = W - M ;
             W = W ./ repmat(diag(sqrt(W'*W))',d,1);

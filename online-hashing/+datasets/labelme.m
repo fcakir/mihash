@@ -36,7 +36,7 @@ if nargin < 2, normalizeX = 1; end
 if ~normalizeX, logInfo('will NOT pre-normalize data'); end
 
 tic;
-load(fullfile(opts.datadir, 'LabelMe_GIST.mat'), 'gist');
+load(fullfile(opts.dirs.data, 'LabelMe_GIST.mat'), 'gist');
 
 % normalize features
 if normalizeX

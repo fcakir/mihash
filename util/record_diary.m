@@ -1,5 +1,5 @@
-function path = record_diary(opts, record)
-diary_path = @(i) sprintf('%s/diary_%03d.txt', opts.expdir, i);
+function path = record_diary(expdir, record)
+diary_path = @(i) sprintf('%s/diary_%03d.txt', expdir, i);
 ind = 1;
 while exist(diary_path(ind), 'file')
     ind = ind + 1;

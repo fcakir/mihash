@@ -41,7 +41,7 @@ properties
 end
 
 methods
-    function W = init(obj, X, opts)
+    function [W, obj] = init(obj, X, opts)
         % do kernel mapping to Xtrain
         % KX: each COLUMN is a kernel-mapped training example
         assert(size(X, 1) >= 4000);

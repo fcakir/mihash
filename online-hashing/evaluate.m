@@ -94,10 +94,10 @@ end
 
 % ----------------------------------------------------------
 function sim = compare_hash_tables(Htrain, Htest)
-trainsize = size(Htrain, 2);
-testsize  = size(Htest, 2);
+trainsize = size(Htrain, 1);
+testsize  = size(Htest, 1);
 if trainsize < 100e3
-    sim = (2*single(Htrain)-1)'*(2*single(Htest)-1);
+    sim = (2*single(Htrain)-1)*(2*single(Htest)-1)';
     sim = int8(sim);
 else
     % for large scale data: process in chunks
@@ -106,7 +106,7 @@ else
     chunkSize = ceil(trainsize/10);
     for i = 1:ceil(trainsize/chunkSize)
         I = (i-1)*chunkSize+1 : min(i*chunkSize, trainsize);
-        tmp = (2*single(Htrain(:,I))-1)' * Ltest;
+        tmp = (2*single(Htrain(:,I))-1) * Ltest';
         sim(I, :) = int8(tmp);
     end
     clear Ltest tmp

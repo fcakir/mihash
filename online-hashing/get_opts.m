@@ -108,6 +108,9 @@ opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
+if strcmp(opts.trigger, 'mi')
+    assert(opts.reservoirSize>0, 'trigger=mi needs reservoirSize>0');
+end
 
 if strcmp(opts.dataset, 'labelme') 
     assert(~strcmpi(opts.methodID, 'OSH')); % OSH is inapplicable on LabelMe 
@@ -123,14 +126,17 @@ end
 % CONFIGS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% localdir
+% dirs
+localdir = opts.localdir;
 if isfield(opts, 'methodID') && ~isempty(opts.methodID)
-    opts.localdir = fullfile(opts.localdir, opts.methodID);
+    localdir = fullfile(localdir, opts.methodID);
 end
-if exist(opts.localdir, 'dir') == 0, 
-    mkdir(opts.localdir);
-end
-opts.datadir = fullfile(pwd, '..', 'data');
+if exist(localdir, 'dir') == 0, mkdir(localdir); end
+opts = rmfield(opts, 'localdir');
+
+opts.dirs = [];
+opts.dirs.local = localdir;
+opts.dirs.data  = fullfile(pwd, '..', 'data');
 
 % set randseed
 rng(opts.randseed, 'twister');
@@ -182,13 +188,13 @@ end;
 opts.identifier = [prefix '-' idr];
 
 % set expdir
-expdir_base = sprintf('%s/%s', opts.localdir, opts.identifier);
-opts.expdir = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, ...
+expdir_base = sprintf('%s/%s', opts.dirs.local, opts.identifier);
+opts.dirs.exp = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, ...
     opts.numTrain, opts.epoch, opts.ntests);
 if ~exist(expdir_base, 'dir'), mkdir(expdir_base); end
-if ~exist(opts.expdir, 'dir'),
-    logInfo(['creating opts.expdir: ' opts.expdir]);
-    mkdir(opts.expdir);
+if ~exist(opts.dirs.exp, 'dir'),
+    logInfo(['creating: ' opts.dirs.exp]);
+    mkdir(opts.dirs.exp);
 end
 
 % FINISHED
