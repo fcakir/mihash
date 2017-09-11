@@ -1,54 +1,37 @@
 classdef SketchHash
 
 properties
-    kInstFeatDimCnt
-    numUseToTrain
-    batchsize
-    batchCnt
-    instCntSeen
     instFeatAvePre
     instFeatSkc
+    instCntSeen
 end
 
 methods
-    function W = init(obj, X, opts)
-        kInstFeatDimCnt = size(X, 2);  % feature dim
-        bits = opts.nbits;
-        assert(opts.sketchSize <= kInstFeatDimCnt, ...
-            sprintf('Sketching needs sketchSize<=d(%d)', kInstFeatDimCnt));
+    function [W, R, obj] = init(obj, R, X, Y, opts)
+        d = size(X, 2);  % feature dim
+        assert(opts.sketchSize<=d, sprintf('Need sketchSize<=d(%d)', d));
 
-        % initialize hash functions & table
         if 0
-            % original init for SketchHash, which performed worse
-            W = rand(kInstFeatDimCnt, bits) - 0.5;
+            % original init for SketchHash, performed worse
+            W = rand(d, opts.nbits) - 0.5;
         else
             % LSH init
-            d = kInstFeatDimCnt;
-            W = randn(d, bits);
+            W = randn(d, opts.nbits);
             W = W ./ repmat(diag(sqrt(W'*W))',d,1);
         end
-        % prepare to run online sketching hashing
-        if opts.noTrainingPoints > 0
-            numUseToTrain = opts.noTrainingPoints;
-        else
-            numUseToTrain = size(X, 1);
-        end
-        batchsize      = opts.batchSize;
-        batchCnt       = ceil(numUseToTrain/batchsize);
-        instCntSeen    = 0;
-        instFeatAvePre = zeros(1, kInstFeatDimCnt);  % mean vector
-        instFeatSkc    = [];
-        logInfo('%d batches of size %d, sketchSize=%d', ...
-            batchCnt, batchsize, opts.sketchSize);
+
+        obj.instFeatAvePre = zeros(1, d);  % mean vector
+        obj.instFeatSkc    = [];           % sketch matrix
+        obj.instCntSeen    = 0;
+        logInfo('%d batches of size %d, sketchSize %d', ...
+            ceil(opts.numTrain/batchsize), opts.batchSize, opts.sketchSize);
     end
 
 
-    function [W, ind] = train1batch(obj, W, X, Y, I, t, opts)
-        % TODO use I
-        batchInd = t;
+    function [W, ind] = train1batch(obj, W, R, X, Y, I, t, opts)
 
         %%%%%%%%%% LOAD BATCH DATA - BELOW %%%%%%%%%%
-        ind = (batchInd-1)*batchsize + 1 : min(batchInd*batchsize, numUseToTrain);
+        ind = (t-1)*opts.batchSize + (1:opts.batchSize);
         ind = I(ind);
         instFeatInBatch = X(ind, :);
 
@@ -57,29 +40,28 @@ methods
 
 
         %%%%%%%%%% UPDATE HASHING FUNCTION - BELOW %%%%%%%%%%
-        tic;
-
         % calculate current mean feature vector
         instFeatAveCur = mean(instFeatInBatch, 1);
 
         % sketech current training batch
-        if batchInd == 1
+        if t == 1
             instFeatToSkc = bsxfun(@minus, instFeatInBatch, instFeatAveCur);
         else
-            instFeatCmps = sqrt(instCntSeen * instCntInBatch / ...
-                (instCntSeen + instCntInBatch)) * (instFeatAveCur - instFeatAvePre);
+            instFeatCmps = sqrt(obj.instCntSeen * instCntInBatch / ...
+                (obj.instCntSeen + instCntInBatch)) * (instFeatAveCur - obj.instFeatAvePre);
             instFeatToSkc = [bsxfun(@minus, instFeatInBatch, instFeatAveCur); ...
                 instFeatCmps];
         end
-        instFeatSkc = MatrixSketch_Incr(instFeatSkc, instFeatToSkc, opts.sketchSize);
+        obj.instFeatSkc = obj.MatrixSketch_Incr(obj.instFeatSkc, instFeatToSkc, ...
+            opts.sketchSize);
 
         % update mean feature vector and instance counter
-        instFeatAvePre = (instFeatAvePre * instCntSeen + ...
-            instFeatAveCur * instCntInBatch) / (instCntSeen + instCntInBatch);
-        instCntSeen = instCntSeen + instCntInBatch;
+        obj.instFeatAvePre = (obj.instFeatAvePre * obj.instCntSeen + ...
+            instFeatAveCur * instCntInBatch) / (obj.instCntSeen + instCntInBatch);
+        obj.instCntSeen = obj.instCntSeen + instCntInBatch;
 
         % compute QR decomposition of the sketched matrix
-        [q, r] = qr(instFeatSkc', 0);
+        [q, r] = qr(obj.instFeatSkc', 0);
         [u, ~, ~] = svd(r, 'econ');
         v = q * u;
 
@@ -91,13 +73,11 @@ methods
 
         % update hashing function
         W = hashProjMatOrg * R;
-
-        train_time = train_time + toc;
         %%%%%%%%%% UPDATE HASHING FUNCTION - ABOVE %%%%%%%%%%
     end
 
 
-    function B = MatrixSketch_Incr(B, A, l)
+    function B = MatrixSketch_Incr(obj, B, A, l)
         if mod(l,2) ~= 0
             error('l should be an even number...')
         end

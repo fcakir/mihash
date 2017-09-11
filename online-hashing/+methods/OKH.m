@@ -76,23 +76,21 @@ methods
 
 
     function [W, ind] = train1batch(obj, W, R, X, Y, I, t, opts)
-        % TODO affinity
-        if ~opts.unsupervised
-            idx_i = Y(2*t-1, :);
-            idx_j = Y(2*t, :);
-            s = 2*(idx_i==idx_j)-1;
+        ind = I(2*t-1 : 2*t);
+        if opts.unsupervised
+            Y1 = [];
+            Y2 = [];
         else
-            idx_i = []; 
-            idx_j = [];
-            D = pdist([X(2*iter-1,:); X(2*iter,:)], 'euclidean');
-            s = 2*(D <= thr_dist) - 1;
+            Y1 = Y(ind(1), :);
+            Y2 = Y(ind(2), :);
         end
-
-        xi = obj.KX(:, 2*iter-1);
-        xj = obj.KX(:, 2*iter);
+        s = affinity(X(ind(1), :), X(ind(2), :), Y1, Y2, opts);
+        s = 2 * s - 1;
 
         % hash function update
-        W = methods.OKHlearn(xi, xj, s, W, obj.para);
+        xi = obj.KX(:, ind(1));
+        xj = obj.KX(:, ind(2));
+        W  = methods.OKHlearn(xi, xj, s, W, obj.para);
     end
 
 end % methods

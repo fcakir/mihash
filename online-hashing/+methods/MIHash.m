@@ -138,6 +138,7 @@ methods
         d_pDCn_phi  = zeros(nbins+1, nbits);
         for i = 1:nbins+1
             A = obj.dTriPulse(hdist, Cents(i), Delta);
+
             % each column of below matrix (RHS) --> 
             % [\partial \delta_{x^r,l} / \partial d_h(x, x^r)] 
             %      x [\partial d_h(x, x^r) / \partial \Phi(x)] 
@@ -145,19 +146,21 @@ methods
             d_delta_phi(:,:,i) = bsxfun(@times, d_dh_phi, A); 
         end
 
-        for i=1:nbins+1
-            % \partial p_{D,l}^+ / \partial \Phi(x)
-            % having computed d_delta_phi, we just some the respective columns
-            % that correspond to positive neighbors. 
-            if any(Aff)
+        % \partial p_{D,l}^+ / \partial \Phi(x)
+        % having computed d_delta_phi, we just some the respective columns
+        % that correspond to positive neighbors. 
+        if any(Aff)
+            for i = 1:nbins+1
                 d_pDCp_phi(i,:) = sum(d_delta_phi(:, Aff, i),2)'./sum(Aff); 
             end
-            % similar to above computation but for 
-            % \partial p_{D,l}^- / \partial Phi(x)
-            if any(~Aff)
+        end
+        % similar to above but for \partial p_{D,l}^- / \partial Phi(x)
+        if any(~Aff)
+            for i = 1:nbins+1
                 d_pDCn_phi(i,:) = sum(d_delta_phi(:, ~Aff, i),2)'./sum(~Aff); 
             end
         end
+
         % \partial p_{D,l} / \partial \Phi(x)
         d_pQ_phi = d_pDCp_phi*prCp + d_pDCn_phi*prCn;
         t_log = ones(1, nbins+1);
