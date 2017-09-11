@@ -46,9 +46,7 @@ function [reservoir, update_ind] = update_reservoir(reservoir, ...
 % outputs:
 %   update_ind: indices of updated entries ([] if no update)
 %
-if ~exist('unsupervised', 'var'), unsupervised = false; end
-assert(isstruct(reservoir));
-assert((~unsupervised && ~isempty(labels)) || (unsupervised && isempty(labels)));
+if ~exist('unsupervised', 'var'), unsupervised = isempty(labels); end
 n = size(points, 1);
 if ~unsupervised, assert(n == size(labels, 1)); end;
 

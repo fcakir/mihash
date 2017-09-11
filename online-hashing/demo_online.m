@@ -86,9 +86,9 @@ if strcmp(method, 'MIHash')
     %                    >=500 is recommended. 
     ip.addParamValue('normalize' , true , @islogical);
     ip.addParamValue('no_bins'   , 16   , @isscalar);
+    ip.addParamValue('sigscale'  , 10   , @isscalar);
     ip.addParamValue('stepsize'  , 1    , @isscalar);
     ip.addParamValue('decay'     , 0    , @isscalar);
-    ip.addParamValue('sigscale'  , 10   , @isscalar);
     ip.addParamValue('initRS'    , 500  , @isscalar); % initial reservoir size
     ip.parse(varargin{:}); opts = ip.Results;
 
