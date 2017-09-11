@@ -79,7 +79,7 @@ properties
 end
 
 methods
-    function W = init(obj, X, opts, bigM)
+    function [W, R, obj] = init(obj, R, X, Y, opts)
         % randomly generate candidate codewords, store in ECOCs
         if nargin < 4, bigM = 10000; end
 
@@ -107,7 +107,7 @@ methods
     end
 
 
-    function W = train1batch(obj, W, X, Y, I, t, opts)
+    function [W, ind] = train1batch(obj, W, R, X, Y, I, t, opts)
         % new training point
         ind = I(t);
         spoint = X(ind, :);

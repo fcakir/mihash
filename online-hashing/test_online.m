@@ -58,7 +58,7 @@ Xtest  = Dataset.Xtest;
 Ytest  = Dataset.Ytest;
 Aff    = affinity(Xtrain, Xtest, Ytrain, Ytest, opts);
 
-prefix = sprintf('%s/trial%d', opts.expdir, trial);
+prefix = sprintf('%s/trial%d', opts.dirs.exp, trial);
 model  = load([prefix '.mat']);
 
 % handle transformations to X

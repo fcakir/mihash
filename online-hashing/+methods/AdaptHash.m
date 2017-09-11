@@ -82,7 +82,7 @@ properties
 end
 
 methods
-    function [W, obj] = init(obj, X, R, opts)
+    function [W, R, obj] = init(obj, X, R, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD
@@ -98,7 +98,7 @@ methods
     end % init
 
 
-    function [W, sampleIdx] = train1batch(obj, W, X, Y, I, t, opts)
+    function [W, sampleIdx] = train1batch(obj, W, R, X, Y, I, t, opts)
         [n, d] = size(X);
         sampleIdx = I(2*t-1: 2*t);
         Xsample = X(sampleIdx, :);

@@ -227,10 +227,10 @@ end;
 opts.identifier = [prefix '-' idr];
 
 % set expdir
-expdir_base = sprintf('%s/%s', opts.dirs.local, opts.identifier);
-opts.dirs.exp = sprintf('%s/%gpts_%gepochs_%dtests', expdir_base, ...
+exp_base = sprintf('%s/%s', opts.dirs.local, opts.identifier);
+opts.dirs.exp = sprintf('%s/%gpts_%gepochs_%dtests', exp_base, ...
     opts.numTrain, opts.epoch, opts.ntests);
-if ~exist(expdir_base, 'dir'), mkdir(expdir_base); end
+if ~exist(exp_base, 'dir'), mkdir(exp_base); end
 if ~exist(opts.dirs.exp, 'dir'),
     logInfo(['creating: ' opts.dirs.exp]);
     mkdir(opts.dirs.exp);

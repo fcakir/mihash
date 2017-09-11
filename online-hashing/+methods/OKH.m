@@ -79,7 +79,7 @@ properties
 end
 
 methods
-    function [W, obj] = init(obj, X, opts)
+    function [W, R, obj] = init(obj, R, X, Y, opts)
         % do kernel mapping to Xtrain
         % KX: each COLUMN is a kernel-mapped training example
         assert(size(X, 1) >= 4000);
@@ -113,7 +113,7 @@ methods
     end
 
 
-    function W = train1batch(obj, W, X, Y, I, t, opts)
+    function [W, ind] = train1batch(obj, W, R, X, Y, I, t, opts)
         % TODO affinity
         if ~opts.unsupervised
             idx_i = Y(2*t-1, :);
