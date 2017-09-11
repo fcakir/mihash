@@ -35,7 +35,7 @@ properties
 end
 
 methods
-    function [W, obj] = init(obj, X, opts)
+    function [W, obj] = init(obj, X, R, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD

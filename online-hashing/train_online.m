@@ -21,26 +21,20 @@ function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 Xtrain = Dataset.Xtrain;
 Ytrain = Dataset.Ytrain;
 
-[W, methodObj] = methodObj.init(Xtrain, opts);  % hash mapping
-H = (Xtrain * W) > 0;  % hash table (mapped binary codes)
-
-% keep track of the last W used to update the hash table
-W_snapshot = W;  
-
 % set up reservoir
 reservoir = [];
-reservoir_size = opts.reservoirSize;
-if reservoir_size > 0
+if opts.reservoirSize > 0
     reservoir.size = 0;
-    reservoir.PQ   = [];
+    reservoir.PQ   = [];  % priority queue
     reservoir.H    = [];  % hash table for the reservoir
     reservoir.X    = zeros(0, size(Xtrain, 2));
-    if opts.unsupervised
-	reservoir.Y = [];
-    else
-        reservoir.Y = zeros(0, size(Ytrain, 2));
-    end
+    reservoir.Y    = zeros(0, size(Ytrain, 2));
 end
+
+% hash mapping & hash table
+[W, reservoir, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
+W_snapshot = W;                 % snapshot hash mapping
+H = (Xtrain * W_snapshot) > 0;  % hash table (mapped binary codes)
 
 % order training examples
 ntrain = size(Xtrain, 1);
@@ -73,17 +67,18 @@ logInfo('%s: %d train_iters', opts.identifier, num_iters);
 update_table = false;
 for iter = 1:num_iters
     t_ = tic;
-    [W, batch] = methodObj.train1batch(W, Xtrain, Ytrain, trainInd, iter, opts);
+    [W, batch] = methodObj.train1batch(W, reservoir, Xtrain, Ytrain, ...
+        trainInd, iter, opts);
     info.time_train = info.time_train + toc(t_);
 
     % ---- reservoir update & compute new reservoir hash table ----
     t_ = tic;
     Hres_new = [];
-    if reservoir_size > 0
+    if opts.reservoirSize > 0
         % update reservoir
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             Xtrain(batch, :), Ytrain(batch, :), ...
-            reservoir_size, W_snapshot, opts.unsupervised);
+            opts.reservoirSize, W_snapshot, opts.unsupervised);
         % compute new reservoir hash table (do not update yet)
         Hres_new = (reservoir.X * W) > 0;
     end
@@ -99,7 +94,7 @@ for iter = 1:num_iters
     if update_table
         W_snapshot = W;  % update snapshot
         info.update_iters = [info.update_iters, iter];
-        if reservoir_size > 0
+        if opts.reservoirSize > 0
             reservoir.H = Hres_new;
         end
 
