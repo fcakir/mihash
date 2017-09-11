@@ -90,7 +90,7 @@ methods
         % hash function update
         xi = obj.KX(:, ind(1));
         xj = obj.KX(:, ind(2));
-        W  = methods.OKHlearn(xi, xj, s, W, obj.para);
+        W  = Methods.OKHlearn(xi, xj, s, W, obj.para);
     end
 
 end % methods

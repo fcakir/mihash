@@ -185,7 +185,7 @@ global Dataset
 if isfield(Dataset, 'name') && strcmp(Dataset.name, opts.dataset)
     logInfo('Dataset [%s] already loaded', Dataset.name);
 elseif ~all(res_exist)
-    datasetFunc  = str2func(['datasets.' opts.dataset]);
+    datasetFunc  = str2func(['Datasets.' opts.dataset]);
     Dataset      = datasetFunc(opts);
     Dataset.name = opts.dataset;
 end
