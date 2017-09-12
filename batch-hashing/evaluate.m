@@ -141,19 +141,3 @@ else
 end
 end
 
-
-% ----------------------------------------------------------
-function T = binsearch(x, k)
-% x: input vector
-% k: number of largest elements
-% T: threshold
-T = -Inf;
-while numel(x) > k
-    T0 = T;
-    x0 = x;
-    T  = mean(x);
-    x  = x(x>T);
-end
-% for sanity
-if numel(x) < k, T = T0; end
-end

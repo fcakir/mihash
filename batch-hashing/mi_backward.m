@@ -85,7 +85,7 @@ Nn = sum(Xn, 2);
 invalid = (Np==0) | (Nn==0);
 for l = 1:no_bins+1
     % NxN matrix of delta_hat(i, j, l) for fixed l
-    dpulse = dTriPulse(hdist, centersD(l), deltaD);  % NxN
+    dpulse = triPulseDeriv(hdist, centersD(l), deltaD);  % NxN
     ddp = dpulse .* Xp;  % delta_l^+(i, j)
     ddn = dpulse .* Xn;  % delta_l^-(i, j)
 
@@ -109,16 +109,6 @@ d_L_x   = d_L_phi .* d_phi_x;
 bot.dzdx = zeros(size(bot.x), 'single');
 if onGPU, bot.dzdx = gpuArray(bot.dzdx); end
 bot.dzdx(1, 1, :, :) = single(d_L_x);
-end
-
-
-function y = dTriPulse(D, mid, delta);
-% vectorized version
-% mid: scalar bin center
-%   D: can be a matrix
-ind1 = (D > mid-delta) & (D <= mid);
-ind2 = (D > mid) & (D <= mid+delta);
-y = (ind1 - ind2) / delta;
 end
 
 
