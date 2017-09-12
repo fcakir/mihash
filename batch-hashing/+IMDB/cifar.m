@@ -1,7 +1,7 @@
 function imdb = cifar(opts)
 
 [data, labels, ~, names] = cifar_load_images(opts);
-set = split_cifar(labels, opts);
+set = IMDB.split_cifar(labels, opts);
 
 imgSize = opts.imageSize;
 if opts.normalize

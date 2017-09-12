@@ -1,19 +1,10 @@
 function imdb = cifar_fc7(opts)
-% load precomputed CNN features
-if ~isempty(strfind(computer, 'WIN'))
-    basedir = '\\ivcfs1\codebooks\hashing_project\data';
-else
-    basedir = '/research/codebooks/hashing_project/data';
-end
-% TODO put into a single file and give download link
-load([basedir '/cifar-10/descriptors/trainCNN.mat']); % trainCNN
-load([basedir '/cifar-10/descriptors/traininglabelsCNN.mat']); % traininglabels
-load([basedir '/cifar-10/descriptors/testCNN.mat']); % testCNN
-load([basedir '/cifar-10/descriptors/testlabelsCNN.mat']); % testlabels
+
+load([opts.datadir '/CIFAR10_VGG16_fc7.mat']);
 
 data = [testCNN; trainCNN];
 labels = [testlabels; traininglabels] + 1;
-sets = split_cifar(labels, opts);
+sets = IMDB.split_cifar(labels, opts);
 
 % remove mean in any case
 Xtrain = data(sets==1, :);
