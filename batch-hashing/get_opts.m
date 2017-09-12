@@ -9,16 +9,7 @@ ip.addRequired('nbits', @isscalar);
 ip.addRequired('modelType', @isstr);
 
 ip.addParameter('metric', 'mAP');
-ip.addParameter('epoch', 1);
 ip.addParameter('randseed', 12345);
-
-% misc
-ip.addParameter('mapping', 'smooth');
-ip.addParameter('ntests', 50);
-ip.addParameter('override', 0);
-ip.addParameter('showplots', 0);
-ip.addParameter('val_size', 0);
-ip.addParameter('updateInterval', 100);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -29,7 +20,6 @@ opts.whitenData = true ;
 opts.contrastNormalization = true ;
 opts.networkType = 'simplenn' ;
 opts.train = struct() ;
-%opts = vl_argparse(opts, varargin) ;
 
 if ~isfield(opts.train, 'gpus'), opts.train.gpus = opts.gpus; end;
 
@@ -57,7 +47,6 @@ opts.imdbPath = fullfile(opts.dataDir, [opts.dataset '_imdb']);
 opts.expDir = fullfile(opts.localDir, opts.methodID);
 if exist(opts.expDir, 'dir') == 0, 
     mkdir(opts.expDir);
-    if ~opts.windows, unix(['chmod g+rw ' opts.localDir]); end
 end
 
 % evaluation metric
@@ -94,7 +83,6 @@ opts.expDir = fullfile(opts.expDir, opts.identifier);
 if ~exist(opts.expDir, 'dir'),
     logInfo(['creating opts.expDir: ' opts.expDir]);
     mkdir(opts.expDir);
-    if ~opts.windows, unix(['chmod g+rw ' opts.expDir]); end
 end
 
 end

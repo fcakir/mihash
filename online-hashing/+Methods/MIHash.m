@@ -117,7 +117,7 @@ methods
         pDCp  = zeros(1, nbins+1);
         pDCn  = zeros(1, nbins+1);
         for i = 1 : nbins+1
-            pulse = obj.triPulse(hdist, Cents(i), Delta);
+            pulse = triPulse(hdist, Cents(i), Delta);
             pDCp(i) = sum(pulse .*  Aff);
             pDCn(i) = sum(pulse .* ~Aff);
         end
@@ -137,7 +137,7 @@ methods
         d_pDCp_phi  = zeros(nbins+1, nbits);
         d_pDCn_phi  = zeros(nbins+1, nbits);
         for i = 1:nbins+1
-            A = obj.dTriPulse(hdist, Cents(i), Delta);
+            A = triPulseDeriv(hdist, Cents(i), Delta);
 
             % each column of below matrix (RHS) --> 
             % [\partial \delta_{x^r,l} / \partial d_h(x, x^r)] 
@@ -191,20 +191,6 @@ methods
         ty = obj.sigscale * (X * W)'; % a vector
         grad = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
             (sigmoid(ty, 1) .* (1 - sigmoid(ty, 1)) .* obj.sigscale)'), d_MI_phi'));
-    end
-
-
-    function y = triPulse(obj, x, mid, delta)
-        ind = (x > mid-delta) & (x <= mid+delta);    
-        y   = 1 - abs(x - mid) / delta;
-        y   = y .* ind;
-    end
-
-
-    function y = dTriPulse(obj, x, mid, delta)
-        ind1 = (x > mid-delta) & (x <= mid);
-        ind2 = (x > mid) & (x <= mid+delta);
-        y = (ind1 - ind2) / delta;
     end
 
 end % methods
