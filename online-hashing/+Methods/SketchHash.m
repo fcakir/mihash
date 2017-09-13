@@ -112,6 +112,11 @@ methods
         H = (X * W) > 0;
     end
 
+    function P = get_params(obj)
+        P = [];
+        P.instFeatAvePre = obj.instFeatAvePre;
+    end
+
 end % methods
 
 end % classdef
