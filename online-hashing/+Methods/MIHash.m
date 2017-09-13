@@ -237,6 +237,10 @@ methods
         H = (X * W) > 0;
     end
 
+    function P = get_params(obj)
+        P = [];
+    end
+
 end % methods
 
 end % classdef

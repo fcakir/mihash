@@ -40,4 +40,5 @@
 addpath(pwd);
 addpath(fullfile(pwd, 'util'));
 run vlfeat/toolbox/vl_setup
->>>>>>> more progress
+logInfo('done.');
+>>>>>>> OKH down, OSH/Sketch to go

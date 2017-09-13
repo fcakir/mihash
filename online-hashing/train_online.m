@@ -1,4 +1,4 @@
-function info = train_online(methodObj, Dataset, trial, test_iters, opts)
+function info = train_online(methodObj, Dataset, trial, res_file, test_iters, opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -63,20 +63,6 @@ function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 Xtrain = Dataset.Xtrain;
 Ytrain = Dataset.Ytrain;
 
-% hash mapping & hash table
-[W, reservoir, Xtrain, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
-H = methodObj.encode(W, Xtrain, false);
-W_snapshot = W;  % snapshot hash mapping
-
-% order training examples
-ntrain = size(Xtrain, 1);
-assert(opts.numTrain<=ntrain, sprintf('opts.numTrain > %d!', ntrain));
-trainInd = [];
-for e = 1:opts.epoch
-    trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
-end
-numTrainTotal = numel(trainInd);
-
 % set up reservoir
 reservoir = [];
 if opts.reservoirSize > 0
@@ -87,10 +73,24 @@ if opts.reservoirSize > 0
     reservoir.Y    = zeros(0, size(Ytrain, 2));
 end
 
+% hash mapping & hash table
+[W, reservoir, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
+H = methodObj.encode(W, Xtrain, false);
+Wsnapshot = W;  % snapshot hash mapping
+
+% order training examples
+ntrain = size(Xtrain, 1);
+assert(opts.numTrain<=ntrain, sprintf('opts.numTrain > %d!', ntrain));
+trainInd = [];
+for e = 1:opts.epoch
+    trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
+end
+numTrainTotal = numel(trainInd);
+
 info = [];
 info.H            = [];
 info.W            = [];
-info.W_snapshot   = [];
+info.Wsnapshot    = [];
 info.update_iters = [];
 info.bit_recomp   = 0;
 info.time_train   = 0;
@@ -122,7 +122,7 @@ for iter = 1:opts.num_iters
             Xtrain(batch, :), Ytrain(batch, :), ...
             opts.reservoirSize, opts.unsupervised);
         % update reservoir hash table (with snapshot)
-        Hres = methodObj.encode(W_snapshot, reservoir.X, true);
+        Hres = methodObj.encode(Wsnapshot, reservoir.X, true);
         reservoir.H(update_ind, :) = Hres(update_ind, :);
     end
 
@@ -130,14 +130,14 @@ for iter = 1:opts.num_iters
     if ~mod(iter*opts.batchSize, opts.updateInterval)
         % new reservoir hash table (with new W)
         Hres_new = methodObj.encode(W, reservoir.X, true);
-        update_table = trigger_update(iter, W_snapshot, W, reservoir, ...
+        update_table = trigger_update(iter, Wsnapshot, W, reservoir, ...
             Hres_new, opts);
     end
     info.time_reserv = info.time_reserv + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        W_snapshot = W;  % update snapshot
+        Wsnapshot = W;  % update snapshot
         info.update_iters = [info.update_iters, iter];
         if opts.reservoirSize > 0
             reservoir.H = Hres_new;
@@ -149,7 +149,7 @@ for iter = 1:opts.num_iters
         %       the case with large databases, where disk I/O would probably be 
         %       involved in the hash table recomputation.
         t_ = tic;
-        H  = methodObj.encode(W_snapshot, Xtrain, false);
+        H  = methodObj.encode(Wsnapshot, Xtrain, false);
         info.bit_recomp  = info.bit_recomp + prod(size(H));
         info.time_update = info.time_update + toc(t_);
         update_table = false;
@@ -157,7 +157,8 @@ for iter = 1:opts.num_iters
 
     % ---- CHECKPOINT: save intermediate model ----
     if ismember(iter, test_iters)
-        info.W_snapshot = W_snapshot;
+        info.params = methodObj.get_params();
+        info.Wsnapshot = Wsnapshot;
         info.W = W;
         info.H = H;
         F = sprintf('%s/%d.mat', iterdir, iter);
@@ -178,11 +179,16 @@ end
 % finalize info
 info.ht_updates = numel(info.update_iters);
 info.test_iters = test_iters;
-
-info = rmfield(info, 'W_snapshot');
-info = rmfield(info, 'W');
-info = rmfield(info, 'H');
-
+info.params = methodObj.get_params();
 logInfo('HT updates: %d, bits computed: %d', info.ht_updates, info.bit_recomp);
 
+% save
+save(res_file, '-struct', 'info');
+logInfo('[Trial %d] Saved: %s\n', trial, res_file);
+
+% rmfields
+info = rmfield(info, 'params');
+info = rmfield(info, 'Wsnapshot');
+info = rmfield(info, 'W');
+info = rmfield(info, 'H');
 end

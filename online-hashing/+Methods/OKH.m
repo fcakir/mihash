@@ -74,13 +74,16 @@ classdef OKH
 % 	data arrives in pairs
 
 properties
-    KX
     para
     sigma
 end
 
+properties (Transient = true)
+    KX
+end
+
 methods
-    function [W, R, KX, obj] = init(obj, R, X, Y, opts)
+    function [W, R, obj] = init(obj, R, X, Y, opts)
         % do kernel mapping to Xtrain
         % KX: each COLUMN is a kernel-mapped training example
         assert(size(X, 1) >= 4000);
@@ -100,8 +103,8 @@ methods
         clear Xval Kval
 
         % kernel mapping the whole set
-        KX = exp(-0.5*sqdist(X', Xanchor')/obj.sigma^2)';
-        KX = [KX; ones(1,size(KX,2))];
+        obj.KX = exp(-0.5*sqdist(X', Xanchor')/obj.sigma^2)';
+        obj.KX = [obj.KX; ones(1,size(obj.KX,2))];
 
         obj.para = [];
         obj.para.c      = opts.c; %0.1;
@@ -129,8 +132,8 @@ methods
         s = 2 * s - 1;
 
         % hash function update
-        xi = X(:, ind(1));
-        xj = X(:, ind(2));
+        xi = obj.KX(:, ind(1));
+        xj = obj.KX(:, ind(2));
         W  = Methods.OKHlearn(xi, xj, s, W, obj.para);
     end
 
@@ -144,6 +147,12 @@ methods
         else
             H = (obj.KX' * W) > 0;
         end
+    end
+
+    function P = get_params(obj)
+        P = [];
+        P.sigma = obj.sigma;
+        P.Xanchor = obj.para.anchor;
     end
 
 end % methods
