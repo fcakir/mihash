@@ -5,8 +5,7 @@ assert(ismember(modelType, {'fc1', 'vggf'}), ...
 
 addpath(fullfile(pwd, '..'));
 addpath(fullfile(pwd, '..', 'util'));
-%run ./vlfeat/toolbox/vl_setup
-run ./matconvnet/matlab/vl_setupnn
+run matconvnet/matlab/vl_setupnn
 
 % init opts
 ip = inputParser;
@@ -38,7 +37,7 @@ if ~opts.normalize
     opts.identifier = [opts.identifier, '-nonorm']; 
 end
 
-opts = get_opts(opts, 'cifar', nbits, modelType, varargin{:})
+opts = opts_batch(opts, 'cifar', nbits, modelType, varargin{:})
 opts.unsupervised = false;
 disp(opts.identifier);
 
@@ -116,6 +115,7 @@ Htest    = cnn_encode(net, batchFunc, imdb, test_id, opts);
 disp('Evaluating...');
 opts.metric = 'mAP';
 opts.unsupervised = false;
-evaluate(Htrain, Htest, Ytrain, Ytest, opts);
+Aff = affinity([], [], Ytrain, Ytest, opts);
+evaluate(Htrain, Htest, opts, Aff);
 
 end

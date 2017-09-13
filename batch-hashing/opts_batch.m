@@ -11,22 +11,6 @@ ip.addRequired('modelType', @isstr);
 ip.addParameter('metric', 'mAP');
 ip.addParameter('randseed', 12345);
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% MatConvNet specific
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-opts.whitenData = true ;
-opts.contrastNormalization = true ;
-opts.networkType = 'simplenn' ;
-opts.train = struct() ;
-
-if ~isfield(opts.train, 'gpus'), opts.train.gpus = opts.gpus; end;
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% parse input
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ip.KeepUnmatched = true;
 ip.parse(dataset, nbits, modelType, varargin{:});
 opts = catstruct(ip.Results, opts);  % combine w/ existing opts
@@ -69,10 +53,9 @@ end
 % NOTE: opts.identifier is already initialized with method-specific params
 idr = opts.identifier;
 
-head = textread('../.git/HEAD', '%s');  
-head_ID = textread(['../.git/' head{2}], '%s');
-prefix = head_ID{1}(1:7);
-assert(all(isstrprop(prefix, 'xdigit')));
+if isempty(opts.prefix)
+    prefix = sprintf('%s',datetime('today','Format','yyyyMMdd')); 
+end
 opts.identifier = [prefix '-' idr];
 % --------------------------------------------
 
@@ -84,5 +67,9 @@ if ~exist(opts.expDir, 'dir'),
     logInfo(['creating opts.expDir: ' opts.expDir]);
     mkdir(opts.expDir);
 end
+
+% FINISHED
+logInfo('identifier: %s', opts.identifier);
+disp(opts);
 
 end

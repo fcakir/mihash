@@ -38,10 +38,11 @@ classdef OKH
 properties
     KX
     para
+    sigma
 end
 
 methods
-    function [W, R, obj] = init(obj, R, X, Y, opts)
+    function [W, R, KX, obj] = init(obj, R, X, Y, opts)
         % do kernel mapping to Xtrain
         % KX: each COLUMN is a kernel-mapped training example
         assert(size(X, 1) >= 4000);
@@ -56,20 +57,22 @@ methods
         ind = randperm(nhalf, 2000);
         Xval = X(nhalf+ind, :);
         Kval = sqdist(Xval', Xanchor');
-        sigma = mean(mean(Kval, 2));
-        logInfo('Estimated sigma = %g', sigma);
+        obj.sigma = mean(mean(Kval, 2));
+        logInfo('Estimated sigma = %g', obj.sigma);
         clear Xval Kval
 
         % kernel mapping the whole set
-        KX = exp(-0.5*sqdist(X', Xanchor')/sigma^2)';
+        KX = exp(-0.5*sqdist(X', Xanchor')/obj.sigma^2)';
         KX = [KX; ones(1,size(KX,2))];
 
-        para.c      = opts.c; %0.1;
-        para.alpha  = opts.alpha; %0.2;
-        para.anchor = Xanchor;
+        obj.para = [];
+        obj.para.c      = opts.c; %0.1;
+        obj.para.alpha  = opts.alpha; %0.2;
+        obj.para.anchor = Xanchor;
+        disp(obj)
 
         % LSH init
-        d = size(KX, 1);
+        d = size(obj.KX, 1);
         W = randn(d, opts.nbits);
         W = W ./ repmat(diag(sqrt(W'*W))',d,1);
     end
@@ -88,9 +91,21 @@ methods
         s = 2 * s - 1;
 
         % hash function update
-        xi = obj.KX(:, ind(1));
-        xj = obj.KX(:, ind(2));
+        xi = X(:, ind(1));
+        xj = X(:, ind(2));
         W  = Methods.OKHlearn(xi, xj, s, W, obj.para);
+    end
+
+
+    function H = encode(obj, W, X, isTest)
+        if isTest
+            % do kernel mapping for test data
+            X = exp(-0.5*sqdist(X', obj.para.anchor')/obj.sigma^2)';
+            X = [X; ones(1, size(X,2))];
+            H = (X' * W) > 0;
+        else
+            H = (obj.KX' * W) > 0;
+        end
     end
 
 end % methods

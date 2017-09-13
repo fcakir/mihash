@@ -35,7 +35,7 @@ properties
 end
 
 methods
-    function [W, R, obj] = init(obj, X, R, opts)
+    function [W, R, obj] = init(obj, R, X, Y, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD
@@ -108,6 +108,11 @@ methods
             W = W ./ repmat(diag(sqrt(W'*W))',d,1);
         end 
     end % train1batch
+
+
+    function H = encode(obj, W, X, isTest)
+        H = (X * W) > 0;
+    end
 
 end % methods
 

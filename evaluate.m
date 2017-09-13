@@ -1,4 +1,4 @@
-function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff)
+function res = evaluate(Htrain, Htest, opts, Aff)
 % Given the hash codes of the training data (Htrain) and the hash codes of the test
 % data (Htest) evaluates the performance.
 % 
@@ -7,10 +7,6 @@ function res = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff)
 % 			   data. Each column corresponds to a hash code. 
 %  	Htest  - (logical) Matrix containing the hash codes of the test data. 
 %			   Each column corresponds to a hash code.
-%  	Ytrain - (int) 	   Training data labels. For multilabel datasets such as nuswide
-% 			   each column corresponds to a label. For unsupervised 
-% 			   datasets such as LabelMe, Ytrain is set to [].
-%   	Ytest  - (int) 	   Testing data labels. 
 %	opts   - (struct)  Parameter structure.
 %       Aff    - (logical) Neighbor indicator matrix. trainingsize x testsize. 
 %
