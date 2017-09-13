@@ -5,7 +5,7 @@ assert(ismember(modelType, {'fc1', 'vggf'}), ...
 
 addpath(fullfile(pwd, '..'));
 addpath(fullfile(pwd, '..', 'util'));
-run matconvnet/matlab/vl_setupnn
+run ../matconvnet/matlab/vl_setupnn
 
 % init opts
 ip = inputParser;
@@ -28,8 +28,7 @@ ip.addParameter('plot'      , false);
 ip.KeepUnmatched = true;
 ip.parse(varargin{:});
 opts = ip.Results;
-opts.methodID = sprintf('%s-cifar%d-sp%d-%s', upper(opts.obj), nbits, ...
-    opts.split, modelType);
+opts.methodID = sprintf('deepMI-cifar%d-sp%d-%s', nbits, opts.split, modelType);
 opts.identifier = sprintf('Bins%dSig%g-Batch%d-LR%gD%gS%d', opts.nbins, ...
     opts.sigscale, opts.batchSize, opts.lr, opts.lrdecay, opts.lrstep);
 opts.normalize = strcmp(modelType, 'fc1');
