@@ -47,6 +47,7 @@ ip.addRequired('dataset', @isstr);
 ip.addRequired('nbits', @isscalar);
 ip.addRequired('modelType', @isstr);
 
+ip.addParameter('prefix', '');
 ip.addParameter('metric', 'mAP');
 ip.addParameter('randseed', 12345);
 
