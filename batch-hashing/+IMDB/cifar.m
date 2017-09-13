@@ -39,8 +39,7 @@ function imdb = cifar(opts)
 %
 %------------------------------------------------------------------------------
 
-[data, labels, ~, names] = cifar_load_images(opts);
-set = IMDB.split_cifar(labels, opts);
+[data, labels, set, names] = cifar_load_images(opts);
 
 imgSize = opts.imageSize;
 if opts.normalize
@@ -72,6 +71,7 @@ if opts.normalize
         z = V*diag(en./max(sqrt(d2), 10))*V'*z ;
         data = reshape(z, imgSize, imgSize, 3, []) ;
     %end
+    logInfo('Data normalized.');
 end
 
 imdb.images.data = data ;

@@ -38,6 +38,7 @@ function H = cnn_encode(net, batchFunc, imdb, ids, opts, noLossLayer)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
+if ~exist('noLossLayer', 'var'), noLossLayer = false; end
 if noLossLayer
     layerOffset = 0;
 else

@@ -1,4 +1,4 @@
-function [net, imageSize, normalize] = vggf(opts)
+function [net, imageSize] = vggf(opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -40,9 +40,8 @@ function [net, imageSize, normalize] = vggf(opts)
 %------------------------------------------------------------------------------
 
 imageSize = 224;
-normalize = false;
 
-net = load(fullfile(opts.localDir, 'models', 'imagenet-vgg-f.mat'));
+net = load(fullfile(opts.dataDir, 'imagenet-vgg-f.mat'));
 net.layers(end) = [];
 net.layers(end) = [];
 

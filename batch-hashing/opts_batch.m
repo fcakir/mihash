@@ -1,4 +1,4 @@
-function opts = get_opts(opts, dataset, nbits, modelType, varargin)
+function opts = opts_batch(opts, dataset, nbits, modelType, varargin)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -39,77 +39,54 @@ function opts = get_opts(opts, dataset, nbits, modelType, varargin)
 %
 %------------------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Generic
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ip = inputParser;
-ip.addRequired('dataset', @isstr);
-ip.addRequired('nbits', @isscalar);
-ip.addRequired('modelType', @isstr);
+ip.addRequired('dataset'    , @isstr);
+ip.addRequired('nbits'      , @isscalar);
+ip.addRequired('modelType'  , @isstr);
 
-ip.addParameter('prefix', '');
-ip.addParameter('metric', 'mAP');
-ip.addParameter('randseed', 12345);
+ip.addParameter('split'     , 1);      % train/test split
+ip.addParameter('nbins'     , 16);     % # of histogram bins
+ip.addParameter('sigscale'  , 40);     % sigmoid scaling factor
+
+ip.addParameter('batchSize' , 100);    % SGD batch size
+ip.addParameter('lr'        , 0.1);    % SGD learning rate
+ip.addParameter('lrdecay'   , 0.5);    % learning rate decay ratio
+ip.addParameter('lrstep'    , 10);     % learning rate decay step
+ip.addParameter('wdecay'    , 0.0005); % weight decay
+ip.addParameter('epochs'    , 100);    % # of epochs
+
+ip.addParameter('gpus'      , []);
+ip.addParameter('continue'  , true);   % continue from saved model
+ip.addParameter('debug'     , false);
+ip.addParameter('plot'      , false);
 
 ip.KeepUnmatched = true;
 ip.parse(dataset, nbits, modelType, varargin{:});
-opts = catstruct(ip.Results, opts);  % combine w/ existing opts
+opts = catstruct(ip.Results, opts);
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% post-parse processing
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% post processing
 
-opts.localDir = '../cachedir';  % symlink
-if ~exist(opts.localDir, 'file')
-    error('Please make a symlink for cachedir!');
+opts.methodID = sprintf('deepMI-%s-sp%d', opts.dataset, opts.split);
+
+prefix = sprintf('%s',datetime('today','Format','yyyyMMdd')); 
+opts.identifier = sprintf('%s-%snorm%d-%dbit-Bins%dSig%g-Batch%d-LR%gD%gS%d', ...
+    prefix, opts.modelType, opts.normalize, opts.nbits, opts.nbins, opts.sigscale, ...
+    opts.batchSize, opts.lr, opts.lrdecay, opts.lrstep);
+
+opts.dataDir  = '../data';
+opts.localDir = '../cachedir';
+if ~exist(opts.localDir)
+    error('../cachedir does not exist!');
 end
-opts.dataDir = fullfile(opts.localDir, 'data');
-opts.imdbPath = fullfile(opts.dataDir, [opts.dataset '_imdb']);
-
-% expDir: format like [localDir]/deepMI-cifar32-fc
-opts.expDir = fullfile(opts.localDir, opts.methodID);
-if exist(opts.expDir, 'dir') == 0, 
-    mkdir(opts.expDir);
-end
-
-% evaluation metric
-if ~isempty(strfind(opts.metric, 'prec_k'))
-    % eg. prec_k3 is precision at k=3
-    opts.prec_k = sscanf(opts.metric(7:end), '%d');
-elseif ~isempty(strfind(opts.metric, 'prec_n'))
-    % eg. prec_n3 is precision at n=3
-    opts.prec_n = sscanf(opts.metric(7:end), '%d');
-elseif ~isempty(strfind(opts.metric, 'mAP_'))
-    % eg. mAP_1000 is mAP @ top 1000 retrievals
-    opts.mAP = sscanf(opts.metric(5:end), '%d');
-else 
-    % default: mAP
-    assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
-end
-
-% --------------------------------------------
-% identifier string for the current experiment
-% NOTE: opts.identifier is already initialized with method-specific params
-idr = opts.identifier;
-
-if isempty(opts.prefix)
-    prefix = sprintf('%s',datetime('today','Format','yyyyMMdd')); 
-end
-opts.identifier = [prefix '-' idr];
-% --------------------------------------------
-
-% expand expDir
-% expDir (orig): .../deep-hashing/deepMI-cifar32-fc
-% identifier: abcdef-maxdif0.1-......
-opts.expDir = fullfile(opts.expDir, opts.identifier);
+exp_base = fullfile(opts.localDir, opts.methodID);
+opts.expDir = fullfile(exp_base, opts.identifier);
+if ~exist(exp_base, 'dir'), mkdir(exp_base); end
 if ~exist(opts.expDir, 'dir'),
-    logInfo(['creating opts.expDir: ' opts.expDir]);
+    logInfo(['creating expDir: ' opts.expDir]);
     mkdir(opts.expDir);
 end
 
-% FINISHED
-logInfo('identifier: %s', opts.identifier);
 disp(opts);
 
 end

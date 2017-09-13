@@ -1,7 +1,8 @@
 function S = cifar_split(Y, opts)
 if opts.split == 1
     trainPerCls = 500; testPerCls = 100;
-else, assert(opts.split == 2);
+else
+    assert(opts.split == 2);
     trainPerCls = 0; testPerCls = 1000;
 end
 

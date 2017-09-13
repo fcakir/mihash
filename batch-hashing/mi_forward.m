@@ -38,41 +38,34 @@ function [top] = mi_forward(layer, bot, top)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
+% vectorized implementation of MIHash (minibatch)
+% forward pass
+
 Y = squeeze(layer.class); % Nx1
 X = squeeze(bot.x);  % 1x1xBxN -> BxN, raw scores (logits) for each bit
 [nbits, N] = size(X);
+assert(size(Y, 1) == N);
 
 opts = layer.opts;
 onGPU = numel(opts.gpus) > 0;
-if ~opts.unsupervised, assert(size(Y, 1) == N); end
-
-% histogram bin centers & width
-no_bins = opts.nbins;
-deltaD = nbits / no_bins;
-centersD = 0: deltaD: nbits;
 
 % get NxN affinity matrix
-if opts.unsupervised     
-    X_raw = squeeze(layer.rawinput)';    
-    Aff = squareform(pdist(X_raw, 'euclidean')) <= opts.thr_dist;
-else
-    if size(Y, 2) > 1  % if multilabel
-        Aff = (Y * Y' > 0);    
-    else  % if multiclass
-        Aff = bsxfun(@eq, Y', Y);
-    end
-end
-Xp = logical(Aff - diag(diag(Aff)));
-Xn = ~Aff;
+Aff = affinity(X', X', Y, Y, opts);
+Xp  = logical(Aff - diag(diag(Aff)));
+Xn  = ~Aff;
 if onGPU
     Xp = gpuArray(Xp);
     Xn = gpuArray(Xn);
 end
 
+% histogram params
+no_bins = opts.nbins;
+histC = linspace(0, nbits, no_bins+1);
+histD = nbits / no_bins;
+
 % compute distances from hash codes
 phi = 2*sigmoid(X, opts.sigscale) - 1;  % RELAXED hash codes to interval [-1, 1]
-hdist = phi' * phi;  % NxN pairwise dist matrix
-hdist = (-hdist + nbits)/2;   
+hdist = (nbits - phi' * phi)/2;   % NxN pairwise dist matrix
 
 % estimate discrete distributions
 prCp = sum(Xp, 2) ./ (N-1);
@@ -86,7 +79,7 @@ end
 
 % new version, better when L<N
 for l = 1:no_bins+1
-    pulse = triPulse(hdist, centersD(l), deltaD);  % NxN
+    pulse = triPulse(hdist, histC(l), histD);  % NxN
     pDCp(:, l) = sum(pulse .* Xp, 2);
     pDCn(:, l) = sum(pulse .* Xn, 2);
 end
@@ -106,17 +99,19 @@ ent_D   = ent(pD, y0);  % H(D)
 ent_D_C = prCp .* ent(pDCp, y0) + prCn .* ent(pDCn, y0);  % H(D|C)
 
 % loss
-top.x = -sum(single(ent_D - ent_D_C));  % maximize MI -> minimize -MI
+top.x = sum(single(ent_D - ent_D_C));  % display MI, but minimize -MI
 top.aux = [];
-top.aux.phi = phi;
-top.aux.Xp = Xp;
-top.aux.Xn = Xn;
-top.aux.distance = hdist;
-top.aux.prCp = prCp;
-top.aux.prCn = prCn;
-top.aux.pDCp = pDCp;
-top.aux.pDCn = pDCn;
-top.aux.pD   = pD;
+top.aux.phi   = phi;
+top.aux.hdist = hdist;
+top.aux.histC = histC;
+top.aux.histD = histD;
+top.aux.Xp    = Xp;
+top.aux.Xn    = Xn;
+top.aux.prCp  = prCp;
+top.aux.prCn  = prCn;
+top.aux.pDCp  = pDCp;
+top.aux.pDCn  = pDCn;
+top.aux.pD    = pD;
 end
 
 

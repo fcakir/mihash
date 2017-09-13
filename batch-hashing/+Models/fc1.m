@@ -1,4 +1,4 @@
-function [net, imageSize, normalize] = fc1(opts)
+function [net, imageSize] = fc1(opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -40,8 +40,6 @@ function [net, imageSize, normalize] = fc1(opts)
 %------------------------------------------------------------------------------
 
 imageSize = 0;
-normalize = [];
-
 if opts.normalize
     lr = [1 0.1] ;
 else
