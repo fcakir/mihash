@@ -1,8 +1,6 @@
-function [net, imageSize, normalize] = fc1(opts)
+function [net, imageSize] = fc1(opts)
 
 imageSize = 0;
-normalize = [];
-
 if opts.normalize
     lr = [1 0.1] ;
 else

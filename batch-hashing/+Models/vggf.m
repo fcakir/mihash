@@ -1,9 +1,8 @@
-function [net, imageSize, normalize] = vggf(opts)
+function [net, imageSize] = vggf(opts)
 
 imageSize = 224;
-normalize = false;
 
-net = load(fullfile(opts.localDir, 'models', 'imagenet-vgg-f.mat'));
+net = load(fullfile(opts.dataDir, 'imagenet-vgg-f.mat'));
 net.layers(end) = [];
 net.layers(end) = [];
 

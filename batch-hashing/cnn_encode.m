@@ -1,4 +1,5 @@
 function H = cnn_encode(net, batchFunc, imdb, ids, opts, noLossLayer)
+if ~exist('noLossLayer', 'var'), noLossLayer = false; end
 if noLossLayer
     layerOffset = 0;
 else
