@@ -39,7 +39,6 @@ classdef OKH
 %
 %------------------------------------------------------------------------------
 % Training routine for OKH method
->>>>>>> OSH doesn't work yet
 %
 % INPUTS
 % 	Xtrain - (float) n x d matrix where n is number of points 
