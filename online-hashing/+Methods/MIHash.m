@@ -38,7 +38,7 @@ classdef MIHash
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
-% Training routine for the MIHash method, see demo_mutualinfo.m .
+% Training routine for the MIHash method.
 %
 % INPUTS
 % 	Xtrain - (float) n x d matrix where n is number of points 
