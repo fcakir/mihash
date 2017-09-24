@@ -71,39 +71,44 @@ classdef OSH
 %            and b is the bit length / # hash functions
 
 properties
-    ECOCs
-    multi_labeled
-    i_ecoc
-    M_ecoc
-    seenLabels
+    ECOCs   % matrix of candidate ECOC codewords
+    ECOC_i  % internal index
+    ECOC_M  % assigned ECOC codewords
+    seen_labels
+    stepsize
+    SGDBoost
 end
 
 methods
     function [W, R, obj] = init(obj, R, X, Y, opts)
-        % randomly generate candidate codewords, store in ECOCs
-        if nargin < 4, bigM = 10000; end
+        assert(~opts.unsupervised);
+        assert(~isempty(Y));
 
-        % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-        ECOCs = logical(zeros(bigM, opts.nbits));
+        % randomly generate candidate codewords, store in ECOCs
+        bigM = 10000;
+        obj.ECOCs = logical(zeros(bigM, opts.nbits));
         for t = 1:opts.nbits
-            r = ones(bigM, 1);
+            r = randi([0 1], bigM, 1);
             while (sum(r)==bigM || sum(r)==0)
-                r = randi([0,1], bigM, 1);
+                r = randi([0 1], bigM, 1);
             end
-            ECOCs(:, t) = logical(r);
+            obj.ECOCs(:, t) = logical(r);
         end
         clear r
+        obj.ECOC_i = 1;  
+        obj.ECOC_M = zeros(0, opts.nbits);
+        if size(Y, 2) > 1
+            obj.seen_labels = zeros(1, size(Y, 2));
+        else
+            obj.seen_labels = [];
+        end
+        obj.stepsize = opts.stepsize;
+        obj.SGDBoost = opts.SGDBoost;
 
-        d = size(X, 2);
         % LSH init
+        d = size(X, 2);
         W = randn(d, opts.nbits);
         W = W ./ repmat(diag(sqrt(W'*W))',d,1);
-
-        multi_labeled = (size(Ytrain, 2) > 1);
-        if multi_labeled, logInfo('Handling multi-labeled dataset'); end
-        i_ecoc     = 1;  
-        M_ecoc     = [];  
-        seenLabels = [];
     end
 
 
@@ -113,34 +118,16 @@ methods
         spoint = X(ind, :);
         slabel = Y(ind, :);
         
-        % ---- Assign ECOC, etc ----
-        if (~obj.multi_labeled && mod(slabel, 10) == 0) || ...
-                (obj.multi_labeled && sum(slabel) > 0)
-            % labeled (single- or multi-label): assign target code(s)
-            isLabeled = true;
-            num_labeled = num_labeled + 1;
-            % TODO use a single struct for all ECOC stuff
-            [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-                slabel, seenLabels, M_ecoc, i_ecoc, ECOCs);
-        else
-            % unlabeled
-            isLabeled = false;
-            slabel = zeros(size(slabel));  % mark as unlabeled for subsequent functions
-            num_unlabeled = num_unlabeled + 1;
-        end
-
-        % ---- hash function update ----
-        % SGD. update W wrt. loss term(s)
-        if isLabeled
-            for c = 1:size(target_codes, 1)
-                code = target_codes(c, :);
-                W = sgd_update(W, spoint, code, opts.stepsize, opts.SGDBoost);
-            end
+        % Assign ECOC, SGD update
+        target_codes = obj.find_target_codes(slabel);
+        for c = 1:size(target_codes, 1)
+            code = target_codes(c, :);
+            W = obj.sgd_update(W, spoint, code);
         end
     end
 
 
-    function W = sgd_update(W, points, codes, stepsizes, SGDBoost)
+    function W = sgd_update(obj, W, points, codes)
         % SGD mini-batch update
         % input:
         %   W         - D*nbits matrix, each col is a hyperplane
@@ -149,7 +136,8 @@ methods
         %   stepsizes - SGD step sizes (1 per point) for current batch
         % output:
         %   updated W
-        if SGDBoost == 0
+        st = obj.stepsize;
+        if ~obj.SGDBoost
             % no online boosting, hinge loss
             for i = 1:size(points, 1)
                 xi = points(i, :);
@@ -157,7 +145,7 @@ methods
                 id = (xi * W .* ci < 1);  % logical indexing > find()
                 n  = sum(id);
                 if n > 0
-                    W(:,id) = W(:,id) + stepsizes(i)*(repmat(xi',[1 n])*diag(ci(id)));
+                    W(:,id) = W(:,id) + st * (repmat(xi',[1 n])*diag(ci(id)));
                 end
             end
         else
@@ -165,7 +153,6 @@ methods
             for i = 1:size(points, 1)
                 xi = points(i, :);
                 ci = codes(i, :);
-                st = stepsizes(i);
                 for j = 1:size(W, 2)
                     if j ~= 1
                         c1 = exp(-(ci(1:j-1)*(W(:,1:j-1)'*xi')));
@@ -179,44 +166,34 @@ methods
     end
 
 
-    function [target_codes, seenLabels, M_ecoc, i_ecoc] = find_target_codes(...
-        slabel, seenLabels, M_ecoc, i_ecoc, ECOCs)
+    function target_codes = find_target_codes(obj, slabel)
         % find target codes for a new labeled example
-        assert(sum(slabel) ~= 0, ...
+        assert(~isempty(slabel) && sum(slabel) ~= 0, ...
             'Error: finding target codes for unlabeled example');
 
         if numel(slabel) == 1
             % single-label dataset
-            [ismem, ind] = ismember(slabel, seenLabels);
-            if ismem == 0
-                seenLabels = [seenLabels; slabel];
-                % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-                M_ecoc = [M_ecoc; 2*ECOCs(i_ecoc,:)-1];
-                ind    = i_ecoc;
-                i_ecoc = i_ecoc + 1;
+            [ismem, ind] = ismember(slabel, obj.seen_labels);
+            if ~ismem
+                ind = obj.ECOC_i;
+                obj.seen_labels = [obj.seen_labels; slabel];
+                obj.ECOC_M = [obj.ECOC_M; 2*obj.ECOCs(obj.ECOC_i,:)-1];
+                obj.ECOC_i = obj.ECOC_i + 1;
             end
         else
             % multi-label dataset
-            if isempty(seenLabels)
-                assert(isempty(M_ecoc));
-                seenLabels = zeros(size(slabel));
-                M_ecoc = zeros(numel(slabel), size(ECOCs, 2));
-            end
             % find incoming labels that are unseen
-            unseen = find((slabel==1) & (seenLabels==0));
+            unseen = find(slabel & ~obj.seen_labels);
             if ~isempty(unseen)
                 for j = unseen
-                    % NOTE ECOCs now is a BINARY (0/1) MATRIX!
-                    M_ecoc(j, :) = 2*ECOCs(i_ecoc, :)-1;
-                    i_ecoc = i_ecoc + 1;
+                    obj.ECOC_M(j, :) = 2*obj.ECOCs(obj.ECOC_i, :)-1;
+                    obj.ECOC_i = obj.ECOC_i + 1;
                 end
-                seenLabels(unseen) = 1;
+                obj.seen_labels(unseen) = 1;
             end
-            ind = find(slabel==1);
+            ind = find(slabel);
         end
-
-        % find/assign target codes
-        target_codes = M_ecoc(ind, :);
+        target_codes = obj.ECOC_M(ind, :);
     end
 
 end % methods
