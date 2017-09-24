@@ -82,7 +82,7 @@ if normalizeX
 end
 
 % split
-[itrain, itest] = datasets.split_dataset(X, Y, T);
+[itrain, itest] = Datasets.split_dataset(X, Y, T);
 
 DS = [];
 DS.Xtrain = X(itrain, :);

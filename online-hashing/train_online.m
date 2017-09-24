@@ -63,20 +63,10 @@ function info = train_online(methodObj, Dataset, trial, test_iters, opts)
 Xtrain = Dataset.Xtrain;
 Ytrain = Dataset.Ytrain;
 
-% set up reservoir
-reservoir = [];
-if opts.reservoirSize > 0
-    reservoir.size = 0;
-    reservoir.PQ   = [];  % priority queue
-    reservoir.H    = [];  % hash table for the reservoir
-    reservoir.X    = zeros(0, size(Xtrain, 2));
-    reservoir.Y    = zeros(0, size(Ytrain, 2));
-end
-
 % hash mapping & hash table
-[W, reservoir, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
-W_snapshot = W;                 % snapshot hash mapping
-H = (Xtrain * W_snapshot) > 0;  % hash table (mapped binary codes)
+[W, reservoir, Xtrain, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
+H = methodObj.encode(W, Xtrain, false);
+W_snapshot = W;  % snapshot hash mapping
 
 % order training examples
 ntrain = size(Xtrain, 1);
@@ -86,6 +76,16 @@ for e = 1:opts.epoch
     trainInd = [trainInd, randperm(ntrain, opts.numTrain)];
 end
 numTrainTotal = numel(trainInd);
+
+% set up reservoir
+reservoir = [];
+if opts.reservoirSize > 0
+    reservoir.size = 0;
+    reservoir.PQ   = [];  % priority queue
+    reservoir.H    = [];  % hash table for the reservoir
+    reservoir.X    = zeros(0, size(Xtrain, 2));
+    reservoir.Y    = zeros(0, size(Ytrain, 2));
+end
 
 info = [];
 info.H            = [];
@@ -103,11 +103,11 @@ if ~exist(iterdir), mkdir(iterdir); end
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-num_iters = ceil(numTrainTotal / opts.batchSize);
-logInfo('%s: %d train_iters', opts.identifier, num_iters);
+opts.num_iters = ceil(numTrainTotal / opts.batchSize);
+logInfo('%s: %d train_iters', opts.identifier, opts.num_iters);
 
 update_table = false;
-for iter = 1:num_iters
+for iter = 1:opts.num_iters
     t_ = tic;
     [W, batch] = methodObj.train1batch(W, reservoir, Xtrain, Ytrain, ...
         trainInd, iter, opts);
@@ -120,13 +120,16 @@ for iter = 1:num_iters
         % update reservoir
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             Xtrain(batch, :), Ytrain(batch, :), ...
-            opts.reservoirSize, W_snapshot, opts.unsupervised);
-        % compute new reservoir hash table (do not update yet)
-        Hres_new = (reservoir.X * W) > 0;
+            opts.reservoirSize, opts.unsupervised);
+        % update reservoir hash table (with snapshot)
+        Hres = methodObj.encode(W_snapshot, reservoir.X, true);
+        reservoir.H(update_ind, :) = Hres(update_ind, :);
     end
 
     % ---- determine whether to update or not ----
     if ~mod(iter*opts.batchSize, opts.updateInterval)
+        % new reservoir hash table (with new W)
+        Hres_new = methodObj.encode(W, reservoir.X, true);
         update_table = trigger_update(iter, W_snapshot, W, reservoir, ...
             Hres_new, opts);
     end
@@ -146,7 +149,7 @@ for iter = 1:num_iters
         %       the case with large databases, where disk I/O would probably be 
         %       involved in the hash table recomputation.
         t_ = tic;
-        H  = (Xtrain * W_snapshot) > 0;
+        H  = methodObj.encode(W_snapshot, Xtrain, false);
         info.bit_recomp  = info.bit_recomp + prod(size(H));
         info.time_update = info.time_update + toc(t_);
         update_table = false;
@@ -162,7 +165,7 @@ for iter = 1:num_iters
 
         logInfo('');
         logInfo('[T%d] CHECKPOINT @ iter %d/%d (batchSize %d)', trial, iter, ...
-            num_iters, opts.batchSize);
+            opts.num_iters, opts.batchSize);
         logInfo('[%s] %s', opts.methodID, opts.identifier);
         logInfo('W %.2fs, HT %.2fs (%d updates), Res %.2fs. #BR: %.3g', ...
             info.time_train, info.time_update, numel(info.update_iters), ...
@@ -176,7 +179,6 @@ end
 info.ht_updates = numel(info.update_iters);
 info.test_iters = test_iters;
 
-% rm W/H when returning as stats
 info = rmfield(info, 'W_snapshot');
 info = rmfield(info, 'W');
 info = rmfield(info, 'H');

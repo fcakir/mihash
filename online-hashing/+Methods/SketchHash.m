@@ -145,6 +145,12 @@ methods
         end
     end
 
+    
+    function H = encode(obj, W, X, isTest)
+        X = bsxfun(@minus, X, obj.instFeatAvePre);
+        H = (X * W) > 0;
+    end
+
 end % methods
 
 end % classdef

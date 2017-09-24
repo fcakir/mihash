@@ -85,7 +85,7 @@ methods
         obj.sigscale = opts.sigscale;
         obj.stepsize = opts.stepsize;
         obj.decay    = opts.decay;
-        obj.initRS   = opts.initRS;
+        obj.initRS   = ceil(opts.reservoirSize/10);
         disp(obj)
 
         % LSH init
@@ -230,6 +230,11 @@ methods
         ty = obj.sigscale * (X * W)'; % a vector
         grad = (bsxfun(@times, bsxfun(@times, repmat(X', 1, length(ty)), ...
             (sigmoid(ty, 1) .* (1 - sigmoid(ty, 1)) .* obj.sigscale)'), d_MI_phi'));
+    end
+
+
+    function H = encode(obj, W, X, isTest)
+        H = (X * W) > 0;
     end
 
 end % methods

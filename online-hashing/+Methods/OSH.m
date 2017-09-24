@@ -196,6 +196,11 @@ methods
         target_codes = obj.ECOC_M(ind, :);
     end
 
+
+    function H = encode(obj, W, X, isTest)
+        H = (X * W) > 0;
+    end
+
 end % methods
 
 end % classdef

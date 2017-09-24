@@ -126,7 +126,7 @@ ip.addParamValue('epoch'    , 1           , @isscalar)
 ip.addParamValue('reservoirSize'  , 0    , @isscalar);  % reservoir size
 ip.addParamValue('updateInterval' , 100  , @isscalar);  % use with baseline
 ip.addParamValue('trigger'        , 'mi' , @isstr);     % update trigger type
-ip.addParamValue('miThresh'       , 0    , @isscalar);  % for trigger=mi
+ip.addParamValue('triggerThresh'  , 0    , @isscalar);  % for trigger=mi
 
 % misc
 ip.addParamValue('prefix'    , ''           , @isstr);
@@ -145,6 +145,7 @@ opts = catstruct(ip.Results, opts);  % combine w/ existing opts
 % ASSERTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 assert(opts.ntests >= 2, 'ntests should be at least 2 (first & last iter)');
+assert(opts.updateInterval > 0);
 assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
     sprintf('updateInterval should be a multiple of batchSize(%d)', opts.batchSize));
 if strcmp(opts.trigger, 'mi')
@@ -154,11 +155,9 @@ end
 if strcmp(opts.dataset, 'labelme') 
     assert(~strcmpi(opts.methodID, 'OSH')); % OSH is inapplicable on LabelMe 
     opts.unsupervised = 1;
-    opts.ftype = 'gist';
 else
     % CIFAR and PLACES
     opts.unsupervised = 0;
-    opts.ftype = 'cnn';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -191,39 +190,29 @@ elseif ~isempty(strfind(opts.metric, 'mAP_'))
     % eg. mAP_1000 is mAP @ top 1000 retrievals
     opts.mAP = sscanf(opts.metric(5:end), '%d');
 else 
-    % default: mAP
+    % no support for others yet
     assert(strcmp(opts.metric, 'mAP'), ['unknown opts.metric: ' opts.metric]);
 end
 
 
 % --------------------------------------------
 % identifier string for the current experiment
-% NOTE: opts.identifier is already initialized with method-specific params
-opts.identifier = sprintf('%s-%s-%d-%s', opts.dataset, opts.ftype, ...
-    opts.nbits, opts.identifier);
+% opts.identifier is already initialized with method-specific params
+opts.identifier = sprintf('%s-%dbit-%s', opts.dataset, opts.nbits, opts.identifier);
 idr = opts.identifier;
 
-% handle reservoir
+% update interval & reservoir
+idr = sprintf('%s-U%d', idr, opts.updateInterval);
 if opts.reservoirSize > 0
-    idr = sprintf('%s-RS%d', idr, opts.reservoirSize);
-    if opts.updateInterval > 0
-        idr = sprintf('%sU%d', idr, opts.updateInterval);
-    end
+    idr = sprintf('%s-R%d%s', idr, opts.reservoirSize, upper(opts.trigger));
     if strcmp(opts.trigger, 'mi')
-        idr = sprintf('%s-MI%g', idr, opts.miThresh);
-    else
-        assert(strcmp(opts.trigger, 'fix'), ...
-            'Only [mi] & [fix] are supported for opts.trigger');
-        idr = sprintf('%s-FIX', idr);
+        idr = sprintf('%s%g', idr, opts.triggerThresh);
     end
-else
-    % no reservoir (baseline): must use updateInterval
-    assert(opts.updateInterval > 0);
-    idr = sprintf('%s-U%d', idr, opts.updateInterval);
 end
+
 if isempty(opts.prefix)
     prefix = sprintf('%s',datetime('today','Format','yyyyMMdd')); 
-end;
+end
 opts.identifier = [prefix '-' idr];
 
 % set expdir
@@ -239,4 +228,5 @@ end
 % FINISHED
 logInfo('identifier: %s', opts.identifier);
 disp(opts);
+
 end

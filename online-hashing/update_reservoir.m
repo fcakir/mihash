@@ -1,5 +1,5 @@
 function [reservoir, update_ind] = update_reservoir(reservoir, ...
-    points, labels, max_reservoir_size, W, unsupervised)
+    points, labels, max_reservoir_size, unsupervised)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -78,12 +78,4 @@ else
     end
 end
 reservoir.size = size(reservoir.X, 1);
-
-% if hash functions are given -- udpate entries
-if exist('W', 'var')
-    if isempty(reservoir.H)
-        reservoir.H = (reservoir.X * W > 0);
-    elseif ~isempty(update_ind)
-        reservoir.H(update_ind, :) = (reservoir.X(update_ind, :) * W > 0);
-    end
 end

@@ -79,7 +79,7 @@ if normalizeX
     X = normalize(double(X));  % then scale to unit length
 end
 
-[itrain, itest] = datasets.split_dataset(X, Y, T);
+[itrain, itest] = Datasets.split_dataset(X, Y, T);
 
 DS = [];
 DS.Xtrain = X(itrain, :);
