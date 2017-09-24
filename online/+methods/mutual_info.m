@@ -61,6 +61,7 @@ function [obj, grad] = mutual_info(W_last, input, reservoir, no_bins, sigscale,.
 %     grad      - gradient matrix, see Eq. 11 in MIHash paper, each column
 % 		      contains the gradients of a single hash function
 
+% TODO thr_dist
 if exist('unsupervised', 'var') == 0 
     unsupervised = false; 
 elseif unsupervised

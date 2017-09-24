@@ -110,6 +110,7 @@ methods
 
         % hash function update
         % TODO make mutual_info member func
+        % TODO thr_dist
         t_ = tic;
         inputs.X = spoint;
         inputs.Y = slabel;
