@@ -1,4 +1,4 @@
-function record_diary(opts)
+function path = record_diary(expdir, record)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
@@ -38,11 +38,16 @@ function record_diary(opts)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
-diary_path = @(i) sprintf('%s/diary_%03d.txt', opts.expdir, i);
+diary_path = @(i) sprintf('%s/diary_%03d.txt', expdir, i);
 ind = 1;
 while exist(diary_path(ind), 'file')
     ind = ind + 1;
 end
-diary(diary_path(ind));
-diary('on');
+if record
+    path = diary_path(ind);
+    diary(path);
+    diary('on');
+else
+    path = diary_path(ind-1);
+end
 end

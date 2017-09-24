@@ -1,8 +1,8 @@
-function Xn = normalize(X)
+function [itrain, itest] = split_dataset(X, Y, T)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
-% If used for please cite the below paper:
+% If used for academic purposes please cite the below paper:
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
@@ -38,13 +38,38 @@ function Xn = normalize(X)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
-% Normalize all feature vectors to unit length
+% X: original features
+% Y: original labels
+% T: # test points per class
 
-n = size(X,1);  % the number of documents
-Xt = X';
-l = sqrt(sum(Xt.^2));  % the row vector length (L2 norm)
-Ni = sparse(1:n,1:n,l);
-Ni(Ni>0) = 1./Ni(Ni>0);
-Xn = (Xt*Ni)';
+[N, D] = size(X);
+labels = unique(Y);
+ntest  = numel(labels) * T;
+ntrain = N - ntest;
+Ytrain = zeros(ntrain, 1);  
+Ytest  = zeros(ntest, 1);
+itrain = [];
+itest  = [];
 
+% construct test and training set
+cnt = 0;
+for i = 1:length(labels)
+    % find examples in this class, randomize ordering
+    ind = find(Y == labels(i));
+    n_i = numel(ind);
+    ind = ind(randperm(n_i));
+
+    % assign test
+    Ytest((i-1)*T+1:i*T) = labels(i);
+    itest = [itest; ind(1:T)];
+
+    % assign train
+    itrain = [itrain; ind(T+1:end)];
+    Ytrain(cnt+1:cnt+n_i-T) = labels(i);
+    cnt = cnt+n_i-T;
+end
+
+% randomize again
+itrain = itrain(randperm(ntrain));
+itest  = itest (randperm(ntest));
 end

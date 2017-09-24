@@ -1,8 +1,8 @@
-function Xn = normalize(X)
+function [net, opts] = get_model(opts)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
-% If used for please cite the below paper:
+% If used for academic purposes please cite the below paper:
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
@@ -38,13 +38,8 @@ function Xn = normalize(X)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
-% Normalize all feature vectors to unit length
-
-n = size(X,1);  % the number of documents
-Xt = X';
-l = sqrt(sum(Xt.^2));  % the row vector length (L2 norm)
-Ni = sparse(1:n,1:n,l);
-Ni(Ni>0) = 1./Ni(Ni>0);
-Xn = (Xt*Ni)';
-
+t0 = tic;
+modelFunc = str2func(sprintf('Models.%s', opts.modelType));
+[net, opts.imageSize] = modelFunc(opts);
+logInfo('%s in %.2fs', opts.modelType, toc(t0));
 end

@@ -1,8 +1,8 @@
-function Xn = normalize(X)
+function H = cnn_encode(net, batchFunc, imdb, ids, opts, noLossLayer)
 % Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
 % All rights reserved.
 % 
-% If used for please cite the below paper:
+% If used for academic purposes please cite the below paper:
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah Adel Bargal, Stan Sclaroff
@@ -38,13 +38,30 @@ function Xn = normalize(X)
 % either expressed or implied, of the FreeBSD Project.
 %
 %------------------------------------------------------------------------------
-% Normalize all feature vectors to unit length
+if ~exist('noLossLayer', 'var'), noLossLayer = false; end
+if noLossLayer
+    layerOffset = 0;
+else
+    layerOffset = 1;
+end
+fprintf('Testing network... '); tic;
+batch_size = opts.batchSize;
+onGPU = ~isempty(opts.gpus);
 
-n = size(X,1);  % the number of documents
-Xt = X';
-l = sqrt(sum(Xt.^2));  % the row vector length (L2 norm)
-Ni = sparse(1:n,1:n,l);
-Ni(Ni>0) = 1./Ni(Ni>0);
-Xn = (Xt*Ni)';
-
+H = zeros(opts.nbits, length(ids), 'single');
+for t = 1:batch_size:length(ids)
+    ed = min(t+batch_size-1, length(ids));
+    [data, labels] = batchFunc(imdb, ids(t:ed));
+    net.layers{end}.class = labels;
+    if onGPU
+        data = gpuArray(data); 
+        res = vl_simplenn(net, data, [], [], 'mode', 'test');
+        rex = squeeze(gather(res(end-layerOffset).x));
+    else
+        res = vl_simplenn(net, data, [], [], 'mode', 'test');
+        rex = squeeze(res(end-layerOffset).x);
+    end
+    H(:, t:ed) = single(rex > 0);
+end
+toc;
 end
