@@ -21,14 +21,17 @@ If you have not done so, initialize runtime:
 
 ## Datasets/Methods
 We provide loaders for the three datasets considered in the paper: CIFAR, Places, LabelMe.
-Please refer to the `+Datasets` for details.
+Please refer to the `+Datasets` folder for details.
 
 Online hashing methods are implemented in `+Methods`.
 
 ## Example Usage
-Run the OSH\* method with 2,000 training instances on the CIFAR dataset. Use 32 bit hash codes and CNN features\*. Do a single trial (`ntrials`) and put 5 checkpoints for testing (`ntest`). Override any previously ran identical experimental results (`override`), use a Hinge-loss formulation (`SGDBoost`). 
+Train 32-bit MIHash model (ICCV'17) with 2,000 training instances on the CIFAR dataset. 
+Update the hash table after every 100 examples (no Trigger Update check).
+Do a single random trial and use 5 checkpoints for testing. 
+Override any previous experiments. 
 ```Matlab
->> demo_osh('cnn','cifar',32,'ntrials',1, 'ntest', 5, 'noTrainingPoints',2000, 'updateInterval', 1e2, 'reservoirSize', 0, 'override', 1,'SGDBoost', 0)
+>> demo_online('MIHash','cifar',32,'ntrials',1,'ntest',5,'numTrain',2000,'updateInterval',100,'reservoirSize',0,'override',1)
 ```
 
 ### Command Window Output
