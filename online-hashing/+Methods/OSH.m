@@ -1,5 +1,6 @@
 classdef OSH
-% Training routine for OSH method, see demo_osh.m .
+
+% Training routine for OSH method
 %
 % INPUTS
 % 	Xtrain - (float) n x d matrix where n is number of points 
@@ -7,29 +8,12 @@ classdef OSH
 %
 % 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
 % 			 might be empty, e.g., LabelMe.
-%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
-%		         value to be used in determining whether two data instance
-% 		         are neighbors. If their distance is smaller, then they are
-% 		         considered neighbors.
-%	       	         Given the standard setup, this threshold value
-%		         is hard-wired to be compute from the 5th percentile 
-% 		         distance value obtain through 2,000 training instance.
-% 			 see load_gist.m . 
-% 	prefix - (string) Prefix of the "checkpoint" files.
-%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
-%   trialNo    - (int)   Trial ID
-%	opts   - (struct)Parameter structure.
 %
-% OUTPUTS
-%  train_time  - (float) elapsed time in learning the hash mapping
-%  update_time - (float) elapsed time in updating the hash table
-%  res_time    - (float) elapsed time in maintaing the reservoir set
-%  ht_updates  - (int)   total number of hash table updates performed
-%  bit_computed_all - (int) total number of bit recomputations, see update_hash_table.m
-% 
 % NOTES
+%       Adapted from original OSH implementation
 % 	W is d x b where d is the dimensionality 
-%            and b is the bit length / # hash functions
+%       b is the bit length
+%       batch size fixed to 1
 
 properties
     ECOCs   % matrix of candidate ECOC codewords
@@ -155,6 +139,15 @@ methods
             ind = find(slabel);
         end
         target_codes = obj.ECOC_M(ind, :);
+    end
+
+
+    function H = encode(obj, W, X, isTest)
+        H = (X * W) > 0;
+    end
+
+    function P = get_params(obj)
+        P = [];
     end
 
 end % methods

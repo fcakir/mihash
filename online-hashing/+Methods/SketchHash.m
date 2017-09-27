@@ -1,5 +1,19 @@
 classdef SketchHash
 
+% Training routine for SketchHash method
+%
+% INPUTS
+% 	Xtrain - (float) n x d matrix where n is number of points 
+%       	         and d is the dimensionality 
+%
+% 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
+% 			 might be empty, e.g., LabelMe.
+%
+% NOTES
+%       Adapted from original SketchHash implementation
+% 	W is d x b where d is the dimensionality 
+%       b is the bit length
+
 properties
     instFeatAvePre
     instFeatSkc
@@ -24,7 +38,7 @@ methods
         obj.instFeatSkc    = [];           % sketch matrix
         obj.instCntSeen    = 0;
         logInfo('%d batches of size %d, sketchSize %d', ...
-            ceil(opts.numTrain/batchsize), opts.batchSize, opts.sketchSize);
+            ceil(opts.numTrain/opts.batchSize), opts.batchSize, opts.sketchSize);
     end
 
 
@@ -66,10 +80,10 @@ methods
         v = q * u;
 
         % obtain the original projection matrix
-        hashProjMatOrg = v(:, 1 : bits);
+        hashProjMatOrg = v(:, 1 : opts.nbits);
 
         % use random rotation
-        R = orth(randn(bits));
+        R = orth(randn(opts.nbits));
 
         % update hashing function
         W = hashProjMatOrg * R;
@@ -104,6 +118,17 @@ methods
                 B(numNonzeroRows,:) = A(i,:);
             end
         end
+    end
+
+    
+    function H = encode(obj, W, X, isTest)
+        X = bsxfun(@minus, X, obj.instFeatAvePre);
+        H = (X * W) > 0;
+    end
+
+    function P = get_params(obj)
+        P = [];
+        P.instFeatAvePre = obj.instFeatAvePre;
     end
 
 end % methods

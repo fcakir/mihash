@@ -7,7 +7,7 @@ update_table = false;
 % no update if hash mapping has not changed
 if sum(abs(W_last(:) - W(:))) < 1e-6
     update_table = false;
-    logInfo('[W no change] iter %d, update = 0', iter);
+    logInfo('[W no change] iter %d/%d, update = 0', iter, opts.num_iters);
     return;
 end
 
@@ -17,7 +17,7 @@ end
 if opts.reservoirSize <= 0 || strcmp(opts.trigger, 'fix')
     % no reservoir or 'fix' -- update
     update_table = true;
-    logInfo('[Fix] iter %d, update = 1', iter);
+    logInfo('[Fix] iter %d/%d, update = 1', iter, opts.num_iters);
 
 elseif opts.reservoirSize > 0 && opts.updateInterval > 0
     % using reservoir + MI criterion
@@ -33,8 +33,9 @@ elseif opts.reservoirSize > 0 && opts.updateInterval > 0
     mi_impr = mi_new - mi_old;
 
     % update?
-    update_table = mi_impr > opts.miThresh;
-    logInfo('[MI] iter %d, improvement = %g, update = %d', iter, mi_impr, update_table);
+    update_table = mi_impr > opts.triggerThresh;
+    logInfo('[MI] iter %d/%d, impr = %g, update = %d', iter, opts.num_iters, ...
+        mi_impr, update_table);
 end
 
 end

@@ -1,4 +1,4 @@
-function info = train_online(methodObj, Dataset, trial, test_iters, opts)
+function info = train_online(methodObj, Dataset, trial, res_file, test_iters, opts)
 
 % Training routine for online hashing
 %
@@ -33,8 +33,8 @@ end
 
 % hash mapping & hash table
 [W, reservoir, methodObj] = methodObj.init(reservoir, Xtrain, Ytrain, opts);
-W_snapshot = W;                 % snapshot hash mapping
-H = (Xtrain * W_snapshot) > 0;  % hash table (mapped binary codes)
+H = methodObj.encode(W, Xtrain, false);
+Wsnapshot = W;  % snapshot hash mapping
 
 % order training examples
 ntrain = size(Xtrain, 1);
@@ -48,7 +48,7 @@ numTrainTotal = numel(trainInd);
 info = [];
 info.H            = [];
 info.W            = [];
-info.W_snapshot   = [];
+info.Wsnapshot    = [];
 info.update_iters = [];
 info.bit_recomp   = 0;
 info.time_train   = 0;
@@ -61,11 +61,11 @@ if ~exist(iterdir), mkdir(iterdir); end
 
 
 %%%%%%%%%%%%%%%%%%%%%%% STREAMING BEGINS! %%%%%%%%%%%%%%%%%%%%%%%
-num_iters = ceil(numTrainTotal / opts.batchSize);
-logInfo('%s: %d train_iters', opts.identifier, num_iters);
+opts.num_iters = ceil(numTrainTotal / opts.batchSize);
+logInfo('%s: %d train_iters', opts.identifier, opts.num_iters);
 
 update_table = false;
-for iter = 1:num_iters
+for iter = 1:opts.num_iters
     t_ = tic;
     [W, batch] = methodObj.train1batch(W, reservoir, Xtrain, Ytrain, ...
         trainInd, iter, opts);
@@ -78,21 +78,24 @@ for iter = 1:num_iters
         % update reservoir
         [reservoir, update_ind] = update_reservoir(reservoir, ...
             Xtrain(batch, :), Ytrain(batch, :), ...
-            opts.reservoirSize, W_snapshot, opts.unsupervised);
-        % compute new reservoir hash table (do not update yet)
-        Hres_new = (reservoir.X * W) > 0;
+            opts.reservoirSize, opts.unsupervised);
+        % update reservoir hash table (with snapshot)
+        Hres = methodObj.encode(Wsnapshot, reservoir.X, true);
+        reservoir.H(update_ind, :) = Hres(update_ind, :);
     end
 
     % ---- determine whether to update or not ----
     if ~mod(iter*opts.batchSize, opts.updateInterval)
-        update_table = trigger_update(iter, W_snapshot, W, reservoir, ...
+        % new reservoir hash table (with new W)
+        Hres_new = methodObj.encode(W, reservoir.X, true);
+        update_table = trigger_update(iter, Wsnapshot, W, reservoir, ...
             Hres_new, opts);
     end
     info.time_reserv = info.time_reserv + toc(t_);
 
     % ---- hash table update, etc ----
     if update_table
-        W_snapshot = W;  % update snapshot
+        Wsnapshot = W;  % update snapshot
         info.update_iters = [info.update_iters, iter];
         if opts.reservoirSize > 0
             reservoir.H = Hres_new;
@@ -104,7 +107,7 @@ for iter = 1:num_iters
         %       the case with large databases, where disk I/O would probably be 
         %       involved in the hash table recomputation.
         t_ = tic;
-        H  = (Xtrain * W_snapshot) > 0;
+        H  = methodObj.encode(Wsnapshot, Xtrain, false);
         info.bit_recomp  = info.bit_recomp + prod(size(H));
         info.time_update = info.time_update + toc(t_);
         update_table = false;
@@ -112,7 +115,8 @@ for iter = 1:num_iters
 
     % ---- CHECKPOINT: save intermediate model ----
     if ismember(iter, test_iters)
-        info.W_snapshot = W_snapshot;
+        info.params = methodObj.get_params();
+        info.Wsnapshot = Wsnapshot;
         info.W = W;
         info.H = H;
         F = sprintf('%s/%d.mat', iterdir, iter);
@@ -120,7 +124,7 @@ for iter = 1:num_iters
 
         logInfo('');
         logInfo('[T%d] CHECKPOINT @ iter %d/%d (batchSize %d)', trial, iter, ...
-            num_iters, opts.batchSize);
+            opts.num_iters, opts.batchSize);
         logInfo('[%s] %s', opts.methodID, opts.identifier);
         logInfo('W %.2fs, HT %.2fs (%d updates), Res %.2fs. #BR: %.3g', ...
             info.time_train, info.time_update, numel(info.update_iters), ...
@@ -133,12 +137,16 @@ end
 % finalize info
 info.ht_updates = numel(info.update_iters);
 info.test_iters = test_iters;
-
-% rm W/H when returning as stats
-info = rmfield(info, 'W_snapshot');
-info = rmfield(info, 'W');
-info = rmfield(info, 'H');
-
+info.params = methodObj.get_params();
 logInfo('HT updates: %d, bits computed: %d', info.ht_updates, info.bit_recomp);
 
+% save
+save(res_file, '-struct', 'info');
+logInfo('[Trial %d] Saved: %s\n', trial, res_file);
+
+% rmfields
+info = rmfield(info, 'params');
+info = rmfield(info, 'Wsnapshot');
+info = rmfield(info, 'W');
+info = rmfield(info, 'H');
 end

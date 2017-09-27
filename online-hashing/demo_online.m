@@ -59,11 +59,10 @@ if strcmp(method, 'MIHash')
     ip.addParamValue('sigscale'  , 10   , @isscalar);
     ip.addParamValue('stepsize'  , 1    , @isscalar);
     ip.addParamValue('decay'     , 0    , @isscalar);
-    ip.addParamValue('initRS'    , 500  , @isscalar); % initial reservoir size
     ip.parse(varargin{:}); opts = ip.Results;
 
-    opts.identifier = sprintf('Bins%dSig%g_Step%gDecay%g_InitRS%g', opts.no_bins, ...
-        opts.sigscale, opts.stepsize, opts.decay, opts.initRS);
+    opts.identifier = sprintf('Bins%dSig%g-S%gD%g', opts.no_bins, ...
+        opts.sigscale, opts.stepsize, opts.decay);
     opts.batchSize  = 1;  % hard-coded
 
 elseif strcmp(method, 'AdaptHash')
@@ -154,7 +153,7 @@ end
 opts.methodID = method;
 
 % get generic fields + necessary preparation
-opts = get_opts(opts, dataset, nbits, varargin{:});
+opts = opts_online(opts, dataset, nbits, varargin{:});
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -196,20 +195,19 @@ opts.thr_dist = Dataset.thr_dist;
 % ---------------------------------------------------------------------
 % 3. TRAINING
 % ---------------------------------------------------------------------
-logInfo('%s: Training ...', opts.identifier);
-methodFunc = str2func(['methods.' method]);
+logInfo('[%s] %s: Training ...', opts.methodID, opts.identifier);
+methodFunc = str2func(['Methods.' method]);
 methodObj  = methodFunc();
 
 % NOTE: if you have the Parallel Computing Toolbox, you can use parfor 
 %       to run the trials in parallel
 info_all = [];
 for t = 1:opts.ntrials
-    logInfo('%s: random trial %d', opts.identifier, t);
+    logInfo('[%s] %s: random trial %d', opts.methodID, opts.identifier, t);
     rng(opts.randseed+t, 'twister'); % fix randseed for reproducible results
 
     if res_exist(t)
-        info = load(paths.trials{t}, 'ht_updates', 'bit_recomp', ...
-            'time_train', 'time_update', 'time_reserv');
+        info = load(paths.trials{t});
         logInfo('Results exist');
     else
         % randomly set test checkpoints
@@ -223,13 +221,11 @@ for t = 1:opts.ntrials
         test_iters = [1, test_iters, num_iters];  % always include 1st & last
         
         % train hashing method
-        info = train_online(methodObj, Dataset, t, test_iters, opts);
-        save(paths.trials{t}, '-struct', 'info');
-        logInfo('[Trial %d] Saved: %s\n', t, paths.trials{t});
+        info = train_online(methodObj, Dataset, t, paths.trials{t}, test_iters, opts);
     end
     info_all = [info_all, info];
 end
-logInfo('%s: Training is done.', opts.identifier);
+logInfo('[%s] %s: Training is done.', opts.methodID, opts.identifier);
 
 reportStat = @(field, str, fmt) fprintf(['%s: ' fmt ' +/- ' fmt '\n'], str, ...
     mean(arrayfun(@(x) x.(field)(end), info_all)), ...
@@ -248,7 +244,7 @@ fprintf('================================================\n');
 % ---------------------------------------------------------------------
 % 4. TESTING: see test_online
 % ---------------------------------------------------------------------
-logInfo('%s: Testing ...', opts.identifier);
+logInfo('[%s] %s: Testing ...', opts.methodID, opts.identifier);
 try
     info_all = load(paths.result);
 catch
@@ -257,7 +253,7 @@ catch
         info = test_online(Dataset, t, opts);
         info_all = [info_all, info];
     end
-    save(paths.result, '-struct', 'info_all');
+    save(paths.result, 'info_all');
 end
 auc   = arrayfun(@(x) mean(x.metric), info_all);
 final = arrayfun(@(x) x.metric(end) , info_all);

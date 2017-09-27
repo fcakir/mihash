@@ -1,7 +1,6 @@
 function imdb = cifar(opts)
 
-[data, labels, ~, names] = cifar_load_images(opts);
-set = split_cifar(labels, opts);
+[data, labels, set, names] = cifar_load_images(opts);
 
 imgSize = opts.imageSize;
 if opts.normalize
@@ -15,15 +14,15 @@ if opts.normalize
     % Single-Layer Networks in Unsupervised Feature Learning` Adam
     % Coates, Honglak Lee, Andrew Y. Ng
 
-    if opts.contrastNormalization
+    %if opts.contrastNormalization
         z = reshape(data,[],60000) ;
         z = bsxfun(@minus, z, mean(z,1)) ;
         n = std(z,0,1) ;
         z = bsxfun(@times, z, mean(n) ./ max(n, 40)) ;
         data = reshape(z, imgSize, imgSize, 3, []) ;
-    end
+    %end
 
-    if opts.whitenData
+    %if opts.whitenData
         z = reshape(data,[],60000) ;
         W = z(:,set == 1)*z(:,set == 1)'/60000 ;
         [V,D] = eig(W) ;
@@ -32,7 +31,8 @@ if opts.normalize
         en = sqrt(mean(d2)) ;
         z = V*diag(en./max(sqrt(d2), 10))*V'*z ;
         data = reshape(z, imgSize, imgSize, 3, []) ;
-    end
+    %end
+    logInfo('Data normalized.');
 end
 
 imdb.images.data = data ;

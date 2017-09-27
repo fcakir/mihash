@@ -1,24 +1,24 @@
 function [bot] = mi_backward(layer, bot, top)
+% vectorized implementation of MIHash (minibatch)
+% backward pass
 
 X = squeeze(bot.x);  % nbitsxN
 [nbits, N] = size(X);
 
-opts = layer.opts;
+opts  = layer.opts;
 onGPU = numel(opts.gpus) > 0;
 
-no_bins = opts.nbins;
-deltaD = nbits / no_bins;
-centersD = 0: deltaD: nbits;
-
-pD   = top.aux.pD;
-pDCp = top.aux.pDCp;
-pDCn = top.aux.pDCn;
-prCp = top.aux.prCp;
-prCn = top.aux.prCn;
-phi  = top.aux.phi;
-Xp   = top.aux.Xp;
-Xn   = top.aux.Xn;
-hdist = top.aux.distance;
+pD    = top.aux.pD;
+pDCp  = top.aux.pDCp;
+pDCn  = top.aux.pDCn;
+prCp  = top.aux.prCp;
+prCn  = top.aux.prCn;
+phi   = top.aux.phi;
+Xp    = top.aux.Xp;
+Xn    = top.aux.Xn;
+histC = top.aux.histC;
+histD = top.aux.histD;
+hdist = top.aux.hdist;
 
 minus1s = -ones(size(pD));
 if onGPU, minus1s = gpuArray(minus1s); end
@@ -44,9 +44,9 @@ if onGPU, d_L_phi = gpuArray(d_L_phi); end
 Np = sum(Xp, 2);
 Nn = sum(Xn, 2);
 invalid = (Np==0) | (Nn==0);
-for l = 1:no_bins+1
+for l = 1:numel(histC)
     % NxN matrix of delta_hat(i, j, l) for fixed l
-    dpulse = dTriPulse(hdist, centersD(l), deltaD);  % NxN
+    dpulse = triPulseDeriv(hdist, histC(l), histD);  % NxN
     ddp = dpulse .* Xp;  % delta_l^+(i, j)
     ddn = dpulse .* Xn;  % delta_l^-(i, j)
 
@@ -70,16 +70,6 @@ d_L_x   = d_L_phi .* d_phi_x;
 bot.dzdx = zeros(size(bot.x), 'single');
 if onGPU, bot.dzdx = gpuArray(bot.dzdx); end
 bot.dzdx(1, 1, :, :) = single(d_L_x);
-end
-
-
-function y = dTriPulse(D, mid, delta);
-% vectorized version
-% mid: scalar bin center
-%   D: can be a matrix
-ind1 = (D > mid-delta) & (D <= mid);
-ind2 = (D > mid) & (D <= mid+delta);
-y = (ind1 - ind2) / delta;
 end
 
 

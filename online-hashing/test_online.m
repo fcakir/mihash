@@ -12,35 +12,18 @@ function info = test_online(Dataset, trial, opts)
 % OUTPUTS
 %	none
 
-
-Xtrain = Dataset.Xtrain;
-Ytrain = Dataset.Ytrain;
-Xtest  = Dataset.Xtest;
-Ytest  = Dataset.Ytest;
-Aff    = affinity(Xtrain, Xtest, Ytrain, Ytest, opts);
-
-prefix = sprintf('%s/trial%d', opts.dirs.exp, trial);
-model  = load([prefix '.mat']);
-
-% handle transformations to X
-if strcmp(opts.methodID, 'okh')
-    % do kernel mapping for test data
-    testX_t = exp(-0.5*sqdist(Xtest', model.Xanchor')/model.sigma^2)';
-    testX_t = [testX_t; ones(1,size(testX_t,2))]';
-elseif strcmp(opts.methodID, 'sketch')
-    % subtract mean
-    testX_t = bsxfun(@minus, Xtest, model.instFeatAvePre);
-else
-    % OSH, AdaptHash: nothing
-    testX_t = Xtest;
-end
-
 info = struct(...
     'metric'         , [] , ...
     'train_time'     , [] , ...
     'train_iter'     , [] , ...
     'train_examples' , [] , ...
-    'bits_computed'  , [] );
+    'bit_recomp'     , [] );
+
+testX = Dataset.Xtest;
+Aff = affinity(Dataset.Xtrain, Dataset.Xtest, Dataset.Ytrain, Dataset.Ytest, opts);
+
+prefix = sprintf('%s/trial%d', opts.dirs.exp, trial);
+model = load([prefix '.mat']);
 
 for i = 1:length(model.test_iters)
     iter = model.test_iters(i);
@@ -57,21 +40,30 @@ for i = 1:length(model.test_iters)
         runtest = any(model.update_iters>st & model.update_iters<=ed);
     end
 
-    d = load(sprintf('%s_iter/%d.mat', prefix, iter));
+    itmd = load(sprintf('%s_iter/%d.mat', prefix, iter));
+    P = itmd.params;
+    if strcmp(opts.methodID, 'OKH')
+        % do kernel mapping for test data
+        testX = exp(-0.5*sqdist(Dataset.Xtest', P.Xanchor')/P.sigma^2)';
+        testX = [testX; ones(1,size(testX,2))]';
+    elseif strcmp(opts.methodID, 'SketchHash')
+        % subtract estimated mean
+        testX = bsxfun(@minus, Dataset.Xtest, P.instFeatAvePre);
+    end
     if runtest
-        % NOTE: for intermediate iters, need to use W_snapshot (not W!)
+        % NOTE: for intermediate iters, need to use Wsnapshot (not W!)
         %       to compute Htest, to make sure it's computed using the same
         %       hash mapping as Htrain.
-        Htest  = (testX_t * d.W_snapshot) > 0;
-        Htrain = d.H;
-        metric(i) = evaluate(Htrain, Htest, Ytrain, Ytest, opts, Aff);
-        info.bits_computed(i) = d.bits_computed;
+        Htest  = (testX * itmd.Wsnapshot) > 0;
+        Htrain = itmd.H;
+        info.metric(i) = evaluate(Htrain, Htest, opts, Aff);
+        info.bit_recomp(i) = itmd.bit_recomp;
     else
         info.metric(i) = info.metric(i-1);
-        info.bits_computed(i) = info.bits_computed(i-1);
+        info.bit_recomp(i) = info.bit_recomp(i-1);
         fprintf(' %g\n', info.metric(i));
     end
-    info.train_time(i) = d.train_time;
+    info.train_time(i) = itmd.time_train;
     info.train_iter(i) = iter;
     info.train_examples(i) = iter * opts.batchSize;
 end

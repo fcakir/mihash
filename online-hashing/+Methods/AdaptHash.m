@@ -7,26 +7,14 @@ classdef AdaptHash
 %       	         and d is the dimensionality 
 %
 % 	Ytrain - (int)   n x l matrix containing labels, for unsupervised datasets
-% 			 might be empty, e.g., LabelMe.
-%     thr_dist - (int)   For unlabelled datasets, corresponds to the distance 
-%		         value to be used in determining whether two data instance
-% 		         are neighbors. If their distance is smaller, then they are
-% 		         considered neighbors.
-%	       	         Given the standard setup, this threshold value
-%		         is hard-wired to be compute from the 5th percentile 
-% 		         distance value obtain through 2,000 training instance.
-% 			 see load_gist.m . 
-% 	prefix - (string) Prefix of the "checkpoint" files.
-%   test_iters - (int)   A vector specifiying the checkpoints, see train.m .
-%   trialNo    - (int)   Trial ID
-%	opts   - (struct)Parameter structure.
 %
 % NOTES
+%       Adapted from original AdaptHash implementation
 % 	W is d x b where d is the dimensionality 
-%            and b is the bit length / # hash functions
+%       b is the bit length
 %
-% 	Data arrives in pairs. For example, if number_iterations is 1000, then 
-% 	2000 points will be processed, 
+% 	Data arrives in pairs. If number_iterations is 1000, then 
+% 	2000 points will be processed
 
 properties
     alpha
@@ -35,7 +23,7 @@ properties
 end
 
 methods
-    function [W, R, obj] = init(obj, X, R, opts)
+    function [W, R, obj] = init(obj, R, X, Y, opts)
         % alpha is the alpha in Eq. 5 in ICCV'15 paper
         % beta is the lambda in Eq. 7 in ICCV'15 paper
         % step_size is the step size of SGD
@@ -108,6 +96,15 @@ methods
             W = W ./ repmat(diag(sqrt(W'*W))',d,1);
         end 
     end % train1batch
+
+
+    function H = encode(obj, W, X, isTest)
+        H = (X * W) > 0;
+    end
+
+    function P = get_params(obj)
+        P = [];
+    end
 
 end % methods
 
