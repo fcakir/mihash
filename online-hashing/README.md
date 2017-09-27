@@ -27,73 +27,162 @@ Online hashing methods are implemented in `+Methods`.
 
 ## Example Usage
 Train 32-bit MIHash model (ICCV'17) with 2,000 training instances on the CIFAR dataset. 
-Update the hash table after every 100 examples (no Trigger Update check).
+Use a reservoir of size 200 (for estimating gradients), and update the hash table after 
+every 100 examples (no Trigger Update check).
 Do a single random trial and use 5 checkpoints for testing. 
 Override any previous experiments. 
 ```Matlab
->> demo_online('MIHash','cifar',32,'ntrials',1,'ntest',5,'numTrain',2000,'updateInterval',100,'reservoirSize',0,'override',1)
+>> demo_online('MIHash','cifar',32,'ntrials',1,'ntest',5,'numTrain',2000,'updateInterval',100,'trigger','fix','reservoirSize',200,'override',1)
 ```
 
 ### Command Window Output
-The command window output for the above experiment should look like this (with minor alterations):
+The command window output for the training portion of this experiment should look like this (with minor alterations):
 ```
-TODO: training log
+opts_online: identifier: 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+           dataset: 'cifar'
+             epoch: 1
+            metric: 'mAP'
+             nbits: 32
+            ntests: 5
+           ntrials: 1
+          numTrain: 2000
+          override: 1
+            prefix: ''
+          randseed: 12345
+     reservoirSize: 200
+         showplots: 0
+           trigger: 'fix'
+     triggerThresh: 0
+    updateInterval: 100
+             decay: 0
+           no_bins: 16
+         normalize: 1
+          sigscale: 10
+          stepsize: 1
+        identifier: '20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX'
+         batchSize: 1
+          methodID: 'MIHash'
+      unsupervised: 0
+              dirs: [1×1 struct]
+
+cifar: [CIFAR10_CNN] loaded in 61.69 secs
+demo_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX: Training ...
+demo_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX: random trial 1
+  MIHash with properties:
+
+     no_bins: 16
+    sigscale: 10
+    stepsize: 1
+       decay: 0
+      initRS: 20
+
+train_online: 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX: 2000 train_iters
+train_online: 
+train_online: [T1] CHECKPOINT @ iter 1/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 0.07s, HT 0.00s (0 updates), Res 0.00s. #BR: 0
+train_online: 
+trigger_update: [Fix] iter 100/2000, update = 1
+trigger_update: [Fix] iter 200/2000, update = 1
+trigger_update: [Fix] iter 300/2000, update = 1
+trigger_update: [Fix] iter 400/2000, update = 1
+trigger_update: [Fix] iter 500/2000, update = 1
+train_online: 
+train_online: [T1] CHECKPOINT @ iter 573/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 1.76s, HT 1.67s (5 updates), Res 0.54s. #BR: 9.44e+06
+train_online: 
+trigger_update: [Fix] iter 600/2000, update = 1
+trigger_update: [Fix] iter 700/2000, update = 1
+trigger_update: [Fix] iter 800/2000, update = 1
+trigger_update: [Fix] iter 900/2000, update = 1
+train_online: 
+train_online: [T1] CHECKPOINT @ iter 993/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 3.05s, HT 2.95s (9 updates), Res 0.77s. #BR: 1.7e+07
+train_online: 
+trigger_update: [Fix] iter 1000/2000, update = 1
+trigger_update: [Fix] iter 1100/2000, update = 1
+trigger_update: [Fix] iter 1200/2000, update = 1
+trigger_update: [Fix] iter 1300/2000, update = 1
+trigger_update: [Fix] iter 1400/2000, update = 1
+train_online: 
+train_online: [T1] CHECKPOINT @ iter 1456/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 4.35s, HT 4.51s (14 updates), Res 1.01s. #BR: 2.64e+07
+train_online: 
+trigger_update: [Fix] iter 1500/2000, update = 1
+trigger_update: [Fix] iter 1600/2000, update = 1
+trigger_update: [Fix] iter 1700/2000, update = 1
+trigger_update: [Fix] iter 1800/2000, update = 1
+trigger_update: [Fix] iter 1900/2000, update = 1
+trigger_update: [Fix] iter 2000/2000, update = 1
+train_online: 
+train_online: [T1] CHECKPOINT @ iter 2000/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 5.73s, HT 6.42s (20 updates), Res 1.24s. #BR: 3.78e+07
+train_online: 
+train_online: HT updates: 20, bits computed: 37760000
+train_online: [Trial 1] Saved: ../cachedir/MIHash/20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX/2000pts_1epochs_5tests/trial1.mat
+
+demo_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX: Training is done.
+================================================
+       Training Time: 5.73 +/- 0.00
+      HT update time: 6.42 +/- 0.00
+      Reservoir time: 1.24 +/- 0.00
+
+  Hash Table Updates: 20 +/- 0
+  Bit Recomputations: 37760000 +/- 000
+================================================
 ```
 
-After printing out the experiment ID (`get_opts: identifier:01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100`) 
-and the input parameters, the data is loaded (`@demo: Loading data for cifar_cnn...
-@load_cnn: Dataset "cifar" loaded in 13.72 secs`). 
-Afterwards, the training begins. Two primary information are printed during learning.
+The experiment ID is prefixed with the current date, 
+e.g. `20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX`.
+After priting input parameters, the dataset is loaded and training begins. 
+Two major types of events are logged during training.
 
-#### i. When a checkpoint (for testing) is reached
+#### i. When a checkpoint is reached
 ```
-@train_osh: *checkpoint*
-[T01] 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100
-     (1456/2000) W 1.32s, HT 13.59s(15 updates), Res 0.52s
-     total #BRs=2.832e+07, avg #BF=30.9103
+train_online: [T1] CHECKPOINT @ iter 2000/2000 (batchSize 1)
+train_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX
+train_online: W 5.73s, HT 6.42s (20 updates), Res 1.24s. #BR: 3.78e+07
 ```
-- `[T01]` again specifies the trial number.
-- `01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100` denotes the experiment ID.
-- `(1456/2000)` is the checkpoint location.
-- `W 1.32s` specifies the training time for the hash method.
-- `HT 13.59s(15 updates)` specifies the hash table update time and the total number of hash table updates till this checkpoint
-- `Res 0.52s` specifies the reservoir maintainance time.
-- `total #BRs=2.832e+07` specifies the current total amount of bit recomputations.
-- `avg #BF=30.9103` specifies the current total bit flips per iteration.
+- `[T1]` specifies the trial number.
+- `@ iter 2000/2000` is the checkpoint location.
+- `W 5.73s` the training time for the hash method.
+- `HT 6.42s (20 updates)` time spent in updating the hash table, and the total number of updates up to this checkpoint.
+- `Res 1.24s` time spent in maintaining the reservoir.
+- `#BR: 3.78e+07` current total amount of bit recomputations.
 
-#### ii. When the hash table is updated (only for OSH)
-`@train_osh: [T01] HT Update#7 @600, #BRs=1.3216e+07, bf_all=1.35307, trigger_val=-1(bf)`
-
-- `[T01]` indicates the trial number. 
-- `HT Update#7` indicates it is the 7th hash table update. 
-- `@600` specifies the training iteration location for the hash table update. 
-- `#BRs=1.3216e+07` specifies the current total number of bit recomputations in the hash table 
-- `bf_all=1.35307` specifies the current total number of bit flips in the hash table
-- `trigger_val=-1(bf)` specifies the trigger threshold value in determining whether to perform an update to the hash table. `bf` denotes that the trigger type is based on `bit flips`.
-
-Note that some of the information such as `Bit flips`, `Bit recomputations` and `Trigger Type` are rudimentary and primarily for future release purposes. 
-
-After training the method, the performance is evaluated and displayed on the command windows as below:
+#### ii. When the hash table is updated
 ```
-@demo: Testing models...
-Trial 1, Checkpoint     1/2000, @evaluate: mAP = 0.17385
-Trial 1, Checkpoint   573/2000, @evaluate: mAP = 0.457
-Trial 1, Checkpoint   993/2000, @evaluate: mAP = 0.50891
-Trial 1, Checkpoint  1456/2000, @evaluate: mAP = 0.53164
-Trial 1, Checkpoint  2000/2000, @evaluate: mAP = 0.55005
-@test:   FINAL mAP: 0.55 +/- 0
-@test:     AUC mAP: 0.444 +/- 0
-@demo: 01-Jul-2017-cifar-cnn-32smooth-B0_S0.1-U100: Testing is done.
+trigger_update: [Fix] iter 1500/2000, update = 1
 ```
-Notice that the performance metric is mAP by default. 
-Other performance measures can be used, please check the `metric` parameter in `get_opts.m`. 
-mAP is evaluated at every checkpoint and for each trial. 
-The performance values, among other information, are stored under the folder specified by `opts.expdir`. 
-Afterwards, the average mAP and the AUC values of all the trials are reported as `FINAL mAP` and `AUC mAP`, respectively. 
-Notice the std is 0 as there is a single trial. 
 
+- `[Fix]` indicates the update strategy. 
+- `iter 1500/2000` is the current iteration.
+- `update = 1` result of the update check (always 1 for `fix`).
 
-Results are stored at: `result_file_path='/research/object_detection/cachedir/online-hashing/okh/01-Jul-2017-labelme-gist-24smooth-C0.0001A0.7-U200/2000pts_1epochs_10tests/prec_k100_1trials.mat'`
+After training, performance is evaluated and displayed:
+```
+demo_online: [MIHash] 20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX: Testing ...
+Trial 1, Checkpoint     1/2000, evaluate: mAP = 0.20967
+Trial 1, Checkpoint   573/2000, evaluate: mAP = 0.32368
+Trial 1, Checkpoint   993/2000, evaluate: mAP = 0.37662
+Trial 1, Checkpoint  1456/2000, evaluate: mAP = 0.40889
+Trial 1, Checkpoint  2000/2000, evaluate: mAP = 0.45064
+demo_online: 
+demo_online:   AUC mAP: 0.354 +/- 0
+demo_online: FINAL mAP: 0.451 +/- 0
+```
+The default performance metric is mAP, and can be specified by the `metric` parameter.
+The instataneous performance at each checkpoint is recorded, and the area under curve (AUC) 
+and final performance are reported in the end. 
+The std is 0 in this case as there is a single trial. 
 
-Command window log is at: `diary_path='/research/object_detection/cachedir/online-hashing/okh/01-Jul-2017-labelme-gist-24smooth-C0.0001A0.7-U200/2000pts_1epochs_10tests/diary_001.txt'`
-
+Final bits of information:
+```
+demo_online: All done.
+demo_online: Results file: ../cachedir/MIHash/20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX/2000pts_1epochs_5tests/mAP_1trials.mat
+demo_online:   Diary file: ../cachedir/MIHash/20170901-cifar-32bit-Bins16Sig10-S1D0-U100-R200FIX/2000pts_1epochs_5tests/diary_001.txt
+```
