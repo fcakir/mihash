@@ -13,7 +13,7 @@ If you have not done so, initialize runtime:
 ## Datasets/Models
 Currently,  only the CIFAR dataset is supported. See `+IMDB` folder.
 
-Two model types are supported:  single-layer (`+Models/fc1.m`) and VGG-F ('+Models/vggf.m').
+Two model types are supported:  single-layer (`+Models/fc1.m`) and VGG-F (`+Models/vggf.m`).
 
 ## Example Usage
 Train 32-bit single-layer MIHash model on CIFAR, split 1. 
@@ -26,5 +26,5 @@ Do not use GPU.
 Training uses MatConvNet, and example log is not shown. 
 The result should be close to this:
 ```
-evaluate: mAP = 0.72866
+evaluate: mAP = 0.72766
 ```
