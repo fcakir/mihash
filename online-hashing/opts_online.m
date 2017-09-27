@@ -112,6 +112,9 @@ assert(mod(opts.updateInterval, opts.batchSize) == 0, ...
 if strcmp(opts.trigger, 'mi')
     assert(opts.reservoirSize>0, 'trigger=mi needs reservoirSize>0');
 end
+if strcmp(opts.methodID, 'MIHash')
+    assert(opts.reservoirSize>0, 'MIHash needs reservoirSize>0');
+end
 
 if strcmp(opts.dataset, 'labelme') 
     assert(~strcmpi(opts.methodID, 'OSH')); % OSH is inapplicable on LabelMe 

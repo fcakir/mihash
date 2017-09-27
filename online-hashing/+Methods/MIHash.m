@@ -61,7 +61,7 @@ methods
             if isempty(Y), Yinit = [];
             else, Yinit = Y(ind, :); end
             [R, ~] = update_reservoir(R, Xinit, Yinit, opts.reservoirSize, ...
-                W, opts.unsupervised);
+                opts.unsupervised);
         end
     end
 
