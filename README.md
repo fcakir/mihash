@@ -12,9 +12,9 @@ This repository contains Matlab implementation of the below paper:
 ## Usage
 - In the main folder, run `startup.m`
 - For **online** hashing experiments: `cd online-hashing`, and run `demo_online.m` with appropriate input arguments (see `online-hashing/README.md`)
-- For **batch** hashing experiments (including deep CNN): `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`). Currently, the CIFAR-10 dataset is supported.
+- For **batch** hashing experiments (including deep CNN): `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`).
 
 ## License
-BSD
+BSD License,  see `LICENSE`
 
 If you use this code in your research, please cite [1].
