@@ -10,7 +10,7 @@ function paths = demo_online(method, dataset, nbits, varargin)
 %   method   - (string) in {'MIHash', 'AdaptHash', 'OKH', 'OSH', 'SketchHash'}
 %   dataset  - (string) in {'cifar', 'places', 'labelme'}
 %   nbits    - (int) length of binary code, 32 is used in the paper
-%   varargin - key-value pairs, see otps_online.m for details
+%   varargin - key-value pairs, see opts_online.m for details
 %
 % OUTPUTS
 %   paths (struct)
@@ -25,7 +25,7 @@ function paths = demo_online(method, dataset, nbits, varargin)
 %
 % A final result file with format 'METRIC_Ntrials.mat' is also created, where 
 % N is the total number of trials, equal to opts.ntrials. This file contains the
-% average statistics of the individual trial (see test.m).
+% average statistics of the individual trial.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parse options
