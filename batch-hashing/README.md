@@ -1,5 +1,5 @@
-# Online Hashing Benchmark
-This folder contains MatConvNet implementation of the batch hashing method in the following paper:
+# Batch Hashing
+This folder contains MatConvNet implementation of MIHash (batch learning version), described in the following paper:
 - F. Cakir, K. He, S. A. Bargal, S. Sclaroff "MIHash: Online Hashing with Mutual Information" International Conference on Computer Vision (ICCV) 2017 ([pdf](https://arxiv.org/abs/1703.08919))
 
 
@@ -11,7 +11,7 @@ If you have not done so, initialize runtime:
 ```
 
 ## Datasets/Models
-Currently,  only the CIFAR dataset is supported. See `+IMDB` folder.
+The CIFAR dataset is supported. See `+IMDB` folder.
 
 Two model types are supported:  single-layer (`+Models/fc1.m`) and VGG-F (`+Models/vggf.m`).
 
