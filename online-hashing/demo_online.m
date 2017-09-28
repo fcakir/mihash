@@ -1,43 +1,11 @@
 function paths = demo_online(method, dataset, nbits, varargin)
-% Copyright (c) 2017, Fatih Cakir, Kun He, Saral Adel Bargal, Stan Sclaroff 
-% All rights reserved.
-% 
 % Implementation of an online hashing benchmark as described in: 
 %
 % "MIHash: Online Hashing with Mutual Information", 
 % Fatih Cakir*, Kun He*, Sarah A. Bargal, Stan Sclaroff
 % (* equal contribution)
 % International Conference on Computer Vision (ICCV) 2017
-% 
-% Usage of code from authors not listed above might be subject
-% to different licensing. Please check with the corresponding authors (see below)
-% for additional information.
 %
-% Redistribution and use in source and binary forms, with or without
-% modification, are permitted provided that the following conditions are met:
-% 
-% 1. Redistributions of source code must retain the above copyright notice, this
-%    list of conditions and the following disclaimer.
-% 2. Redistributions in binary form must reproduce the above copyright notice,
-%    this list of conditions and the following disclaimer in the documentation
-%    and/or other materials provided with the distribution.
-% 
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-% ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-% WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-% ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-% (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-% LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-% ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-% (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-% SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-% 
-% The views and conclusions contained in the software and documentation are those
-% of the authors and should not be interpreted as representing official policies,
-% either expressed or implied, of the FreeBSD Project.
-%
-%------------------------------------------------------------------------------
 % INPUTS
 %   method   - (string) in {'MIHash', 'AdaptHash', 'OKH', 'OSH', 'SketchHash'}
 %   dataset  - (string) in {'cifar', 'places', 'labelme'}
@@ -59,7 +27,6 @@ function paths = demo_online(method, dataset, nbits, varargin)
 % N is the total number of trials, equal to opts.ntrials. This file contains the
 % average statistics of the individual trial (see test.m).
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parse options
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,7 +36,7 @@ ip = inputParser;
 ip.KeepUnmatched = true;
 
 if strcmp(method, 'MIHash')
-    % Implementation of MIHash. If used please cite below paper: 
+    % Implementation of MIHash as described in: 
     %
     % "MIHash: Online Hashing with Mutual Information"
     % Fatih Cakir*, Kun He*, Sarah A. Bargal, Stan Sclaroff (*equal contribution)
@@ -96,7 +63,7 @@ if strcmp(method, 'MIHash')
     opts.batchSize  = 1;  % hard-coded
 
 elseif strcmp(method, 'AdaptHash')
-    % Implementation of AdaptHash. If used please cite below paper:
+    % Implementation of AdaptHash as described in: 
     %
     % "Adaptive Hashing for Fast Similarity Search"
     % F. Cakir, S. Sclaroff
@@ -116,7 +83,7 @@ elseif strcmp(method, 'AdaptHash')
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
 elseif strcmp(method, 'OKH')
-    % Implementation of OKH. If used please cite below paper:
+    % Implementation of OKH as described in: 
     %
     % "Online Hashing"
     % L. K. Huang, Q. Y. Yang and W. S. Zheng
@@ -134,7 +101,7 @@ elseif strcmp(method, 'OKH')
     opts.batchSize  = 2;  % hard-coded; pair supervision
 
 elseif strcmp(method, 'OSH')
-    % Implementation of the OSH. If used please cite below paper: 
+    % Implementation of the OSH method as described in: 
     %
     % "Online Supervised Hashing"
     % F. Cakir, S. Sclaroff
@@ -160,7 +127,7 @@ elseif strcmp(method, 'OSH')
     opts.batchSize  = 1;      % hard-coded
 
 elseif strcmp(method, 'SketchHash')
-    % Implementation of the SketchHash. If used please cite below paper:
+    % Implementation of the SketchHash method as described in: 
     %
     % "Online Sketching Hashing"
     % C. Leng, J. Wu, J. Cheng, X. Bai and H. Lu
