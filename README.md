@@ -6,8 +6,8 @@ This repository contains Matlab implementation of the below paper:
 ## Preparation
 - Create or symlink a directory `cachedir` under the main directory to hold experimental results
 - Run `download_data.sh` in the `data` directory
-- Install or symlink [VLFeat](http://www.vlfeat.org/)  at `./vlfeat`
--  Install or symlink [MatConvNet](http://www.vlfeat.org/matconvnet/) at `./matconvnet` (For expeirments with deep CNN)
+- Install or symlink [VLFeat](http://www.vlfeat.org/)  at `./vlfeat` (for computing performance metrics)
+- Install or symlink [MatConvNet](http://www.vlfeat.org/matconvnet/) at `./matconvnet` (for batch hashing experiments)
 
 ## Usage
 - In the main folder, run `startup.m`
