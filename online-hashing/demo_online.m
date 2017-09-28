@@ -10,7 +10,7 @@ function paths = demo_online(method, dataset, nbits, varargin)
 %   method   - (string) in {'MIHash', 'AdaptHash', 'OKH', 'OSH', 'SketchHash'}
 %   dataset  - (string) in {'cifar', 'places', 'labelme'}
 %   nbits    - (int) length of binary code, 32 is used in the paper
-%   varargin - key-value pairs, see get_opts.m for details
+%   varargin - key-value pairs, see otps_online.m for details
 %
 % OUTPUTS
 %   paths (struct)
