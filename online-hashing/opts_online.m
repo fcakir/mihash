@@ -1,4 +1,4 @@
-function opts = get_opts(opts, dataset, nbits, varargin)
+function opts = opts_online(opts, dataset, nbits, varargin)
 % Sets up data stream settings.
 % The data stream constitutes "trainingPoints" x "epochs" training instances, i.e., the
 % online learning is continued until "trainingPoints" x "epochs" examples are processed
