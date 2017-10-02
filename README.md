@@ -1,7 +1,9 @@
 # Hashing with Mutual Information
 This repository contains Matlab implementation of the below paper:
 
-[1] "MIHash: Online Hashing with Mutual Information", Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution) International Conference on Computer Vision (ICCV), 2017 ([arXiv](https://arxiv.org/abs/1703.08919))
+"MIHash: Online Hashing with Mutual Information",  
+Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution)  
+International Conference on Computer Vision (ICCV), 2017 ([arXiv](https://arxiv.org/abs/1703.08919))
 
 ## Preparation
 - Create or symlink a directory `cachedir` under the main directory to hold experimental results
@@ -17,4 +19,12 @@ This repository contains Matlab implementation of the below paper:
 ## License
 BSD License,  see `LICENSE`
 
-If you use this code in your research, please cite [1].
+If you use this code in your research, please cite:
+```
+@inproceedings{mihash,
+  title={MIHash: Online Hashing with Mutual Information},
+  author={Fatih Cakir and Kun He and Sarah A. Bargal and Stan Sclaroff},
+  booktitle={IEEE International Conference on Computer Vision (ICCV)},
+  year={2017}
+}
+```
