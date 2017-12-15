@@ -48,13 +48,15 @@ Please refer to the above papers for details regarding setting 1 and 2.
 | ------------- | ------------- | ------------- | ------------- |  ------------- |
 | **DPSH**  | 0.908 | 0.909  | 0.917  | 0.932  |
 | **DTSH**  | 0.916  | 0.924  | 0.927  | 0.934  |
-| **MIHash**  | **0.922**  | **0.931**  | **0.94**  | **0.942**  |
+| **MIHash**  | **0.922**  | **0.931**  | **0.9408**  | **0.942**  |
 
 **MIHash Parameters:**
 - 16: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar16-sp2-vggf.txt)
 - 24: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar24-sp2-vggf.txt)
 - 32: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar32-sp2-vggf.txt)
 - 48: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar48-sp2-vggf.txt)
+
+**NOTE:** These diaries are from older versions of the repo, where different parameters is used. By inspection the parameters can easily be matched to `opts_batch.m`. Notably **sigscale** is equal to **sigmf(1)**. Please email `fcakir@gmail.com` if you have any questions. 
 
 ## License
 BSD License,  see `LICENSE`
