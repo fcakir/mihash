@@ -17,10 +17,12 @@ International Conference on Computer Vision (ICCV), 2017 ([arXiv](https://arxiv.
 - For **batch** hashing experiments: `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`).
 
 ## Batch Results
-Here we provide the latest results of MIHash and other competing work on CIFAR-10 and NUSWIDE. These results are from our latest hashing paper [Tie-Aware Learning to Rank](https://arxiv.org/pdf/1705.08562.pdf). For reproducibility, we also provide the parameters for MIHash we used to obtain these results (see `batch-hashing/opts_batch.m`). 
+Here we provide the latest results of MIHash and other competing work on CIFAR-10 and NUSWIDE. For reproducibility, we also provide the parameters for MIHash we used to obtain these results (see `batch-hashing/opts_batch.m`). 
 
 ### CIFAR-10
-The standard setup for CIFAR-10 has two distinct settings. The deep learning architecture is VGG-F and learning is done in and end-to-end fashion. Please refer to the above paper for details. 
+The standard setup for CIFAR-10 has two distinct settings (as specified in the papers DTSH and MIHash). The results shown here uses the VGG-F deep learning architecture and learning is done in an end-to-end fashion. For non-deep methods this corresponds to using the features at the penultimate layer of VGG-F. (Note that differently, in the MIHash paper, we do VGG-16 single-layer experiments for setting-1). 
+
+Please refer to the above papers for details regarding setting 1 and 2. 
 
 **Setting 1: Mean Average Precision** 
 
@@ -32,7 +34,7 @@ The standard setup for CIFAR-10 has two distinct settings. The deep learning arc
 | **StructHash**  | 0.664  | 0.693  | 0.691  | 0.700  |
 | **DPSH**  | 0.720  | 0.757  | 0.757  | 0.767  |
 | **DTSH**  | **0.725**  | 0.773  | 0.781  | 0.810  |
-| **MIHash**  | 0.687  | **0.775**  | **0.786**  | **0.822**  |
+| **MIHash**  | 0.687  | **0.788**  | **0.7899**  | **0.826**  |
 
 **MIHash Parameters:**
 - 12: [diary ](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar12-sp1-vggf.txt)
@@ -46,7 +48,7 @@ The standard setup for CIFAR-10 has two distinct settings. The deep learning arc
 | ------------- | ------------- | ------------- | ------------- |  ------------- |
 | **DPSH**  | 0.908 | 0.909  | 0.917  | 0.932  |
 | **DTSH**  | 0.916  | 0.924  | 0.927  | 0.934  |
-| **MIHash**  | **0.929**  | **0.933**  | **0.938**  | **0.942**  |
+| **MIHash**  | **0.922**  | **0.931**  | **0.94**  | **0.942**  |
 
 **MIHash Parameters:**
 - 16: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar16-sp2-vggf.txt)
