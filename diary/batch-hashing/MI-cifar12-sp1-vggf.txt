@@ -1,0 +1,1523 @@
+
+opts = 
+
+  struct with fields:
+
+       batchSize: 200
+         bpdepth: Inf
+        continue: 1
+         dataset: 'cifar'
+           debug: 0
+         dropout: 0
+             ep1: 0
+           epoch: 100
+            gpus: 1
+              lr: 1.0000e-03
+         lrdecay: 0.5000
+          lrmult: 0.0100
+          lrstep: 50
+        max_iter: 32
+       modelType: 'vggf'
+           nbins: 10
+           nbits: 12
+       normalize: 0
+            plot: 0
+          prefix: '1016.225200'
+    random_codes: 0
+        randseed: 42
+         regress: 1
+           sigmf: [10 0]
+          solver: 'sgd'
+    testInterval: 10
+       tolerance: 1.0000e-06
+          wdecay: 5.0000e-04
+        weighted: 1
+             obj: 'mi'
+           split: 1
+         metrics: {'tieAP'  'AP'}
+             SCC: []
+        testFunc: @test_supervised
+    unsupervised: 0
+         sigmf_p: 10
+        methodID: 'MI-cifar12-vggf-sp1'
+      identifier: '1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005'
+         windows: 0
+        localDir: './cachedir'
+         dataDir: './cachedir/data'
+        imdbPath: './cachedir/data/cifar_imdb'
+          expDir: './cachedir/MI-cifar12-vggf-sp1/1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005'
+
+@demo_AP: MI-cifar12-vggf-sp1
+@demo_AP: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+
+ans =
+
+  1×21 cell array
+
+  Columns 1 through 12
+
+    'conv1'    'relu1'    'norm1'    'pool1'    'conv2'    'relu2'    'norm2'    'pool2'    'conv3'    'relu3'    'conv4'    'relu4'
+
+  Columns 13 through 21
+
+    'conv5'    'relu5'    'pool5'    'fc6'    'relu6'    'fc7'    'relu7'    'logits'    'loss'
+
+@get_model: vggf in 1.67s
+@get_imdb: ./cachedir/data/imdb_cifar_split1.mat
+@get_imdb: loaded in 3.43s
+@get_imdb: cifar_split1 loaded
+      data: [32×32×3×60000 single]
+    labels: [1×60000 single]
+       set: [60000×1 double]
+
+     layer|    0|    1|    2|    3|      4|    5|    6|    7|      8|    9|   10|   11|   12|   13|   14|     15|   16|   17|
+      type|input| conv| relu|  lrn|  mpool| conv| relu|  lrn|  mpool| conv| relu| conv| relu| conv| relu|  mpool| conv| relu|
+      name|  n/a|conv1|relu1|norm1|  pool1|conv2|relu2|norm2|  pool2|conv3|relu3|conv4|relu4|conv5|relu5|  pool5|  fc6|relu6|
+----------|-----|-----|-----|-----|-------|-----|-----|-----|-------|-----|-----|-----|-----|-----|-----|-------|-----|-----|
+   support|  n/a|   11|    1|    1|      3|    5|    1|    1|      3|    3|    1|    3|    1|    3|    1|      3|    6|    1|
+  filt dim|  n/a|    3|  n/a|  n/a|    n/a|   64|  n/a|  n/a|    n/a|  256|  n/a|  256|  n/a|  256|  n/a|    n/a|  256|  n/a|
+filt dilat|  n/a|    1|  n/a|  n/a|    n/a|    1|  n/a|  n/a|    n/a|    1|  n/a|    1|  n/a|    1|  n/a|    n/a|    1|  n/a|
+ num filts|  n/a|   64|  n/a|  n/a|    n/a|  256|  n/a|  n/a|    n/a|  256|  n/a|  256|  n/a|  256|  n/a|    n/a| 4096|  n/a|
+    stride|  n/a|    4|    1|    1|      2|    1|    1|    1|      2|    1|    1|    1|    1|    1|    1|      2|    1|    1|
+       pad|  n/a|    0|    0|    0|0x1x0x1|    2|    0|    0|0x1x0x1|    1|    0|    1|    0|    1|    0|0x1x0x1|    0|    0|
+----------|-----|-----|-----|-----|-------|-----|-----|-----|-------|-----|-----|-----|-----|-----|-----|-------|-----|-----|
+   rf size|  n/a|   11|   11|   11|     19|   51|   51|   51|     67|   99|   99|  131|  131|  163|  163|    195|  355|  355|
+ rf offset|  n/a|    6|    6|    6|     10|   10|   10|   10|     18|   18|   18|   18|   18|   18|   18|     34|  114|  114|
+ rf stride|  n/a|    4|    4|    4|      8|    8|    8|    8|     16|   16|   16|   16|   16|   16|   16|     32|   32|   32|
+----------|-----|-----|-----|-----|-------|-----|-----|-----|-------|-----|-----|-----|-----|-----|-----|-------|-----|-----|
+ data size|  224|   54|   54|   54|     27|   27|   27|   27|     13|   13|   13|   13|   13|   13|   13|      6|    1|    1|
+data depth|    3|   64|   64|   64|     64|  256|  256|  256|    256|  256|  256|  256|  256|  256|  256|    256| 4096| 4096|
+  data num|  200|  200|  200|  200|    200|  200|  200|  200|    200|  200|  200|  200|  200|  200|  200|    200|  200|  200|
+----------|-----|-----|-----|-----|-------|-----|-----|-----|-------|-----|-----|-----|-----|-----|-----|-------|-----|-----|
+  data mem|115MB|142MB|142MB|142MB|   36MB|142MB|142MB|142MB|   33MB| 33MB| 33MB| 33MB| 33MB| 33MB| 33MB|    7MB|  3MB|  3MB|
+ param mem|  n/a| 91KB|   0B|   0B|     0B|  2MB|   0B|   0B|     0B|  2MB|   0B|  2MB|   0B|  2MB|   0B|     0B|144MB|   0B|
+
+     layer|  18|   19|    20|    21|
+      type|conv| relu|  conv|custom|
+      name| fc7|relu7|logits|  loss|
+----------|----|-----|------|------|
+   support|   1|    1|     1|     1|
+  filt dim|4096|  n/a|  4096|   n/a|
+filt dilat|   1|  n/a|     1|   n/a|
+ num filts|4096|  n/a|    12|   n/a|
+    stride|   1|    1|     1|     1|
+       pad|   0|    0|     0|     0|
+----------|----|-----|------|------|
+   rf size| 355|  355|   355|   355|
+ rf offset| 114|  114|   114|   114|
+ rf stride|  32|   32|    32|    32|
+----------|----|-----|------|------|
+ data size|   1|    1|     1|     1|
+data depth|4096| 4096|    12|   NaN|
+  data num| 200|  200|   200|   200|
+----------|----|-----|------|------|
+  data mem| 3MB|  3MB|   9KB|   NaN|
+ param mem|64MB|   0B| 192KB|    0B|
+
+parameter memory|217MB (5.7e+07 parameters)|
+     data memory|  NaN (for batch size 200)|
+
+train_simplenn: resetting GPU
+Clearing mex files
+  CUDADevice with properties:
+
+                      Name: 'GeForce GTX TITAN X'
+                     Index: 1
+         ComputeCapability: '5.2'
+            SupportsDouble: 1
+             DriverVersion: 9
+            ToolkitVersion: 8
+        MaxThreadsPerBlock: 1024
+          MaxShmemPerBlock: 49152
+        MaxThreadBlockSize: [1024 1024 64]
+               MaxGridSize: [2.1475e+09 65535 65535]
+                 SIMDWidth: 32
+               TotalMemory: 1.2800e+10
+           AvailableMemory: 1.2592e+10
+       MultiprocessorCount: 24
+              ClockRateKHz: 1076000
+               ComputeMode: 'Default'
+      GPUOverlapsTransfers: 1
+    KernelExecutionTimeout: 0
+          CanMapHostMemory: 1
+           DeviceSupported: 1
+            DeviceSelected: 1
+
+@processEpoch: Epoch 1, learningRate = 1.000000e-03
+train: epoch 01:   1/ 25: 29.6 Hz objective: -0.022
+train: epoch 01:  13/ 25: 763.2 Hz objective: -0.034
+train: epoch 01:  25/ 25: 768.0 Hz objective: -0.052
+@processEpoch: Avg objective = -0.0344958
+@processEpoch: Epoch 1, learningRate = 1.000000e-03
+val: epoch 01:   1/  5: 1398.0 Hz objective: -0.083
+val: epoch 01:   5/  5: 1457.4 Hz objective: -0.089
+@processEpoch: Avg objective = -0.0862601
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 2, learningRate = 1.000000e-03
+train: epoch 02:   1/ 25: 1175.9 Hz objective: -0.086
+train: epoch 02:  13/ 25: 786.0 Hz objective: -0.110
+train: epoch 02:  25/ 25: 771.3 Hz objective: -0.116
+@processEpoch: Avg objective = -0.108538
+@processEpoch: Epoch 2, learningRate = 1.000000e-03
+val: epoch 02:   1/  5: 1463.8 Hz objective: -0.132
+val: epoch 02:   5/  5: 1482.4 Hz objective: -0.131
+@processEpoch: Avg objective = -0.128765
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 3, learningRate = 1.000000e-03
+train: epoch 03:   1/ 25: 1232.1 Hz objective: -0.144
+train: epoch 03:  13/ 25: 786.3 Hz objective: -0.135
+train: epoch 03:  25/ 25: 787.9 Hz objective: -0.146
+@processEpoch: Avg objective = -0.139532
+@processEpoch: Epoch 3, learningRate = 1.000000e-03
+val: epoch 03:   1/  5: 1549.8 Hz objective: -0.160
+val: epoch 03:   5/  5: 1491.6 Hz objective: -0.151
+@processEpoch: Avg objective = -0.156157
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 4, learningRate = 1.000000e-03
+train: epoch 04:   1/ 25: 1145.5 Hz objective: -0.170
+train: epoch 04:  13/ 25: 787.4 Hz objective: -0.168
+train: epoch 04:  25/ 25: 784.7 Hz objective: -0.168
+@processEpoch: Avg objective = -0.166013
+@processEpoch: Epoch 4, learningRate = 1.000000e-03
+val: epoch 04:   1/  5: 1453.7 Hz objective: -0.152
+val: epoch 04:   5/  5: 1421.6 Hz objective: -0.167
+@processEpoch: Avg objective = -0.161236
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 5, learningRate = 1.000000e-03
+train: epoch 05:   1/ 25: 1180.5 Hz objective: -0.145
+train: epoch 05:  13/ 25: 774.6 Hz objective: -0.181
+train: epoch 05:  25/ 25: 771.5 Hz objective: -0.183
+@processEpoch: Avg objective = -0.179039
+@processEpoch: Epoch 5, learningRate = 1.000000e-03
+val: epoch 05:   1/  5: 1456.7 Hz objective: -0.168
+val: epoch 05:   5/  5: 1480.8 Hz objective: -0.169
+@processEpoch: Avg objective = -0.166674
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 6, learningRate = 1.000000e-03
+train: epoch 06:   1/ 25: 1233.8 Hz objective: -0.195
+train: epoch 06:  13/ 25: 782.8 Hz objective: -0.198
+train: epoch 06:  25/ 25: 779.2 Hz objective: -0.193
+@processEpoch: Avg objective = -0.196694
+@processEpoch: Epoch 6, learningRate = 1.000000e-03
+val: epoch 06:   1/  5: 1524.2 Hz objective: -0.175
+val: epoch 06:   5/  5: 1485.2 Hz objective: -0.175
+@processEpoch: Avg objective = -0.174684
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 7, learningRate = 1.000000e-03
+train: epoch 07:   1/ 25: 1251.3 Hz objective: -0.214
+train: epoch 07:  13/ 25: 782.3 Hz objective: -0.205
+train: epoch 07:  25/ 25: 780.8 Hz objective: -0.202
+@processEpoch: Avg objective = -0.205555
+@processEpoch: Epoch 7, learningRate = 1.000000e-03
+val: epoch 07:   1/  5: 1527.9 Hz objective: -0.181
+val: epoch 07:   5/  5: 1490.8 Hz objective: -0.187
+@processEpoch: Avg objective = -0.184204
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 8, learningRate = 1.000000e-03
+train: epoch 08:   1/ 25: 1242.7 Hz objective: -0.210
+train: epoch 08:  13/ 25: 781.4 Hz objective: -0.209
+train: epoch 08:  25/ 25: 780.8 Hz objective: -0.212
+@processEpoch: Avg objective = -0.210342
+@processEpoch: Epoch 8, learningRate = 1.000000e-03
+val: epoch 08:   1/  5: 1538.7 Hz objective: -0.229
+val: epoch 08:   5/  5: 1481.7 Hz objective: -0.191
+@processEpoch: Avg objective = -0.205308
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 9, learningRate = 1.000000e-03
+train: epoch 09:   1/ 25: 1231.6 Hz objective: -0.239
+train: epoch 09:  13/ 25: 776.9 Hz objective: -0.218
+train: epoch 09:  25/ 25: 776.2 Hz objective: -0.219
+@processEpoch: Avg objective = -0.220889
+@processEpoch: Epoch 9, learningRate = 1.000000e-03
+val: epoch 09:   1/  5: 1540.4 Hz objective: -0.210
+val: epoch 09:   5/  5: 1449.7 Hz objective: -0.198
+@processEpoch: Avg objective = -0.204183
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 10, learningRate = 1.000000e-03
+train: epoch 10:   1/ 25: 1249.3 Hz objective: -0.234
+train: epoch 10:  13/ 25: 773.1 Hz objective: -0.228
+train: epoch 10:  25/ 25: 773.1 Hz objective: -0.233
+@processEpoch: Avg objective = -0.230153
+@processEpoch: Epoch 10, learningRate = 1.000000e-03
+val: epoch 10:   1/  5: 1524.6 Hz objective: -0.197
+val: epoch 10:   5/  5: 1463.5 Hz objective: -0.205
+@processEpoch: Avg objective = -0.201101
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.653890 seconds.
+Testing network... Elapsed time is 38.434348 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.50669
+@evaluate_tieAP: 1.38 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.506827
+@evaluate_AP: optim_AP = 0.710722
+@evaluate_AP: pessi_AP = 0.388183
+@evaluate_AP: 8.34 seconds
+
+@processEpoch: Epoch 11, learningRate = 1.000000e-03
+train: epoch 11:   1/ 25: 1160.5 Hz objective: -0.266
+train: epoch 11:  14/ 25: 803.0 Hz objective: -0.239
+train: epoch 11:  25/ 25: 802.0 Hz objective: -0.231
+@processEpoch: Avg objective = -0.238161
+@processEpoch: Epoch 11, learningRate = 1.000000e-03
+val: epoch 11:   1/  5: 1538.8 Hz objective: -0.200
+val: epoch 11:   5/  5: 1475.8 Hz objective: -0.185
+@processEpoch: Avg objective = -0.191114
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 12, learningRate = 1.000000e-03
+train: epoch 12:   1/ 25: 1268.4 Hz objective: -0.215
+train: epoch 12:  14/ 25: 800.3 Hz objective: -0.238
+train: epoch 12:  25/ 25: 795.6 Hz objective: -0.243
+@processEpoch: Avg objective = -0.23206
+@processEpoch: Epoch 12, learningRate = 1.000000e-03
+val: epoch 12:   1/  5: 1525.5 Hz objective: -0.196
+val: epoch 12:   5/  5: 1367.1 Hz objective: -0.217
+@processEpoch: Avg objective = -0.21374
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 13, learningRate = 1.000000e-03
+train: epoch 13:   1/ 25: 1234.3 Hz objective: -0.261
+train: epoch 13:  13/ 25: 797.9 Hz objective: -0.246
+train: epoch 13:  25/ 25: 793.4 Hz objective: -0.248
+@processEpoch: Avg objective = -0.249579
+@processEpoch: Epoch 13, learningRate = 1.000000e-03
+val: epoch 13:   1/  5: 1438.8 Hz objective: -0.227
+val: epoch 13:   5/  5: 1340.6 Hz objective: -0.213
+@processEpoch: Avg objective = -0.217204
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 14, learningRate = 1.000000e-03
+train: epoch 14:   1/ 25: 1204.0 Hz objective: -0.281
+train: epoch 14:  13/ 25: 799.4 Hz objective: -0.260
+train: epoch 14:  25/ 25: 800.4 Hz objective: -0.260
+@processEpoch: Avg objective = -0.264689
+@processEpoch: Epoch 14, learningRate = 1.000000e-03
+val: epoch 14:   1/  5: 1528.5 Hz objective: -0.231
+val: epoch 14:   5/  5: 1355.9 Hz objective: -0.215
+@processEpoch: Avg objective = -0.222688
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 15, learningRate = 1.000000e-03
+train: epoch 15:   1/ 25: 1218.1 Hz objective: -0.239
+train: epoch 15:  13/ 25: 799.9 Hz objective: -0.264
+train: epoch 15:  25/ 25: 799.9 Hz objective: -0.268
+@processEpoch: Avg objective = -0.264469
+@processEpoch: Epoch 15, learningRate = 1.000000e-03
+val: epoch 15:   1/  5: 1500.9 Hz objective: -0.215
+val: epoch 15:   5/  5: 1443.2 Hz objective: -0.216
+@processEpoch: Avg objective = -0.21605
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 16, learningRate = 1.000000e-03
+train: epoch 16:   1/ 25: 1171.6 Hz objective: -0.263
+train: epoch 16:  13/ 25: 799.0 Hz objective: -0.275
+train: epoch 16:  25/ 25: 781.1 Hz objective: -0.279
+@processEpoch: Avg objective = -0.27547
+@processEpoch: Epoch 16, learningRate = 1.000000e-03
+val: epoch 16:   1/  5: 1420.1 Hz objective: -0.251
+val: epoch 16:   5/  5: 1395.9 Hz objective: -0.234
+@processEpoch: Avg objective = -0.243001
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 17, learningRate = 1.000000e-03
+train: epoch 17:   1/ 25: 1147.8 Hz objective: -0.303
+train: epoch 17:  12/ 25: 737.7 Hz objective: -0.289
+train: epoch 17:  24/ 25: 745.9 Hz objective: -0.292
+train: epoch 17:  25/ 25: 745.1 Hz objective: -0.292
+@processEpoch: Avg objective = -0.291697
+@processEpoch: Epoch 17, learningRate = 1.000000e-03
+val: epoch 17:   1/  5: 1460.6 Hz objective: -0.228
+val: epoch 17:   5/  5: 1369.1 Hz objective: -0.233
+@processEpoch: Avg objective = -0.23343
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 18, learningRate = 1.000000e-03
+train: epoch 18:   1/ 25: 1034.8 Hz objective: -0.329
+train: epoch 18:  12/ 25: 686.0 Hz objective: -0.303
+train: epoch 18:  23/ 25: 697.6 Hz objective: -0.298
+train: epoch 18:  25/ 25: 697.7 Hz objective: -0.298
+@processEpoch: Avg objective = -0.302304
+@processEpoch: Epoch 18, learningRate = 1.000000e-03
+val: epoch 18:   1/  5: 1325.1 Hz objective: -0.249
+val: epoch 18:   5/  5: 1443.4 Hz objective: -0.242
+@processEpoch: Avg objective = -0.244038
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 19, learningRate = 1.000000e-03
+train: epoch 19:   1/ 25: 1066.4 Hz objective: -0.324
+train: epoch 19:  12/ 25: 689.2 Hz objective: -0.309
+train: epoch 19:  23/ 25: 687.8 Hz objective: -0.312
+train: epoch 19:  25/ 25: 690.0 Hz objective: -0.312
+@processEpoch: Avg objective = -0.311297
+@processEpoch: Epoch 19, learningRate = 1.000000e-03
+val: epoch 19:   1/  5: 1351.8 Hz objective: -0.224
+val: epoch 19:   5/  5: 1425.2 Hz objective: -0.236
+@processEpoch: Avg objective = -0.239016
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 20, learningRate = 1.000000e-03
+train: epoch 20:   1/ 25: 1148.0 Hz objective: -0.334
+train: epoch 20:  12/ 25: 678.7 Hz objective: -0.316
+train: epoch 20:  22/ 25: 671.5 Hz objective: -0.316
+train: epoch 20:  25/ 25: 674.7 Hz objective: -0.315
+@processEpoch: Avg objective = -0.31824
+@processEpoch: Epoch 20, learningRate = 1.000000e-03
+val: epoch 20:   1/  5: 1422.6 Hz objective: -0.232
+val: epoch 20:   5/  5: 1427.3 Hz objective: -0.245
+@processEpoch: Avg objective = -0.240997
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.703844 seconds.
+Testing network... Elapsed time is 41.240923 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.639006
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.638871
+@evaluate_AP: optim_AP = 0.776746
+@evaluate_AP: pessi_AP = 0.518468
+@evaluate_AP: 8.22 seconds
+
+@processEpoch: Epoch 21, learningRate = 1.000000e-03
+train: epoch 21:   1/ 25: 1115.4 Hz objective: -0.325
+train: epoch 21:  11/ 25: 660.9 Hz objective: -0.320
+train: epoch 21:  21/ 25: 660.1 Hz objective: -0.324
+train: epoch 21:  25/ 25: 662.4 Hz objective: -0.322
+@processEpoch: Avg objective = -0.321662
+@processEpoch: Epoch 21, learningRate = 1.000000e-03
+val: epoch 21:   1/  5: 1437.9 Hz objective: -0.233
+val: epoch 21:   5/  5: 1423.7 Hz objective: -0.245
+@processEpoch: Avg objective = -0.237396
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 22, learningRate = 1.000000e-03
+train: epoch 22:   1/ 25: 1147.2 Hz objective: -0.336
+train: epoch 22:  11/ 25: 652.5 Hz objective: -0.323
+train: epoch 22:  21/ 25: 648.4 Hz objective: -0.323
+train: epoch 22:  25/ 25: 649.8 Hz objective: -0.325
+@processEpoch: Avg objective = -0.326486
+@processEpoch: Epoch 22, learningRate = 1.000000e-03
+val: epoch 22:   1/  5: 1433.8 Hz objective: -0.245
+val: epoch 22:   5/  5: 1443.8 Hz objective: -0.246
+@processEpoch: Avg objective = -0.24858
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 23, learningRate = 1.000000e-03
+train: epoch 23:   1/ 25: 1160.3 Hz objective: -0.317
+train: epoch 23:  11/ 25: 649.8 Hz objective: -0.331
+train: epoch 23:  21/ 25: 649.7 Hz objective: -0.337
+train: epoch 23:  25/ 25: 647.4 Hz objective: -0.335
+@processEpoch: Avg objective = -0.333701
+@processEpoch: Epoch 23, learningRate = 1.000000e-03
+val: epoch 23:   1/  5: 1349.3 Hz objective: -0.231
+val: epoch 23:   5/  5: 1422.0 Hz objective: -0.241
+@processEpoch: Avg objective = -0.243608
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 24, learningRate = 1.000000e-03
+train: epoch 24:   1/ 25: 1159.1 Hz objective: -0.322
+train: epoch 24:  11/ 25: 644.8 Hz objective: -0.331
+train: epoch 24:  21/ 25: 642.1 Hz objective: -0.335
+train: epoch 24:  25/ 25: 643.2 Hz objective: -0.335
+@processEpoch: Avg objective = -0.331386
+@processEpoch: Epoch 24, learningRate = 1.000000e-03
+val: epoch 24:   1/  5: 1423.1 Hz objective: -0.245
+val: epoch 24:   5/  5: 1420.0 Hz objective: -0.240
+@processEpoch: Avg objective = -0.239801
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 25, learningRate = 1.000000e-03
+train: epoch 25:   1/ 25: 1142.5 Hz objective: -0.317
+train: epoch 25:  11/ 25: 649.5 Hz objective: -0.344
+train: epoch 25:  21/ 25: 649.3 Hz objective: -0.343
+train: epoch 25:  25/ 25: 648.1 Hz objective: -0.342
+@processEpoch: Avg objective = -0.339199
+@processEpoch: Epoch 25, learningRate = 1.000000e-03
+val: epoch 25:   1/  5: 1395.6 Hz objective: -0.247
+val: epoch 25:   5/  5: 1381.4 Hz objective: -0.242
+@processEpoch: Avg objective = -0.240205
+@saveState: Saving: ./cachedir/MI-cifar12-vggf-sp1/1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005/net-epoch-25.mat
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 26, learningRate = 1.000000e-03
+train: epoch 26:   1/ 25: 1001.6 Hz objective: -0.340
+train: epoch 26:  11/ 25: 638.9 Hz objective: -0.342
+train: epoch 26:  21/ 25: 642.6 Hz objective: -0.340
+train: epoch 26:  25/ 25: 643.8 Hz objective: -0.342
+@processEpoch: Avg objective = -0.338407
+@processEpoch: Epoch 26, learningRate = 1.000000e-03
+val: epoch 26:   1/  5: 1415.5 Hz objective: -0.251
+val: epoch 26:   5/  5: 1413.2 Hz objective: -0.246
+@processEpoch: Avg objective = -0.24958
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 27, learningRate = 1.000000e-03
+train: epoch 27:   1/ 25: 1143.9 Hz objective: -0.365
+train: epoch 27:  11/ 25: 642.0 Hz objective: -0.352
+train: epoch 27:  21/ 25: 646.1 Hz objective: -0.350
+train: epoch 27:  25/ 25: 646.6 Hz objective: -0.350
+@processEpoch: Avg objective = -0.350689
+@processEpoch: Epoch 27, learningRate = 1.000000e-03
+val: epoch 27:   1/  5: 1438.0 Hz objective: -0.270
+val: epoch 27:   5/  5: 1407.6 Hz objective: -0.252
+@processEpoch: Avg objective = -0.26129
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 28, learningRate = 1.000000e-03
+train: epoch 28:   1/ 25: 1151.6 Hz objective: -0.349
+train: epoch 28:  11/ 25: 634.4 Hz objective: -0.352
+train: epoch 28:  21/ 25: 637.2 Hz objective: -0.354
+train: epoch 28:  25/ 25: 636.3 Hz objective: -0.355
+@processEpoch: Avg objective = -0.351399
+@processEpoch: Epoch 28, learningRate = 1.000000e-03
+val: epoch 28:   1/  5: 1366.0 Hz objective: -0.240
+val: epoch 28:   5/  5: 1377.0 Hz objective: -0.250
+@processEpoch: Avg objective = -0.249019
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 29, learningRate = 1.000000e-03
+train: epoch 29:   1/ 25: 1105.7 Hz objective: -0.352
+train: epoch 29:  11/ 25: 648.2 Hz objective: -0.359
+train: epoch 29:  21/ 25: 648.0 Hz objective: -0.359
+train: epoch 29:  25/ 25: 648.0 Hz objective: -0.359
+@processEpoch: Avg objective = -0.357793
+@processEpoch: Epoch 29, learningRate = 1.000000e-03
+val: epoch 29:   1/  5: 1430.9 Hz objective: -0.238
+val: epoch 29:   5/  5: 1415.9 Hz objective: -0.245
+@processEpoch: Avg objective = -0.24067
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 30, learningRate = 1.000000e-03
+train: epoch 30:   1/ 25: 1140.3 Hz objective: -0.366
+train: epoch 30:  11/ 25: 648.2 Hz objective: -0.354
+train: epoch 30:  21/ 25: 648.4 Hz objective: -0.359
+train: epoch 30:  25/ 25: 646.4 Hz objective: -0.361
+@processEpoch: Avg objective = -0.358116
+@processEpoch: Epoch 30, learningRate = 1.000000e-03
+val: epoch 30:   1/  5: 1414.5 Hz objective: -0.266
+val: epoch 30:   5/  5: 1411.1 Hz objective: -0.252
+@processEpoch: Avg objective = -0.256416
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.711611 seconds.
+Testing network... Elapsed time is 41.214636 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.676383
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.67626
+@evaluate_AP: optim_AP = 0.800777
+@evaluate_AP: pessi_AP = 0.556404
+@evaluate_AP: 8.23 seconds
+
+@processEpoch: Epoch 31, learningRate = 1.000000e-03
+train: epoch 31:   1/ 25: 1102.7 Hz objective: -0.357
+train: epoch 31:  11/ 25: 643.4 Hz objective: -0.370
+train: epoch 31:  21/ 25: 645.5 Hz objective: -0.365
+train: epoch 31:  25/ 25: 645.8 Hz objective: -0.364
+@processEpoch: Avg objective = -0.366234
+@processEpoch: Epoch 31, learningRate = 1.000000e-03
+val: epoch 31:   1/  5: 1423.7 Hz objective: -0.251
+val: epoch 31:   5/  5: 1402.3 Hz objective: -0.251
+@processEpoch: Avg objective = -0.252796
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 32, learningRate = 1.000000e-03
+train: epoch 32:   1/ 25: 1093.7 Hz objective: -0.334
+train: epoch 32:  11/ 25: 647.2 Hz objective: -0.365
+train: epoch 32:  21/ 25: 647.8 Hz objective: -0.368
+train: epoch 32:  25/ 25: 647.5 Hz objective: -0.366
+@processEpoch: Avg objective = -0.363521
+@processEpoch: Epoch 32, learningRate = 1.000000e-03
+val: epoch 32:   1/  5: 1426.7 Hz objective: -0.281
+val: epoch 32:   5/  5: 1407.8 Hz objective: -0.252
+@processEpoch: Avg objective = -0.259739
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 33, learningRate = 1.000000e-03
+train: epoch 33:   1/ 25: 1136.4 Hz objective: -0.384
+train: epoch 33:  11/ 25: 647.1 Hz objective: -0.367
+train: epoch 33:  21/ 25: 647.2 Hz objective: -0.362
+train: epoch 33:  25/ 25: 646.9 Hz objective: -0.364
+@processEpoch: Avg objective = -0.367403
+@processEpoch: Epoch 33, learningRate = 1.000000e-03
+val: epoch 33:   1/  5: 1402.4 Hz objective: -0.257
+val: epoch 33:   5/  5: 1435.5 Hz objective: -0.258
+@processEpoch: Avg objective = -0.254587
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 34, learningRate = 1.000000e-03
+train: epoch 34:   1/ 25: 1135.9 Hz objective: -0.373
+train: epoch 34:  11/ 25: 646.9 Hz objective: -0.367
+train: epoch 34:  21/ 25: 643.1 Hz objective: -0.365
+train: epoch 34:  25/ 25: 643.5 Hz objective: -0.364
+@processEpoch: Avg objective = -0.365777
+@processEpoch: Epoch 34, learningRate = 1.000000e-03
+val: epoch 34:   1/  5: 1411.8 Hz objective: -0.275
+val: epoch 34:   5/  5: 1396.3 Hz objective: -0.257
+@processEpoch: Avg objective = -0.262014
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 35, learningRate = 1.000000e-03
+train: epoch 35:   1/ 25: 1134.0 Hz objective: -0.395
+train: epoch 35:  11/ 25: 642.5 Hz objective: -0.366
+train: epoch 35:  21/ 25: 643.9 Hz objective: -0.363
+train: epoch 35:  25/ 25: 644.2 Hz objective: -0.365
+@processEpoch: Avg objective = -0.366901
+@processEpoch: Epoch 35, learningRate = 1.000000e-03
+val: epoch 35:   1/  5: 1423.9 Hz objective: -0.225
+val: epoch 35:   5/  5: 1408.0 Hz objective: -0.257
+@processEpoch: Avg objective = -0.247823
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 36, learningRate = 1.000000e-03
+train: epoch 36:   1/ 25: 1149.8 Hz objective: -0.348
+train: epoch 36:  11/ 25: 644.5 Hz objective: -0.371
+train: epoch 36:  21/ 25: 642.0 Hz objective: -0.368
+train: epoch 36:  25/ 25: 634.1 Hz objective: -0.370
+@processEpoch: Avg objective = -0.366777
+@processEpoch: Epoch 36, learningRate = 1.000000e-03
+val: epoch 36:   1/  5: 1404.7 Hz objective: -0.251
+val: epoch 36:   5/  5: 1288.8 Hz objective: -0.258
+@processEpoch: Avg objective = -0.255436
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 37, learningRate = 1.000000e-03
+train: epoch 37:   1/ 25: 1011.7 Hz objective: -0.354
+train: epoch 37:  11/ 25: 632.0 Hz objective: -0.371
+train: epoch 37:  21/ 25: 632.9 Hz objective: -0.369
+train: epoch 37:  25/ 25: 631.2 Hz objective: -0.370
+@processEpoch: Avg objective = -0.368721
+@processEpoch: Epoch 37, learningRate = 1.000000e-03
+val: epoch 37:   1/  5: 1359.5 Hz objective: -0.260
+val: epoch 37:   5/  5: 1389.2 Hz objective: -0.256
+@processEpoch: Avg objective = -0.258944
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 38, learningRate = 1.000000e-03
+train: epoch 38:   1/ 25: 1114.5 Hz objective: -0.354
+train: epoch 38:  11/ 25: 646.6 Hz objective: -0.367
+train: epoch 38:  21/ 25: 647.9 Hz objective: -0.372
+train: epoch 38:  25/ 25: 648.4 Hz objective: -0.371
+@processEpoch: Avg objective = -0.368276
+@processEpoch: Epoch 38, learningRate = 1.000000e-03
+val: epoch 38:   1/  5: 1434.0 Hz objective: -0.260
+val: epoch 38:   5/  5: 1416.6 Hz objective: -0.260
+@processEpoch: Avg objective = -0.258486
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 39, learningRate = 1.000000e-03
+train: epoch 39:   1/ 25: 1157.8 Hz objective: -0.393
+train: epoch 39:  11/ 25: 650.5 Hz objective: -0.374
+train: epoch 39:  21/ 25: 644.6 Hz objective: -0.374
+train: epoch 39:  25/ 25: 644.2 Hz objective: -0.373
+@processEpoch: Avg objective = -0.376361
+@processEpoch: Epoch 39, learningRate = 1.000000e-03
+val: epoch 39:   1/  5: 1369.1 Hz objective: -0.258
+val: epoch 39:   5/  5: 1430.7 Hz objective: -0.255
+@processEpoch: Avg objective = -0.258671
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 40, learningRate = 1.000000e-03
+train: epoch 40:   1/ 25: 1143.6 Hz objective: -0.362
+train: epoch 40:  11/ 25: 649.3 Hz objective: -0.374
+train: epoch 40:  21/ 25: 649.7 Hz objective: -0.374
+train: epoch 40:  25/ 25: 649.8 Hz objective: -0.373
+@processEpoch: Avg objective = -0.374033
+@processEpoch: Epoch 40, learningRate = 1.000000e-03
+val: epoch 40:   1/  5: 1443.5 Hz objective: -0.268
+val: epoch 40:   5/  5: 1348.4 Hz objective: -0.265
+@processEpoch: Avg objective = -0.26527
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.748678 seconds.
+Testing network... Elapsed time is 41.385850 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.677734
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.677887
+@evaluate_AP: optim_AP = 0.800587
+@evaluate_AP: pessi_AP = 0.557718
+@evaluate_AP: 8.23 seconds
+
+@processEpoch: Epoch 41, learningRate = 1.000000e-03
+train: epoch 41:   1/ 25: 1102.2 Hz objective: -0.383
+train: epoch 41:  11/ 25: 645.7 Hz objective: -0.372
+train: epoch 41:  21/ 25: 646.9 Hz objective: -0.372
+train: epoch 41:  25/ 25: 646.8 Hz objective: -0.373
+@processEpoch: Avg objective = -0.373755
+@processEpoch: Epoch 41, learningRate = 1.000000e-03
+val: epoch 41:   1/  5: 1429.8 Hz objective: -0.267
+val: epoch 41:   5/  5: 1443.4 Hz objective: -0.258
+@processEpoch: Avg objective = -0.261316
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 42, learningRate = 1.000000e-03
+train: epoch 42:   1/ 25: 1147.8 Hz objective: -0.365
+train: epoch 42:  11/ 25: 647.8 Hz objective: -0.375
+train: epoch 42:  21/ 25: 647.6 Hz objective: -0.376
+train: epoch 42:  25/ 25: 647.4 Hz objective: -0.375
+@processEpoch: Avg objective = -0.374021
+@processEpoch: Epoch 42, learningRate = 1.000000e-03
+val: epoch 42:   1/  5: 1411.4 Hz objective: -0.275
+val: epoch 42:   5/  5: 1396.0 Hz objective: -0.258
+@processEpoch: Avg objective = -0.260979
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 43, learningRate = 1.000000e-03
+train: epoch 43:   1/ 25: 1149.5 Hz objective: -0.374
+train: epoch 43:  11/ 25: 648.4 Hz objective: -0.372
+train: epoch 43:  21/ 25: 647.6 Hz objective: -0.375
+train: epoch 43:  25/ 25: 647.5 Hz objective: -0.377
+@processEpoch: Avg objective = -0.374654
+@processEpoch: Epoch 43, learningRate = 1.000000e-03
+val: epoch 43:   1/  5: 1427.5 Hz objective: -0.251
+val: epoch 43:   5/  5: 1361.0 Hz objective: -0.261
+@processEpoch: Avg objective = -0.257001
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 44, learningRate = 1.000000e-03
+train: epoch 44:   1/ 25: 1104.7 Hz objective: -0.361
+train: epoch 44:  11/ 25: 648.8 Hz objective: -0.377
+train: epoch 44:  21/ 25: 648.0 Hz objective: -0.375
+train: epoch 44:  25/ 25: 647.6 Hz objective: -0.376
+@processEpoch: Avg objective = -0.374871
+@processEpoch: Epoch 44, learningRate = 1.000000e-03
+val: epoch 44:   1/  5: 1416.9 Hz objective: -0.248
+val: epoch 44:   5/  5: 1408.9 Hz objective: -0.259
+@processEpoch: Avg objective = -0.257682
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 45, learningRate = 1.000000e-03
+train: epoch 45:   1/ 25: 1149.7 Hz objective: -0.372
+train: epoch 45:  11/ 25: 639.6 Hz objective: -0.377
+train: epoch 45:  21/ 25: 641.0 Hz objective: -0.376
+train: epoch 45:  25/ 25: 641.4 Hz objective: -0.375
+@processEpoch: Avg objective = -0.375236
+@processEpoch: Epoch 45, learningRate = 1.000000e-03
+val: epoch 45:   1/  5: 1418.9 Hz objective: -0.267
+val: epoch 45:   5/  5: 1396.1 Hz objective: -0.262
+@processEpoch: Avg objective = -0.264373
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 46, learningRate = 1.000000e-03
+train: epoch 46:   1/ 25: 1149.6 Hz objective: -0.379
+train: epoch 46:  11/ 25: 647.4 Hz objective: -0.382
+train: epoch 46:  21/ 25: 646.4 Hz objective: -0.380
+train: epoch 46:  25/ 25: 646.0 Hz objective: -0.377
+@processEpoch: Avg objective = -0.379877
+@processEpoch: Epoch 46, learningRate = 1.000000e-03
+val: epoch 46:   1/  5: 1427.0 Hz objective: -0.254
+val: epoch 46:   5/  5: 1426.8 Hz objective: -0.263
+@processEpoch: Avg objective = -0.261495
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 47, learningRate = 1.000000e-03
+train: epoch 47:   1/ 25: 1138.9 Hz objective: -0.377
+train: epoch 47:  11/ 25: 641.2 Hz objective: -0.379
+train: epoch 47:  21/ 25: 642.6 Hz objective: -0.376
+train: epoch 47:  25/ 25: 643.0 Hz objective: -0.378
+@processEpoch: Avg objective = -0.376966
+@processEpoch: Epoch 47, learningRate = 1.000000e-03
+val: epoch 47:   1/  5: 1425.3 Hz objective: -0.276
+val: epoch 47:   5/  5: 1398.7 Hz objective: -0.261
+@processEpoch: Avg objective = -0.264082
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 48, learningRate = 1.000000e-03
+train: epoch 48:   1/ 25: 1148.5 Hz objective: -0.368
+train: epoch 48:  11/ 25: 634.4 Hz objective: -0.378
+train: epoch 48:  21/ 25: 638.1 Hz objective: -0.381
+train: epoch 48:  25/ 25: 636.4 Hz objective: -0.380
+@processEpoch: Avg objective = -0.378757
+@processEpoch: Epoch 48, learningRate = 1.000000e-03
+val: epoch 48:   1/  5: 1402.1 Hz objective: -0.277
+val: epoch 48:   5/  5: 1387.5 Hz objective: -0.264
+@processEpoch: Avg objective = -0.269263
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 49, learningRate = 1.000000e-03
+train: epoch 49:   1/ 25: 1141.4 Hz objective: -0.379
+train: epoch 49:  11/ 25: 632.1 Hz objective: -0.376
+train: epoch 49:  21/ 25: 630.8 Hz objective: -0.377
+train: epoch 49:  25/ 25: 629.9 Hz objective: -0.378
+@processEpoch: Avg objective = -0.376091
+@processEpoch: Epoch 49, learningRate = 1.000000e-03
+val: epoch 49:   1/  5: 1409.0 Hz objective: -0.272
+val: epoch 49:   5/  5: 1418.3 Hz objective: -0.258
+@processEpoch: Avg objective = -0.261314
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 50, learningRate = 1.000000e-03
+train: epoch 50:   1/ 25: 1144.5 Hz objective: -0.370
+train: epoch 50:  11/ 25: 644.9 Hz objective: -0.381
+train: epoch 50:  21/ 25: 637.1 Hz objective: -0.380
+train: epoch 50:  25/ 25: 638.1 Hz objective: -0.379
+@processEpoch: Avg objective = -0.378259
+@processEpoch: Epoch 50, learningRate = 1.000000e-03
+val: epoch 50:   1/  5: 1410.5 Hz objective: -0.245
+val: epoch 50:   5/  5: 1412.1 Hz objective: -0.261
+@processEpoch: Avg objective = -0.255302
+@saveState: Saving: ./cachedir/MI-cifar12-vggf-sp1/1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005/net-epoch-50.mat
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.754648 seconds.
+Testing network... Elapsed time is 41.245476 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.685279
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.68632
+@evaluate_AP: optim_AP = 0.810332
+@evaluate_AP: pessi_AP = 0.564742
+@evaluate_AP: 8.28 seconds
+
+@processEpoch: Epoch 51, learningRate = 5.000000e-04
+train: epoch 51:   1/ 25: 1081.2 Hz objective: -0.374
+train: epoch 51:  11/ 25: 648.4 Hz objective: -0.378
+train: epoch 51:  21/ 25: 648.0 Hz objective: -0.383
+train: epoch 51:  25/ 25: 647.9 Hz objective: -0.380
+@processEpoch: Avg objective = -0.378397
+@processEpoch: Epoch 51, learningRate = 5.000000e-04
+val: epoch 51:   1/  5: 1413.1 Hz objective: -0.252
+val: epoch 51:   5/  5: 1427.4 Hz objective: -0.257
+@processEpoch: Avg objective = -0.2542
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 52, learningRate = 5.000000e-04
+train: epoch 52:   1/ 25: 1149.7 Hz objective: -0.355
+train: epoch 52:  11/ 25: 647.6 Hz objective: -0.379
+train: epoch 52:  21/ 25: 644.8 Hz objective: -0.380
+train: epoch 52:  25/ 25: 645.2 Hz objective: -0.380
+@processEpoch: Avg objective = -0.379353
+@processEpoch: Epoch 52, learningRate = 5.000000e-04
+val: epoch 52:   1/  5: 1412.0 Hz objective: -0.261
+val: epoch 52:   5/  5: 1428.7 Hz objective: -0.259
+@processEpoch: Avg objective = -0.257444
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 53, learningRate = 5.000000e-04
+train: epoch 53:   1/ 25: 1139.1 Hz objective: -0.382
+train: epoch 53:  11/ 25: 646.9 Hz objective: -0.383
+train: epoch 53:  21/ 25: 645.8 Hz objective: -0.381
+train: epoch 53:  25/ 25: 645.2 Hz objective: -0.380
+@processEpoch: Avg objective = -0.381903
+@processEpoch: Epoch 53, learningRate = 5.000000e-04
+val: epoch 53:   1/  5: 1417.2 Hz objective: -0.238
+val: epoch 53:   5/  5: 1423.8 Hz objective: -0.263
+@processEpoch: Avg objective = -0.253931
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 54, learningRate = 5.000000e-04
+train: epoch 54:   1/ 25: 1135.7 Hz objective: -0.387
+train: epoch 54:  11/ 25: 645.9 Hz objective: -0.380
+train: epoch 54:  21/ 25: 645.5 Hz objective: -0.381
+train: epoch 54:  25/ 25: 645.7 Hz objective: -0.380
+@processEpoch: Avg objective = -0.38006
+@processEpoch: Epoch 54, learningRate = 5.000000e-04
+val: epoch 54:   1/  5: 1429.1 Hz objective: -0.257
+val: epoch 54:   5/  5: 1419.5 Hz objective: -0.261
+@processEpoch: Avg objective = -0.260944
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 55, learningRate = 5.000000e-04
+train: epoch 55:   1/ 25: 1131.8 Hz objective: -0.379
+train: epoch 55:  11/ 25: 645.8 Hz objective: -0.385
+train: epoch 55:  21/ 25: 646.1 Hz objective: -0.381
+train: epoch 55:  25/ 25: 645.9 Hz objective: -0.381
+@processEpoch: Avg objective = -0.382431
+@processEpoch: Epoch 55, learningRate = 5.000000e-04
+val: epoch 55:   1/  5: 1428.2 Hz objective: -0.246
+val: epoch 55:   5/  5: 1404.6 Hz objective: -0.256
+@processEpoch: Avg objective = -0.254332
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 56, learningRate = 5.000000e-04
+train: epoch 56:   1/ 25: 1147.2 Hz objective: -0.377
+train: epoch 56:  11/ 25: 644.7 Hz objective: -0.378
+train: epoch 56:  21/ 25: 645.1 Hz objective: -0.378
+train: epoch 56:  25/ 25: 644.8 Hz objective: -0.377
+@processEpoch: Avg objective = -0.378139
+@processEpoch: Epoch 56, learningRate = 5.000000e-04
+val: epoch 56:   1/  5: 1425.6 Hz objective: -0.235
+val: epoch 56:   5/  5: 1418.9 Hz objective: -0.262
+@processEpoch: Avg objective = -0.254814
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 57, learningRate = 5.000000e-04
+train: epoch 57:   1/ 25: 1139.7 Hz objective: -0.393
+train: epoch 57:  11/ 25: 644.6 Hz objective: -0.381
+train: epoch 57:  21/ 25: 644.6 Hz objective: -0.382
+train: epoch 57:  25/ 25: 644.4 Hz objective: -0.382
+@processEpoch: Avg objective = -0.383644
+@processEpoch: Epoch 57, learningRate = 5.000000e-04
+val: epoch 57:   1/  5: 1427.9 Hz objective: -0.230
+val: epoch 57:   5/  5: 1408.8 Hz objective: -0.263
+@processEpoch: Avg objective = -0.251046
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 58, learningRate = 5.000000e-04
+train: epoch 58:   1/ 25: 1130.6 Hz objective: -0.390
+train: epoch 58:  11/ 25: 643.7 Hz objective: -0.385
+train: epoch 58:  21/ 25: 635.8 Hz objective: -0.384
+train: epoch 58:  25/ 25: 632.9 Hz objective: -0.384
+@processEpoch: Avg objective = -0.385839
+@processEpoch: Epoch 58, learningRate = 5.000000e-04
+val: epoch 58:   1/  5: 1383.1 Hz objective: -0.246
+val: epoch 58:   5/  5: 1374.3 Hz objective: -0.260
+@processEpoch: Avg objective = -0.257627
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 59, learningRate = 5.000000e-04
+train: epoch 59:   1/ 25: 1127.2 Hz objective: -0.378
+train: epoch 59:  11/ 25: 631.2 Hz objective: -0.382
+train: epoch 59:  21/ 25: 633.0 Hz objective: -0.381
+train: epoch 59:  25/ 25: 633.3 Hz objective: -0.381
+@processEpoch: Avg objective = -0.381335
+@processEpoch: Epoch 59, learningRate = 5.000000e-04
+val: epoch 59:   1/  5: 1393.8 Hz objective: -0.261
+val: epoch 59:   5/  5: 1404.4 Hz objective: -0.266
+@processEpoch: Avg objective = -0.261248
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 60, learningRate = 5.000000e-04
+train: epoch 60:   1/ 25: 1132.5 Hz objective: -0.369
+train: epoch 60:  11/ 25: 644.4 Hz objective: -0.379
+train: epoch 60:  21/ 25: 644.3 Hz objective: -0.379
+train: epoch 60:  25/ 25: 642.7 Hz objective: -0.381
+@processEpoch: Avg objective = -0.378527
+@processEpoch: Epoch 60, learningRate = 5.000000e-04
+val: epoch 60:   1/  5: 1390.0 Hz objective: -0.252
+val: epoch 60:   5/  5: 1334.1 Hz objective: -0.262
+@processEpoch: Avg objective = -0.258865
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.708325 seconds.
+Testing network... Elapsed time is 41.436116 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.680114
+@evaluate_tieAP: 1.16 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.680355
+@evaluate_AP: optim_AP = 0.805367
+@evaluate_AP: pessi_AP = 0.560332
+@evaluate_AP: 8.33 seconds
+
+@processEpoch: Epoch 61, learningRate = 5.000000e-04
+train: epoch 61:   1/ 25: 1118.6 Hz objective: -0.367
+train: epoch 61:  11/ 25: 648.2 Hz objective: -0.377
+train: epoch 61:  21/ 25: 645.1 Hz objective: -0.381
+train: epoch 61:  25/ 25: 641.5 Hz objective: -0.381
+@processEpoch: Avg objective = -0.379403
+@processEpoch: Epoch 61, learningRate = 5.000000e-04
+val: epoch 61:   1/  5: 1426.9 Hz objective: -0.263
+val: epoch 61:   5/  5: 1403.1 Hz objective: -0.264
+@processEpoch: Avg objective = -0.263052
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 62, learningRate = 5.000000e-04
+train: epoch 62:   1/ 25: 1149.6 Hz objective: -0.375
+train: epoch 62:  11/ 25: 646.4 Hz objective: -0.381
+train: epoch 62:  21/ 25: 645.4 Hz objective: -0.382
+train: epoch 62:  25/ 25: 645.3 Hz objective: -0.384
+@processEpoch: Avg objective = -0.378769
+@processEpoch: Epoch 62, learningRate = 5.000000e-04
+val: epoch 62:   1/  5: 1412.1 Hz objective: -0.262
+val: epoch 62:   5/  5: 1417.4 Hz objective: -0.264
+@processEpoch: Avg objective = -0.262043
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 63, learningRate = 5.000000e-04
+train: epoch 63:   1/ 25: 1130.2 Hz objective: -0.405
+train: epoch 63:  11/ 25: 644.2 Hz objective: -0.383
+train: epoch 63:  21/ 25: 644.8 Hz objective: -0.383
+train: epoch 63:  25/ 25: 645.1 Hz objective: -0.381
+@processEpoch: Avg objective = -0.386586
+@processEpoch: Epoch 63, learningRate = 5.000000e-04
+val: epoch 63:   1/  5: 1431.4 Hz objective: -0.285
+val: epoch 63:   5/  5: 1412.7 Hz objective: -0.265
+@processEpoch: Avg objective = -0.275252
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 64, learningRate = 5.000000e-04
+train: epoch 64:   1/ 25: 1134.0 Hz objective: -0.379
+train: epoch 64:  11/ 25: 645.3 Hz objective: -0.379
+train: epoch 64:  21/ 25: 645.0 Hz objective: -0.381
+train: epoch 64:  25/ 25: 645.1 Hz objective: -0.382
+@processEpoch: Avg objective = -0.378712
+@processEpoch: Epoch 64, learningRate = 5.000000e-04
+val: epoch 64:   1/  5: 1406.3 Hz objective: -0.252
+val: epoch 64:   5/  5: 1405.9 Hz objective: -0.263
+@processEpoch: Avg objective = -0.259032
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 65, learningRate = 5.000000e-04
+train: epoch 65:   1/ 25: 1089.9 Hz objective: -0.384
+train: epoch 65:  11/ 25: 643.9 Hz objective: -0.382
+train: epoch 65:  21/ 25: 644.1 Hz objective: -0.383
+train: epoch 65:  25/ 25: 644.2 Hz objective: -0.381
+@processEpoch: Avg objective = -0.381039
+@processEpoch: Epoch 65, learningRate = 5.000000e-04
+val: epoch 65:   1/  5: 1422.2 Hz objective: -0.255
+val: epoch 65:   5/  5: 1409.8 Hz objective: -0.263
+@processEpoch: Avg objective = -0.260822
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 66, learningRate = 5.000000e-04
+train: epoch 66:   1/ 25: 1133.9 Hz objective: -0.383
+train: epoch 66:  11/ 25: 643.9 Hz objective: -0.379
+train: epoch 66:  21/ 25: 644.2 Hz objective: -0.381
+train: epoch 66:  25/ 25: 644.3 Hz objective: -0.382
+@processEpoch: Avg objective = -0.380458
+@processEpoch: Epoch 66, learningRate = 5.000000e-04
+val: epoch 66:   1/  5: 1403.2 Hz objective: -0.290
+val: epoch 66:   5/  5: 1405.6 Hz objective: -0.265
+@processEpoch: Avg objective = -0.271852
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 67, learningRate = 5.000000e-04
+train: epoch 67:   1/ 25: 1135.6 Hz objective: -0.389
+train: epoch 67:  11/ 25: 644.4 Hz objective: -0.379
+train: epoch 67:  21/ 25: 644.4 Hz objective: -0.380
+train: epoch 67:  25/ 25: 644.1 Hz objective: -0.380
+@processEpoch: Avg objective = -0.379768
+@processEpoch: Epoch 67, learningRate = 5.000000e-04
+val: epoch 67:   1/  5: 1424.0 Hz objective: -0.268
+val: epoch 67:   5/  5: 1406.9 Hz objective: -0.260
+@processEpoch: Avg objective = -0.26125
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 68, learningRate = 5.000000e-04
+train: epoch 68:   1/ 25: 1133.0 Hz objective: -0.392
+train: epoch 68:  11/ 25: 642.3 Hz objective: -0.380
+train: epoch 68:  21/ 25: 629.9 Hz objective: -0.381
+train: epoch 68:  25/ 25: 628.5 Hz objective: -0.381
+@processEpoch: Avg objective = -0.38254
+@processEpoch: Epoch 68, learningRate = 5.000000e-04
+val: epoch 68:   1/  5: 1393.4 Hz objective: -0.272
+val: epoch 68:   5/  5: 1377.3 Hz objective: -0.261
+@processEpoch: Avg objective = -0.261855
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 69, learningRate = 5.000000e-04
+train: epoch 69:   1/ 25: 1096.8 Hz objective: -0.385
+train: epoch 69:  11/ 25: 627.2 Hz objective: -0.384
+train: epoch 69:  21/ 25: 622.5 Hz objective: -0.385
+train: epoch 69:  25/ 25: 621.5 Hz objective: -0.382
+@processEpoch: Avg objective = -0.383291
+@processEpoch: Epoch 69, learningRate = 5.000000e-04
+val: epoch 69:   1/  5: 1347.0 Hz objective: -0.241
+val: epoch 69:   5/  5: 1323.7 Hz objective: -0.259
+@processEpoch: Avg objective = -0.246501
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 70, learningRate = 5.000000e-04
+train: epoch 70:   1/ 25: 993.6 Hz objective: -0.362
+train: epoch 70:  11/ 25: 634.6 Hz objective: -0.373
+train: epoch 70:  21/ 25: 638.8 Hz objective: -0.379
+train: epoch 70:  25/ 25: 638.4 Hz objective: -0.380
+@processEpoch: Avg objective = -0.375673
+@processEpoch: Epoch 70, learningRate = 5.000000e-04
+val: epoch 70:   1/  5: 1412.7 Hz objective: -0.255
+val: epoch 70:   5/  5: 1385.5 Hz objective: -0.263
+@processEpoch: Avg objective = -0.257542
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.708809 seconds.
+Testing network... Elapsed time is 41.341214 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.682017
+@evaluate_tieAP: 1.16 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.682978
+@evaluate_AP: optim_AP = 0.807607
+@evaluate_AP: pessi_AP = 0.561736
+@evaluate_AP: 8.27 seconds
+
+@processEpoch: Epoch 71, learningRate = 5.000000e-04
+train: epoch 71:   1/ 25: 1052.7 Hz objective: -0.374
+train: epoch 71:  11/ 25: 633.5 Hz objective: -0.380
+train: epoch 71:  21/ 25: 636.2 Hz objective: -0.379
+train: epoch 71:  25/ 25: 637.2 Hz objective: -0.382
+@processEpoch: Avg objective = -0.3786
+@processEpoch: Epoch 71, learningRate = 5.000000e-04
+val: epoch 71:   1/  5: 1371.7 Hz objective: -0.254
+val: epoch 71:   5/  5: 1363.9 Hz objective: -0.261
+@processEpoch: Avg objective = -0.256685
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 72, learningRate = 5.000000e-04
+train: epoch 72:   1/ 25: 1111.4 Hz objective: -0.370
+train: epoch 72:  11/ 25: 645.3 Hz objective: -0.382
+train: epoch 72:  21/ 25: 641.8 Hz objective: -0.383
+train: epoch 72:  25/ 25: 641.6 Hz objective: -0.383
+@processEpoch: Avg objective = -0.381304
+@processEpoch: Epoch 72, learningRate = 5.000000e-04
+val: epoch 72:   1/  5: 1416.1 Hz objective: -0.239
+val: epoch 72:   5/  5: 1407.7 Hz objective: -0.261
+@processEpoch: Avg objective = -0.252948
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 73, learningRate = 5.000000e-04
+train: epoch 73:   1/ 25: 1130.9 Hz objective: -0.369
+train: epoch 73:  11/ 25: 646.1 Hz objective: -0.379
+train: epoch 73:  21/ 25: 646.2 Hz objective: -0.381
+train: epoch 73:  25/ 25: 646.0 Hz objective: -0.381
+@processEpoch: Avg objective = -0.377104
+@processEpoch: Epoch 73, learningRate = 5.000000e-04
+val: epoch 73:   1/  5: 1405.2 Hz objective: -0.261
+val: epoch 73:   5/  5: 1401.5 Hz objective: -0.262
+@processEpoch: Avg objective = -0.255735
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 74, learningRate = 5.000000e-04
+train: epoch 74:   1/ 25: 1141.1 Hz objective: -0.376
+train: epoch 74:  11/ 25: 644.8 Hz objective: -0.383
+train: epoch 74:  21/ 25: 644.6 Hz objective: -0.381
+train: epoch 74:  25/ 25: 644.5 Hz objective: -0.381
+@processEpoch: Avg objective = -0.382597
+@processEpoch: Epoch 74, learningRate = 5.000000e-04
+val: epoch 74:   1/  5: 1415.3 Hz objective: -0.247
+val: epoch 74:   5/  5: 1409.8 Hz objective: -0.263
+@processEpoch: Avg objective = -0.259967
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 75, learningRate = 5.000000e-04
+train: epoch 75:   1/ 25: 1143.3 Hz objective: -0.381
+train: epoch 75:  11/ 25: 644.9 Hz objective: -0.383
+train: epoch 75:  21/ 25: 644.8 Hz objective: -0.383
+train: epoch 75:  25/ 25: 644.9 Hz objective: -0.383
+@processEpoch: Avg objective = -0.384134
+@processEpoch: Epoch 75, learningRate = 5.000000e-04
+val: epoch 75:   1/  5: 1414.1 Hz objective: -0.253
+val: epoch 75:   5/  5: 1409.2 Hz objective: -0.263
+@processEpoch: Avg objective = -0.257808
+@saveState: Saving: ./cachedir/MI-cifar12-vggf-sp1/1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005/net-epoch-75.mat
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 76, learningRate = 5.000000e-04
+train: epoch 76:   1/ 25: 1010.8 Hz objective: -0.390
+train: epoch 76:  11/ 25: 647.9 Hz objective: -0.377
+train: epoch 76:  21/ 25: 646.5 Hz objective: -0.382
+train: epoch 76:  25/ 25: 646.4 Hz objective: -0.382
+@processEpoch: Avg objective = -0.380767
+@processEpoch: Epoch 76, learningRate = 5.000000e-04
+val: epoch 76:   1/  5: 1424.3 Hz objective: -0.270
+val: epoch 76:   5/  5: 1421.1 Hz objective: -0.265
+@processEpoch: Avg objective = -0.270545
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 77, learningRate = 5.000000e-04
+train: epoch 77:   1/ 25: 1136.3 Hz objective: -0.396
+train: epoch 77:  11/ 25: 644.4 Hz objective: -0.378
+train: epoch 77:  21/ 25: 644.7 Hz objective: -0.380
+train: epoch 77:  25/ 25: 644.9 Hz objective: -0.382
+@processEpoch: Avg objective = -0.38058
+@processEpoch: Epoch 77, learningRate = 5.000000e-04
+val: epoch 77:   1/  5: 1408.8 Hz objective: -0.272
+val: epoch 77:   5/  5: 1418.3 Hz objective: -0.263
+@processEpoch: Avg objective = -0.27148
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 78, learningRate = 5.000000e-04
+train: epoch 78:   1/ 25: 1139.8 Hz objective: -0.384
+train: epoch 78:  11/ 25: 635.0 Hz objective: -0.379
+train: epoch 78:  21/ 25: 636.5 Hz objective: -0.382
+train: epoch 78:  25/ 25: 637.6 Hz objective: -0.383
+@processEpoch: Avg objective = -0.380072
+@processEpoch: Epoch 78, learningRate = 5.000000e-04
+val: epoch 78:   1/  5: 1415.4 Hz objective: -0.256
+val: epoch 78:   5/  5: 1410.1 Hz objective: -0.265
+@processEpoch: Avg objective = -0.262184
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 79, learningRate = 5.000000e-04
+train: epoch 79:   1/ 25: 1139.0 Hz objective: -0.391
+train: epoch 79:  11/ 25: 643.0 Hz objective: -0.386
+train: epoch 79:  21/ 25: 643.9 Hz objective: -0.383
+train: epoch 79:  25/ 25: 644.0 Hz objective: -0.383
+@processEpoch: Avg objective = -0.385435
+@processEpoch: Epoch 79, learningRate = 5.000000e-04
+val: epoch 79:   1/  5: 1414.0 Hz objective: -0.276
+val: epoch 79:   5/  5: 1401.7 Hz objective: -0.265
+@processEpoch: Avg objective = -0.269707
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 80, learningRate = 5.000000e-04
+train: epoch 80:   1/ 25: 1139.2 Hz objective: -0.402
+train: epoch 80:  11/ 25: 641.3 Hz objective: -0.385
+train: epoch 80:  21/ 25: 639.0 Hz objective: -0.382
+train: epoch 80:  25/ 25: 637.7 Hz objective: -0.382
+@processEpoch: Avg objective = -0.384919
+@processEpoch: Epoch 80, learningRate = 5.000000e-04
+val: epoch 80:   1/  5: 1360.1 Hz objective: -0.306
+val: epoch 80:   5/  5: 1453.7 Hz objective: -0.264
+@processEpoch: Avg objective = -0.272185
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.722760 seconds.
+Testing network... Elapsed time is 41.434888 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.686486
+@evaluate_tieAP: 1.14 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.687152
+@evaluate_AP: optim_AP = 0.809064
+@evaluate_AP: pessi_AP = 0.566978
+@evaluate_AP: 8.22 seconds
+
+@processEpoch: Epoch 81, learningRate = 5.000000e-04
+train: epoch 81:   1/ 25: 1085.8 Hz objective: -0.378
+train: epoch 81:  11/ 25: 636.6 Hz objective: -0.378
+train: epoch 81:  21/ 25: 636.8 Hz objective: -0.380
+train: epoch 81:  25/ 25: 637.6 Hz objective: -0.381
+@processEpoch: Avg objective = -0.379567
+@processEpoch: Epoch 81, learningRate = 5.000000e-04
+val: epoch 81:   1/  5: 1421.0 Hz objective: -0.262
+val: epoch 81:   5/  5: 1408.9 Hz objective: -0.262
+@processEpoch: Avg objective = -0.265928
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 82, learningRate = 5.000000e-04
+train: epoch 82:   1/ 25: 1136.1 Hz objective: -0.396
+train: epoch 82:  11/ 25: 644.0 Hz objective: -0.382
+train: epoch 82:  21/ 25: 643.5 Hz objective: -0.385
+train: epoch 82:  25/ 25: 643.4 Hz objective: -0.384
+@processEpoch: Avg objective = -0.382383
+@processEpoch: Epoch 82, learningRate = 5.000000e-04
+val: epoch 82:   1/  5: 1409.6 Hz objective: -0.247
+val: epoch 82:   5/  5: 1394.4 Hz objective: -0.265
+@processEpoch: Avg objective = -0.26106
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 83, learningRate = 5.000000e-04
+train: epoch 83:   1/ 25: 1136.5 Hz objective: -0.400
+train: epoch 83:  11/ 25: 642.6 Hz objective: -0.383
+train: epoch 83:  21/ 25: 641.0 Hz objective: -0.382
+train: epoch 83:  25/ 25: 641.5 Hz objective: -0.384
+@processEpoch: Avg objective = -0.384227
+@processEpoch: Epoch 83, learningRate = 5.000000e-04
+val: epoch 83:   1/  5: 1418.2 Hz objective: -0.298
+val: epoch 83:   5/  5: 1386.9 Hz objective: -0.265
+@processEpoch: Avg objective = -0.271684
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 84, learningRate = 5.000000e-04
+train: epoch 84:   1/ 25: 1132.4 Hz objective: -0.387
+train: epoch 84:  11/ 25: 643.5 Hz objective: -0.376
+train: epoch 84:  21/ 25: 643.4 Hz objective: -0.382
+train: epoch 84:  25/ 25: 642.9 Hz objective: -0.383
+@processEpoch: Avg objective = -0.379213
+@processEpoch: Epoch 84, learningRate = 5.000000e-04
+val: epoch 84:   1/  5: 1418.2 Hz objective: -0.295
+val: epoch 84:   5/  5: 1390.9 Hz objective: -0.265
+@processEpoch: Avg objective = -0.276165
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 85, learningRate = 5.000000e-04
+train: epoch 85:   1/ 25: 1128.4 Hz objective: -0.389
+train: epoch 85:  11/ 25: 641.2 Hz objective: -0.383
+train: epoch 85:  21/ 25: 635.9 Hz objective: -0.380
+train: epoch 85:  25/ 25: 636.2 Hz objective: -0.380
+@processEpoch: Avg objective = -0.382135
+@processEpoch: Epoch 85, learningRate = 5.000000e-04
+val: epoch 85:   1/  5: 1405.6 Hz objective: -0.257
+val: epoch 85:   5/  5: 1417.7 Hz objective: -0.260
+@processEpoch: Avg objective = -0.254542
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 86, learningRate = 5.000000e-04
+train: epoch 86:   1/ 25: 1131.8 Hz objective: -0.379
+train: epoch 86:  11/ 25: 639.7 Hz objective: -0.378
+train: epoch 86:  21/ 25: 640.1 Hz objective: -0.381
+train: epoch 86:  25/ 25: 638.5 Hz objective: -0.383
+@processEpoch: Avg objective = -0.379349
+@processEpoch: Epoch 86, learningRate = 5.000000e-04
+val: epoch 86:   1/  5: 1376.8 Hz objective: -0.248
+val: epoch 86:   5/  5: 1386.8 Hz objective: -0.267
+@processEpoch: Avg objective = -0.261001
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 87, learningRate = 5.000000e-04
+train: epoch 87:   1/ 25: 1125.0 Hz objective: -0.383
+train: epoch 87:  11/ 25: 627.7 Hz objective: -0.382
+train: epoch 87:  21/ 25: 623.3 Hz objective: -0.381
+train: epoch 87:  25/ 25: 621.5 Hz objective: -0.381
+@processEpoch: Avg objective = -0.382507
+@processEpoch: Epoch 87, learningRate = 5.000000e-04
+val: epoch 87:   1/  5: 1396.6 Hz objective: -0.238
+val: epoch 87:   5/  5: 1403.2 Hz objective: -0.260
+@processEpoch: Avg objective = -0.251525
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 88, learningRate = 5.000000e-04
+train: epoch 88:   1/ 25: 1121.8 Hz objective: -0.400
+train: epoch 88:  11/ 25: 640.3 Hz objective: -0.376
+train: epoch 88:  21/ 25: 639.3 Hz objective: -0.380
+train: epoch 88:  25/ 25: 639.1 Hz objective: -0.381
+@processEpoch: Avg objective = -0.379728
+@processEpoch: Epoch 88, learningRate = 5.000000e-04
+val: epoch 88:   1/  5: 1412.8 Hz objective: -0.234
+val: epoch 88:   5/  5: 1382.4 Hz objective: -0.263
+@processEpoch: Avg objective = -0.249412
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 89, learningRate = 5.000000e-04
+train: epoch 89:   1/ 25: 1132.8 Hz objective: -0.394
+train: epoch 89:  11/ 25: 635.6 Hz objective: -0.385
+train: epoch 89:  21/ 25: 637.8 Hz objective: -0.383
+train: epoch 89:  25/ 25: 637.9 Hz objective: -0.384
+@processEpoch: Avg objective = -0.383438
+@processEpoch: Epoch 89, learningRate = 5.000000e-04
+val: epoch 89:   1/  5: 1403.0 Hz objective: -0.249
+val: epoch 89:   5/  5: 1399.8 Hz objective: -0.264
+@processEpoch: Avg objective = -0.260603
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 90, learningRate = 5.000000e-04
+train: epoch 90:   1/ 25: 1129.3 Hz objective: -0.390
+train: epoch 90:  11/ 25: 639.6 Hz objective: -0.380
+train: epoch 90:  21/ 25: 640.2 Hz objective: -0.382
+train: epoch 90:  25/ 25: 636.9 Hz objective: -0.381
+@processEpoch: Avg objective = -0.383457
+@processEpoch: Epoch 90, learningRate = 5.000000e-04
+val: epoch 90:   1/  5: 1353.7 Hz objective: -0.245
+val: epoch 90:   5/  5: 1305.3 Hz objective: -0.264
+@processEpoch: Avg objective = -0.256416
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.737265 seconds.
+Testing network... Elapsed time is 41.753109 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.686784
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.687271
+@evaluate_AP: optim_AP = 0.811006
+@evaluate_AP: pessi_AP = 0.566471
+@evaluate_AP: 8.19 seconds
+
+@processEpoch: Epoch 91, learningRate = 5.000000e-04
+train: epoch 91:   1/ 25: 1079.2 Hz objective: -0.375
+train: epoch 91:  11/ 25: 643.5 Hz objective: -0.385
+train: epoch 91:  21/ 25: 643.0 Hz objective: -0.382
+train: epoch 91:  25/ 25: 642.9 Hz objective: -0.381
+@processEpoch: Avg objective = -0.382335
+@processEpoch: Epoch 91, learningRate = 5.000000e-04
+val: epoch 91:   1/  5: 1406.2 Hz objective: -0.270
+val: epoch 91:   5/  5: 1390.7 Hz objective: -0.264
+@processEpoch: Avg objective = -0.268313
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 92, learningRate = 5.000000e-04
+train: epoch 92:   1/ 25: 1131.4 Hz objective: -0.382
+train: epoch 92:  11/ 25: 640.8 Hz objective: -0.387
+train: epoch 92:  21/ 25: 641.8 Hz objective: -0.381
+train: epoch 92:  25/ 25: 641.8 Hz objective: -0.382
+@processEpoch: Avg objective = -0.383865
+@processEpoch: Epoch 92, learningRate = 5.000000e-04
+val: epoch 92:   1/  5: 1422.3 Hz objective: -0.262
+val: epoch 92:   5/  5: 1425.0 Hz objective: -0.263
+@processEpoch: Avg objective = -0.260536
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 93, learningRate = 5.000000e-04
+train: epoch 93:   1/ 25: 1131.4 Hz objective: -0.377
+train: epoch 93:  11/ 25: 636.9 Hz objective: -0.382
+train: epoch 93:  21/ 25: 639.2 Hz objective: -0.384
+train: epoch 93:  25/ 25: 639.5 Hz objective: -0.384
+@processEpoch: Avg objective = -0.382794
+@processEpoch: Epoch 93, learningRate = 5.000000e-04
+val: epoch 93:   1/  5: 1426.5 Hz objective: -0.259
+val: epoch 93:   5/  5: 1400.5 Hz objective: -0.262
+@processEpoch: Avg objective = -0.254571
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 94, learningRate = 5.000000e-04
+train: epoch 94:   1/ 25: 1132.1 Hz objective: -0.390
+train: epoch 94:  11/ 25: 639.8 Hz objective: -0.386
+train: epoch 94:  21/ 25: 640.8 Hz objective: -0.383
+train: epoch 94:  25/ 25: 640.8 Hz objective: -0.384
+@processEpoch: Avg objective = -0.384164
+@processEpoch: Epoch 94, learningRate = 5.000000e-04
+val: epoch 94:   1/  5: 1424.8 Hz objective: -0.268
+val: epoch 94:   5/  5: 1409.7 Hz objective: -0.263
+@processEpoch: Avg objective = -0.264033
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 95, learningRate = 5.000000e-04
+train: epoch 95:   1/ 25: 1120.1 Hz objective: -0.371
+train: epoch 95:  11/ 25: 640.9 Hz objective: -0.374
+train: epoch 95:  21/ 25: 640.8 Hz objective: -0.379
+train: epoch 95:  25/ 25: 640.8 Hz objective: -0.381
+@processEpoch: Avg objective = -0.377089
+@processEpoch: Epoch 95, learningRate = 5.000000e-04
+val: epoch 95:   1/  5: 1398.3 Hz objective: -0.270
+val: epoch 95:   5/  5: 1428.5 Hz objective: -0.260
+@processEpoch: Avg objective = -0.262354
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 96, learningRate = 5.000000e-04
+train: epoch 96:   1/ 25: 1123.4 Hz objective: -0.378
+train: epoch 96:  11/ 25: 639.0 Hz objective: -0.384
+train: epoch 96:  21/ 25: 632.6 Hz objective: -0.384
+train: epoch 96:  25/ 25: 633.0 Hz objective: -0.384
+@processEpoch: Avg objective = -0.383383
+@processEpoch: Epoch 96, learningRate = 5.000000e-04
+val: epoch 96:   1/  5: 1319.4 Hz objective: -0.280
+val: epoch 96:   5/  5: 1306.2 Hz objective: -0.259
+@processEpoch: Avg objective = -0.263511
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 97, learningRate = 5.000000e-04
+train: epoch 97:   1/ 25: 1123.3 Hz objective: -0.392
+train: epoch 97:  11/ 25: 638.3 Hz objective: -0.382
+train: epoch 97:  21/ 25: 636.5 Hz objective: -0.383
+train: epoch 97:  25/ 25: 634.5 Hz objective: -0.382
+@processEpoch: Avg objective = -0.382076
+@processEpoch: Epoch 97, learningRate = 5.000000e-04
+val: epoch 97:   1/  5: 1352.2 Hz objective: -0.244
+val: epoch 97:   5/  5: 1397.7 Hz objective: -0.261
+@processEpoch: Avg objective = -0.253665
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 98, learningRate = 5.000000e-04
+train: epoch 98:   1/ 25: 1104.5 Hz objective: -0.392
+train: epoch 98:  11/ 25: 637.7 Hz objective: -0.383
+train: epoch 98:  21/ 25: 633.1 Hz objective: -0.380
+train: epoch 98:  25/ 25: 632.9 Hz objective: -0.381
+@processEpoch: Avg objective = -0.384457
+@processEpoch: Epoch 98, learningRate = 5.000000e-04
+val: epoch 98:   1/  5: 1398.1 Hz objective: -0.269
+val: epoch 98:   5/  5: 1403.5 Hz objective: -0.261
+@processEpoch: Avg objective = -0.260844
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 99, learningRate = 5.000000e-04
+train: epoch 99:   1/ 25: 1114.2 Hz objective: -0.386
+train: epoch 99:  11/ 25: 619.4 Hz objective: -0.382
+train: epoch 99:  21/ 25: 616.0 Hz objective: -0.382
+train: epoch 99:  25/ 25: 616.5 Hz objective: -0.382
+@processEpoch: Avg objective = -0.383584
+@processEpoch: Epoch 99, learningRate = 5.000000e-04
+val: epoch 99:   1/  5: 1395.9 Hz objective: -0.252
+val: epoch 99:   5/  5: 1438.8 Hz objective: -0.261
+@processEpoch: Avg objective = -0.259358
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@processEpoch: Epoch 100, learningRate = 5.000000e-04
+train: epoch 100:   1/ 25: 1118.2 Hz objective: -0.377
+train: epoch 100:  11/ 25: 639.2 Hz objective: -0.380
+train: epoch 100:  21/ 25: 634.6 Hz objective: -0.383
+train: epoch 100:  25/ 25: 633.1 Hz objective: -0.382
+@processEpoch: Avg objective = -0.380264
+@processEpoch: Epoch 100, learningRate = 5.000000e-04
+val: epoch 100:   1/  5: 1399.6 Hz objective: -0.268
+val: epoch 100:   5/  5: 1383.7 Hz objective: -0.263
+@processEpoch: Avg objective = -0.261751
+@saveState: Saving: ./cachedir/MI-cifar12-vggf-sp1/1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005/net-epoch-100.mat
+@epoch_callback: [MI-cifar12-vggf-sp1]
+@epoch_callback: [1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005]
+@test_supervised: MI-cifar12-vggf-sp1
+@test_supervised: 1016.225200-Bin10Sig10,0-batch200-sgdLR0.001D0.5E50-wdecay0.0005
+  Name            Size             Bytes  Class     Attributes
+
+  Ytest        1000x1               4000  single              
+  Ytrain      59000x1             236000  single              
+
+Testing network... Elapsed time is 0.779374 seconds.
+Testing network... Elapsed time is 41.707805 seconds.
+@test_supervised: Evaluating...
+@evaluate_tieAP: AP-T = 0.686245
+@evaluate_tieAP: 1.15 seconds
+
+@evaluate_AP: Eval full ranking
+@evaluate_AP:       AP = 0.687252
+@evaluate_AP: optim_AP = 0.812129
+@evaluate_AP: pessi_AP = 0.56463
+@evaluate_AP: 8.25 seconds
+
