@@ -56,7 +56,7 @@ Please refer to the above papers for details regarding setting 1 and 2.
 - 32: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar32-sp2-vggf.txt)
 - 48: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar48-sp2-vggf.txt)
 
-**NOTE:** These diaries are from older versions of the repo, where different parameter names might be used. By inspection the parameters can easily be matched to `opts_batch.m`. Notably **sigscale** is equal to **sigmf(1)**. Please email `fcakir@gmail.com` if you have any questions.  
+**NOTE:** These diaries are from older versions of the repo, where different parameter names might be used. By inspection the parameters can easily be matched to `opts_batch.m`. Notably **sigscale** is equal to **sigmf(1)**. Please email `fcakir@gmail.com` or `kun@bu.edu` if you have any questions.  
 
 ## License
 BSD License,  see `LICENSE`
