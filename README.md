@@ -5,6 +5,11 @@ This repository contains Matlab implementation of the below paper:
 Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution)  
 International Conference on Computer Vision (ICCV), 2017 ([arXiv](https://arxiv.org/abs/1703.08919))
 
+The repo includes:
+- Both online/batch versions of our MIHash method from above paper
+- An experimental framework for online hashing methods
+- Implementations of several online hashing techniques
+
 ## Preparation
 - Create or symlink a directory `cachedir` under the main directory to hold experimental results
 - Run `download_data.sh` in the `data` directory
