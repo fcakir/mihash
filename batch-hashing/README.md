@@ -1,6 +1,6 @@
 # Batch (Deep) Hashing
 
-**This portion of the repo is outdated with inferior results. Please refer to the new repo for the latest results for deep/batch learning of MIHash!**
+**This portion of the repo is outdated with inferior results. Please refer to the [new repo](https://github.com/fcakir/deep-mihash) for the latest results for deep/batch learning of MIHash!**
 
 This folder contains MatConvNet implementation of MIHash (batch learning version), described in the following paper:
 - F. Cakir, K. He, S. A. Bargal, S. Sclaroff "MIHash: Online Hashing with Mutual Information" International Conference on Computer Vision (ICCV) 2017 ([pdf](https://arxiv.org/abs/1703.08919))
