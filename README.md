@@ -26,6 +26,8 @@ The repo includes:
 - For **batch** hashing experiments: `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`).
 
 ## Batch Results
+**This portion of the repo is outdated with inferior results. Please refer to the [new repo](https://github.com/fcakir/deep-mihash) for the latest results for deep/batch learning of MIHash!** 
+
 Here we provide the latest results of MIHash and other competing work on CIFAR-10. For reproducibility, we also provide the parameters for MIHash we used to obtain these results (see `batch-hashing/opts_batch.m`). 
 
 ### CIFAR-10
