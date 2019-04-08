@@ -10,7 +10,7 @@ This repository contains Matlab implementation of the below papers:
     Submitted to **TPAMI** ([arXiv](https://arxiv.org/abs/1803.00974))
 
 The repo includes:
-- Both online/batch versions of our MIHash method from above paper
+- Both online/batch versions of our MIHash method from above paper. **Note: The batch (deep) learning of MIHash implementation is updated and moved to [deep-mihash](https://github.com/fcakir/deep-mihash).**
 - An experimental framework for online hashing methods
 - Implementations of several online hashing techniques
 
