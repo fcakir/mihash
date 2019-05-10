@@ -7,7 +7,7 @@ This repository contains Matlab implementation of the below papers:
 
 [2] "Hashing with Mutual Information",  
     Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution)  
-    Submitted to **TPAMI** ([arXiv](https://arxiv.org/abs/1803.00974))
+     **TPAMI** 2019 (to appear) ([arXiv](https://arxiv.org/abs/1803.00974))
 
 The repo includes:
 - Both online/batch versions of our MIHash method from above paper. **Note: The batch (deep) learning of MIHash implementation is updated and moved to [deep-mihash](https://github.com/fcakir/deep-mihash).**
