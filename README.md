@@ -10,7 +10,7 @@ This repository contains Matlab implementation of the below papers:
      **TPAMI** 2019 (to appear) ([arXiv](https://arxiv.org/abs/1803.00974))
 
 The repo includes:
-- Both online/batch versions of our MIHash method from above paper. **Note: The batch (deep) learning of MIHash implementation is updated and moved to [deep-mihash](https://github.com/fcakir/deep-mihash).**
+- Both online/batch versions of our MIHash method from above paper. :warning: **Note: The batch (deep) learning of MIHash implementation is updated and moved to [deep-mihash](https://github.com/fcakir/deep-mihash).**
 - An experimental framework for online hashing methods
 - Implementations of several online hashing techniques
 
@@ -26,7 +26,7 @@ The repo includes:
 - For **batch** hashing experiments: `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`).
 
 ## Batch Results
-**This portion of the repo is outdated with inferior results. Please refer to the [new repo](https://github.com/fcakir/deep-mihash) for the latest results for deep/batch learning of MIHash!** 
+:warning: **This portion of the repo is outdated with inferior results. Please refer to the [new repo](https://github.com/fcakir/deep-mihash) for the latest results for deep/batch learning of MIHash!** 
 
 Here we provide the latest results of MIHash and other competing work on CIFAR-10. For reproducibility, we also provide the parameters for MIHash we used to obtain these results (see `batch-hashing/opts_batch.m`). 
 
