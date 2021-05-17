@@ -1,13 +1,13 @@
 # Hashing with Mutual Information
 This repository contains Matlab implementation of the below papers:
 
-[1] "MIHash: Online Hashing with Mutual Information",  
-    Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution)  
+[1] "MIHash: Online Hashing with Mutual Information",
+    Fatih Cakir*, Kun He*, Sarah Adel Bargal, and Stan Sclaroff. (* Equal contribution)
     International Conference on Computer Vision (**ICCV**), 2017 ([arXiv](https://arxiv.org/abs/1703.08919))
 
-[2] "Hashing with Mutual Information",  
-    Fatih Cakir*, Kun He*, Sarah A. Bargal, and Stan Sclaroff. (* Equal contribution)  
-     **TPAMI** 2019 (to appear) ([arXiv](https://arxiv.org/abs/1803.00974))
+[2] "Hashing with Mutual Information",
+    Fatih Cakir*, Kun He*, Sarah Adel Bargal, and Stan Sclaroff. (* Equal contribution)
+    IEEE Transactions on Pattern Analysis and Machine Intelligence (**TPAMI**) 2019 ([arXiv](https://arxiv.org/abs/1803.00974))
 
 The repo includes:
 - Both online/batch versions of our MIHash method from above paper. :warning: **Note: The batch (deep) learning of MIHash implementation is updated and moved to [deep-mihash](https://github.com/fcakir/deep-mihash).**
@@ -16,13 +16,13 @@ The repo includes:
 
 ## Preparation
 - Create or symlink a directory `cachedir` under the main directory to hold experimental results
-- Run `download_data.sh` in the `data` directory
 - Install or symlink [VLFeat](http://www.vlfeat.org/)  at `./vlfeat` (for computing performance metrics)
 - Install or symlink [MatConvNet](http://www.vlfeat.org/matconvnet/) at `./matconvnet` (for batch hashing experiments)
+- Download datasets and pretrained models: see `data/README.md`.
 
 ## Usage
-- In the main folder, run `startup.m`
-- For **online** hashing experiments: `cd online-hashing`, and run `demo_online.m` with appropriate input arguments (see `online-hashing/README.md`)
+- In the main folder, run `startup.m`.
+- For **online** hashing experiments: `cd online-hashing`, and run `demo_online.m` with appropriate input arguments (see `online-hashing/README.md`).
 - For **batch** hashing experiments: `cd batch-hashing`, and run `demo_cifar.m` with appropriate input arguments (see `batch-hashing/README.md`).
 
 ## Batch Results
@@ -67,7 +67,10 @@ Please refer to the above papers for details regarding setting 1 and 2.
 - 32: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar32-sp2-vggf.txt)
 - 48: [diary](https://github.com/fcakir/mihash/blob/master/diary/batch-hashing/MI-cifar48-sp2-vggf.txt)
 
-**NOTE:** These diaries are from older versions of the repo, where different parameter names might be used. By inspection the parameters can easily be matched to `opts_batch.m`. Notably **sigscale** is equal to **sigmf(1)**. Please email `fcakirs@gmail.com` or `hekun@bu.edu` if you have any questions.  
+**NOTE:** These diaries are from older versions of the repo, where different parameter names might be used. By inspection the parameters can easily be matched to `opts_batch.m`. Notably **sigscale** is equal to **sigmf(1)**. 
+
+## Contact
+Please email `fcakirs@gmail.com` or `kunhe@ieee.org` if you have any questions.
 
 ## License
 BSD License,  see `LICENSE`
