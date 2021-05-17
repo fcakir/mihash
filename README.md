@@ -1,12 +1,16 @@
 # Hashing with Mutual Information
 This repository contains Matlab implementation of the below papers:
 
-[1] "MIHash: Online Hashing with Mutual Information",
+1. "MIHash: Online Hashing with Mutual Information",
+
     Fatih Cakir*, Kun He*, Sarah Adel Bargal, and Stan Sclaroff. (* Equal contribution)
+    
     International Conference on Computer Vision (**ICCV**), 2017 ([arXiv](https://arxiv.org/abs/1703.08919))
 
-[2] "Hashing with Mutual Information",
+2. "Hashing with Mutual Information",
+
     Fatih Cakir*, Kun He*, Sarah Adel Bargal, and Stan Sclaroff. (* Equal contribution)
+    
     IEEE Transactions on Pattern Analysis and Machine Intelligence (**TPAMI**) 2019 ([arXiv](https://arxiv.org/abs/1803.00974))
 
 The repo includes:
